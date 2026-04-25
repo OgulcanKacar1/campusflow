@@ -64,7 +64,6 @@ export default function LoginPage() {
   };
 
   return (
-  return (
     <div className="min-h-screen w-full bg-background flex items-center justify-center relative overflow-hidden">
       <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-indigo-600/10 blur-[120px]" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-blue-600/10 blur-[120px]" />
@@ -136,15 +135,15 @@ export default function LoginPage() {
 
                 {mode === 'otp' && (
                   <div className="space-y-2 mt-4">
-                    <Label htmlFor="code" className="text-foreground">6 Haneli Kod</Label>
+                    <Label htmlFor="code" className="text-foreground">Doğrulama Kodu</Label>
                     <div className="relative">
                       <KeyRound className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
                       <Input 
                         id="code" 
                         name="code" 
                         type="text" 
-                        maxLength={6}
-                        placeholder="000000" 
+                        maxLength={8}
+                        placeholder="••••••••" 
                         required={mode === 'otp'}
                         className="pl-10 text-center tracking-[0.5em] text-lg font-mono bg-input/20 border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"
                       />
