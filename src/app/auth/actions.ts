@@ -51,6 +51,7 @@ export async function loginWithPasswordAndOTP(formData: FormData) {
 export async function registerWithPassword(formData: FormData) {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
+  const fullName = formData.get('full_name') as string;
 
   if (!email?.endsWith('.edu.tr')) {
     return { error: 'Sadece .edu.tr uzantılı e-posta adresleri kayıt olabilir.' };
@@ -60,6 +61,11 @@ export async function registerWithPassword(formData: FormData) {
   const { error } = await supabase.auth.signUp({
     email,
     password,
+    options: {
+      data: {
+        full_name: fullName,
+      },
+    },
   });
 
   if (error) {

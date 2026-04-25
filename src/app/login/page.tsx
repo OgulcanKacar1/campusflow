@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Loader2, Mail, Lock, KeyRound, ArrowRight } from 'lucide-react';
+import { Loader2, Mail, Lock, KeyRound, ArrowRight, User } from 'lucide-react';
 
 type AuthMode = 'login' | 'register' | 'otp';
 
@@ -25,9 +25,17 @@ export default function LoginPage() {
 
     const formData = new FormData(e.currentTarget);
     const formEmail = formData.get('email') as string;
+    const password = formData.get('password') as string;
+    const confirmPassword = formData.get('confirm_password') as string;
     
     if (mode === 'login' || mode === 'register') {
       setEmail(formEmail);
+    }
+
+    if (mode === 'register' && password !== confirmPassword) {
+      setError('Şifreler eşleşmiyor.');
+      setLoading(false);
+      return;
     }
 
     try {
@@ -40,14 +48,12 @@ export default function LoginPage() {
         if (result?.error) throw new Error(result.error);
         if (result?.step === 'otp') setMode('otp');
       } else if (mode === 'otp') {
-        // formData still contains 'code', but we need to inject 'email' and 'type'
         formData.append('email', email);
-        // If we came from register, type is 'signup', else 'email' (for login magic link)
-        formData.append('type', 'email'); // For simplicity, we assume 'email'. In a real app, track the previous mode.
+        formData.append('type', 'email');
         const result = await verifyOTP(formData);
         if (result?.error) throw new Error(result.error);
         if (result?.success) {
-          router.push('/dashboard'); // Başarılı girişte yönlendirme
+          router.push('/dashboard');
         }
       }
     } catch (err: any) {
@@ -59,7 +65,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen w-full bg-background flex items-center justify-center relative overflow-hidden">
-      {/* Arka Plan Glow Efektleri */}
       <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-indigo-600/10 blur-[120px]" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-blue-600/10 blur-[120px]" />
 
@@ -85,6 +90,22 @@ export default function LoginPage() {
 
             {mode !== 'otp' ? (
               <>
+                {mode === 'register' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="full_name" className="text-foreground">Ad Soyad</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                      <Input 
+                        id="full_name" 
+                        name="full_name" 
+                        type="text" 
+                        placeholder="John Doe" 
+                        required 
+                        className="pl-10 bg-input/20 border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"
+                      />
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-foreground">Kurumsal E-Posta</Label>
                   <div className="relative">
@@ -120,6 +141,22 @@ export default function LoginPage() {
                     />
                   </div>
                 </div>
+                {mode === 'register' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm_password" className="text-foreground">Şifre Tekrar</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                      <Input 
+                        id="confirm_password" 
+                        name="confirm_password" 
+                        type="password" 
+                        placeholder="••••••••" 
+                        required 
+                        className="pl-10 bg-input/20 border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"
+                      />
+                    </div>
+                  </div>
+                )}
               </>
             ) : (
               <div className="space-y-2">
