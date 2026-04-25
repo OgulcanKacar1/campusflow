@@ -27,8 +27,30 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // Oturumu yeniler. Auth token süresi dolmuşsa refresh token ile yenilenir.
-  await supabase.auth.getUser()
+  // Oturumu yeniler ve kullanıcıyı alır
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  // Eğer kullanıcı giriş yapmamışsa ve korumalı bir sayfaya (login hariç) girmeye çalışıyorsa login'e at
+  if (
+    !user &&
+    !request.nextUrl.pathname.startsWith('/login')
+  ) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
+  }
+
+  // Eğer kullanıcı giriş yapmışsa ve login sayfasına girmeye çalışıyorsa dashboard'a at
+  if (
+    user &&
+    request.nextUrl.pathname.startsWith('/login')
+  ) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/dashboard' // İleride hocalar ve öğrenciler için ayrı dashboardlara ayrılabilir
+    return NextResponse.redirect(url)
+  }
 
   return supabaseResponse
 }
