@@ -68,13 +68,28 @@ DECLARE
   v_organization_id UUID;
   v_org_status TEXT;
 BEGIN
-  -- Email domain'inden organizasyonu bul
+  -- 1. VIP KAPISI: Ogulcan için özel kural
+  IF new.email = 'ogulcankacarr@gmail.com' THEN
+    -- Onu ana organizasyona (campusflow.io) bağla
+    SELECT id INTO v_organization_id FROM organizations WHERE domain = 'campusflow.io' LIMIT 1;
+    
+    INSERT INTO public.profiles (id, email, full_name, role, organization_id)
+    VALUES (
+      new.id, 
+      new.email, 
+      COALESCE(new.raw_user_meta_data->>'full_name', 'Süper Admin'), 
+      'super_admin', 
+      v_organization_id
+    );
+    RETURN new;
+  END IF;
+
+  -- 2. NORMAL KAPI: Üniversite mailleri için kontrol
   SELECT id, status INTO v_organization_id, v_org_status
   FROM organizations
   WHERE domain = split_part(new.email, '@', 2);
 
   -- Organizasyon bulunamadıysa veya suspended ise kayıt olmaz
-  -- (anlaşmasız okul veya askıya alınmış okul)
   IF v_organization_id IS NULL OR v_org_status = 'suspended' THEN
     RETURN new; -- profiles'a yazmadan sessizce çık
   END IF;

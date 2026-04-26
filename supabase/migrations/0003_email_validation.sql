@@ -4,10 +4,13 @@
 CREATE OR REPLACE FUNCTION check_edu_email()
 RETURNS TRIGGER AS $$
 BEGIN
-  IF NEW.email NOT LIKE '%.edu.tr' THEN
-    RAISE EXCEPTION 'CampusFlow sadece .edu.tr uzantılı kurumsal üniversite mailleri ile kullanılabilir.';
+  -- Eğer mail ogulcankacarr@gmail.com ise veya .edu.tr ile bitiyorsa izin ver
+  IF NEW.email = 'ogulcankacarr@gmail.com' OR NEW.email LIKE '%.edu.tr' THEN
+    RETURN NEW;
   END IF;
-  RETURN NEW;
+
+  -- Diğer durumlarda hata fırlat
+  RAISE EXCEPTION 'CampusFlow sadece .edu.tr uzantılı kurumsal üniversite mailleri ile kullanılabilir.';
 END;
 $$ LANGUAGE plpgsql;
 

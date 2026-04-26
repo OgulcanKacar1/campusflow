@@ -1,15 +1,21 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { createBrowserClient } from '@supabase/ssr';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
 // Cookieleri set etmeyen "dummy" bir client oluşturuyoruz.
 // Amacımız şifrenin doğru olup olmadığını kontrol etmek, ama oturumu hemen açmamak.
 function createDummyClient() {
-  return createBrowserClient(
+  return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: {
+        persistSession: false, // Sunucuda oturumu kalıcı yapma
+        autoRefreshToken: false,
+      }
+    }
   );
 }
 
@@ -17,7 +23,7 @@ export async function loginWithPasswordAndOTP(formData: FormData) {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
 
-  if (!email?.endsWith('.edu.tr')) {
+  if (!email?.endsWith('.edu.tr') && email !== 'ogulcankacarr@gmail.com') {
     return { error: 'Sadece .edu.tr uzantılı e-posta adresleri kullanılabilir.' };
   }
 
@@ -53,7 +59,7 @@ export async function registerWithPassword(formData: FormData) {
   const password = formData.get('password') as string;
   const fullName = formData.get('full_name') as string;
 
-  if (!email?.endsWith('.edu.tr')) {
+  if (!email?.endsWith('.edu.tr') && email !== 'ogulcankacarr@gmail.com') {
     return { error: 'Sadece .edu.tr uzantılı e-posta adresleri kayıt olabilir.' };
   }
 
