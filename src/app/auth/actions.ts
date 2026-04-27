@@ -100,3 +100,9 @@ export async function verifyOTP(formData: FormData) {
 
   return { success: true };
 }
+
+export async function logout() {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect('/login');
+}
