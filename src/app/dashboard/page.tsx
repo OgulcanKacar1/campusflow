@@ -1,7 +1,37 @@
-export default function DashboardPage() {
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-[#020617] text-white">
-      <h1 className="text-3xl font-bold">CampusFlow Dashboard (Yapım Aşamasında)</h1>
-    </div>
-  );
+import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+
+export default async function DashboardPage() {
+  const supabase = await createClient();
+
+  // Oturum kontrolü
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    redirect('/login');
+  }
+
+  // Kullanıcının profilini ve rolünü çek
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile) {
+    redirect('/login');
+  }
+
+  // Role göre yönlendir
+  switch (profile.role) {
+    case 'super_admin':
+      redirect('/dashboard/super-admin');
+    case 'admin':
+      redirect('/dashboard/admin');
+    case 'instructor':
+      redirect('/dashboard/instructor');
+    case 'student':
+      redirect('/dashboard/student');
+    default:
+      redirect('/login');
+  }
 }
