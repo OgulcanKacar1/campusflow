@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 
 // Cookieleri set etmeyen "dummy" bir client oluşturuyoruz.
 // Amacımız şifrenin doğru olup olmadığını kontrol etmek, ama oturumu hemen açmamak.
