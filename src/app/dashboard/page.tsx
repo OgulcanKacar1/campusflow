@@ -18,6 +18,8 @@ export default async function DashboardPage() {
     .single();
 
   if (!profile) {
+    // Profil yoksa, oturumu kapat ki middleware tekrar dashboard'a yönlendirmesin (sonsuz döngü engeli)
+    await supabase.auth.signOut();
     redirect('/login');
   }
 
