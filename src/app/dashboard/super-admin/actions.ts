@@ -14,6 +14,17 @@ export async function getSuperAdminStats() {
   return data;
 }
 
+export async function getRegistrationTrend(daysBack = 30) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('get_registration_trend', { days_back: daysBack });
+
+  if (error) {
+    console.error('getRegistrationTrend error:', error);
+    return [];
+  }
+  return data;
+}
+
 export async function getOrganizationsWithDomains() {
   const supabase = await createClient();
   
