@@ -14,6 +14,17 @@ export async function getSuperAdminStats() {
   return data;
 }
 
+export async function getRegistrationTrend(daysBack = 30) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('get_registration_trend', { days_back: daysBack });
+
+  if (error) {
+    console.error('getRegistrationTrend error:', error);
+    return [];
+  }
+  return data;
+}
+
 export async function getOrganizationsWithDomains() {
   const supabase = await createClient();
   
@@ -122,6 +133,28 @@ export async function updateOrganizationStatus(orgId: string, status: 'active' |
     return { error: error.message };
   }
 
+  revalidatePath('/dashboard/super-admin');
+  return { success: true };
+}
+
+export async function updateOrganizationDetails(orgId: string, formData: FormData) {
+  const name = formData.get('name') as string;
+  const plan = formData.get('plan') as string;
+  const maxStudentsStr = formData.get('maxStudents') as string;
+  const maxStudents = maxStudentsStr ? parseInt(maxStudentsStr, 10) : null;
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from('organizations')
+    .update({ name, plan, max_students: maxStudents })
+    .eq('id', orgId);
+
+  if (error) {
+    return { error: error.message };
+  }
+  
+  revalidatePath('/dashboard/super-admin/organizations');
   revalidatePath('/dashboard/super-admin');
   return { success: true };
 }

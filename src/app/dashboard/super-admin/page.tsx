@@ -1,8 +1,10 @@
-import { getSuperAdminStats, getOrganizationsWithDomains } from './actions';
+import { getSuperAdminStats, getOrganizationsWithDomains, getRegistrationTrend } from './actions';
+import OverviewCharts from './OverviewCharts';
 
 export default async function SuperAdminDashboard() {
   const statsList = await getSuperAdminStats();
   const organizations = await getOrganizationsWithDomains();
+  const trendData = await getRegistrationTrend(30);
 
   // Hesaplamalar
   const totalOrgs = organizations.length;
@@ -14,9 +16,14 @@ export default async function SuperAdminDashboard() {
     totalUsers += (s.student_count || 0) + (s.instructor_count || 0) + (s.admin_count || 0);
   });
 
+  // Top 5 Üniversite (Öğrenci sayısına göre)
+  const topOrgs = [...statsList]
+    .sort((a, b) => (b.student_count || 0) - (a.student_count || 0))
+    .slice(0, 5);
+
   return (
     <div className="p-8">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold text-white mb-2">
           👑 Süper Admin Paneli
         </h1>
@@ -40,6 +47,9 @@ export default async function SuperAdminDashboard() {
             </div>
           ))}
         </div>
+
+        {/* Grafikler ve Top Tablo */}
+        <OverviewCharts trendData={trendData as any} topOrgs={topOrgs as any} />
       </div>
     </div>
   );
