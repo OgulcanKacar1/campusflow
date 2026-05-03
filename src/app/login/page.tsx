@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { loginWithPasswordAndOTP, registerWithPassword, verifyOTP } from '@/app/auth/actions';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,7 +11,6 @@ import { Loader2, Mail, Lock, KeyRound, ArrowRight, User } from 'lucide-react';
 type AuthMode = 'login' | 'register' | 'otp';
 
 export default function LoginPage() {
-  const router = useRouter();
   const [mode, setMode] = useState<AuthMode>('login');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,13 +48,17 @@ export default function LoginPage() {
       } else if (mode === 'otp') {
         formData.append('email', email);
         formData.append('type', 'email');
+        // verifyOTP server action başarılıysa doğrudan redirect('/dashboard') yapıyor.
+        // Burada sadece hata durumunu yönetiyoruz.
         const result = await verifyOTP(formData);
         if (result?.error) throw new Error(result.error);
-        if (result?.success) {
-          router.push('/dashboard');
-        }
       }
     } catch (err: any) {
+      // NEXT_REDIRECT hatası server action'ın redirect() çağrısından gelir.
+      // Bu bir hata değil, başarılı yönlendirmedir — tekrar fırlat.
+      if (err?.digest?.startsWith('NEXT_REDIRECT')) {
+        throw err;
+      }
       setError(err.message);
     } finally {
       setLoading(false);
