@@ -19,7 +19,12 @@ export async function getRegistrationTrend(daysBack = 30) {
   const { data, error } = await supabase.rpc('get_registration_trend', { days_back: daysBack });
 
   if (error) {
-    console.error('getRegistrationTrend error:', error);
+    console.error('getRegistrationTrend error:', {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint
+    });
     return [];
   }
   return data;
