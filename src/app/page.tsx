@@ -2,45 +2,44 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { ArrowRight, Bot, Shield, BarChart3, Users, Zap, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Bot, Shield, BarChart3, Users, Zap, CheckCircle2, Layout, Sparkles } from 'lucide-react';
 
-const fadeIn = {
-  hidden: { opacity: 0, y: 30 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
-};
-
-const staggerContainer = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.2 }
-  }
+const fadeInUp = {
+  hidden: { opacity: 0, y: 40 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } }
 };
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-[#050505] text-white selection:bg-purple-500/30 font-sans overflow-x-hidden">
-      {/* Arkaplan Efektleri */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-purple-900/20 blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-blue-900/20 blur-[120px]" />
+    <div className="min-h-screen bg-[#030303] text-white selection:bg-purple-500/30 font-sans overflow-x-hidden antialiased">
+      {/* Premium Background Effects */}
+      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] rounded-full bg-purple-600/10 blur-[140px]" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-blue-600/10 blur-[140px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.02)_0%,transparent_100%)]" />
       </div>
 
-      {/* Navbar */}
-      <nav className="relative z-50 border-b border-white/5 bg-black/50 backdrop-blur-md sticky top-0">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center font-bold">
-              C
+      {/* Modern Navbar */}
+      <nav className="relative z-50 bg-black/20 backdrop-blur-xl border-b border-white/[0.05] sticky top-0">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-blue-500 p-[1px]">
+              <div className="w-full h-full bg-black rounded-[11px] flex items-center justify-center font-bold text-lg">
+                C
+              </div>
             </div>
-            <span className="text-xl font-bold tracking-tight">CampusFlow</span>
+            <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white to-white/60">
+              CampusFlow
+            </span>
           </div>
-          <div className="flex items-center gap-4">
-            <Link href="#features" className="text-sm text-gray-400 hover:text-white transition-colors hidden md:block">Özellikler</Link>
-            <Link href="#pricing" className="text-sm text-gray-400 hover:text-white transition-colors hidden md:block mr-4">Fiyatlandırma</Link>
+          <div className="flex items-center gap-8">
+            <div className="hidden md:flex items-center gap-6">
+              <Link href="#features" className="text-sm text-white/50 hover:text-white transition-colors">Özellikler</Link>
+              <Link href="#pricing" className="text-sm text-white/50 hover:text-white transition-colors">Fiyatlandırma</Link>
+            </div>
             <Link 
               href="/login" 
-              className="px-5 py-2.5 text-sm font-medium rounded-full bg-white text-black hover:bg-gray-200 transition-colors flex items-center gap-2"
+              className="px-6 py-2 rounded-full bg-white text-black text-sm font-semibold hover:bg-white/90 transition-all active:scale-95 flex items-center gap-2"
             >
               Giriş Yap <ArrowRight className="w-4 h-4" />
             </Link>
@@ -49,193 +48,199 @@ export default function Home() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative z-10 pt-32 pb-20 px-6">
-        <div className="max-w-5xl mx-auto text-center">
+      <section className="relative z-10 pt-24 pb-32 px-6">
+        <div className="max-w-4xl mx-auto text-center">
           <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={fadeIn}
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-sm text-purple-300 mb-8"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-purple-300 mb-10 shadow-[0_0_20px_rgba(168,85,247,0.15)]"
           >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
-            </span>
-            CampusFlow v2.0 Yayında!
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>CampusFlow v2.0 Şimdi Üniversitelerde</span>
           </motion.div>
           
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.1 }}
-            className="text-5xl md:text-7xl font-extrabold tracking-tight mb-8 leading-tight"
+            transition={{ duration: 0.8, delay: 0.1 }}
+            className="text-5xl md:text-7xl font-bold tracking-tight mb-10 leading-[1.2]"
           >
-            Üniversite Süreçlerini <br className="hidden md:block" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-500">
-              Yapay Zeka
-            </span> ile Otomatize Edin
+            Akademik Hayatı <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-blue-400 to-emerald-400">
+              Yeniden Tanımlayın
+            </span>
           </motion.h1>
           
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.2 }}
-            className="text-lg md:text-xl text-gray-400 mb-12 max-w-2xl mx-auto leading-relaxed"
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="text-base md:text-lg text-white/50 mb-14 max-w-2xl mx-auto leading-relaxed"
           >
-            Akademik proje yönetimi, akıllı notlandırma ve izole kurum altyapısıyla
-            öğrenci ve hocalar arasındaki duvarları yıkın.
+            Üniversite projelerini, takımları ve dersleri yapay zeka desteğiyle tek bir merkezden yönetin. Modern, hızlı ve izole SaaS deneyimi.
           </motion.p>
 
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.3 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4"
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-6"
           >
             <Link 
               href="/login" 
-              className="w-full sm:w-auto px-8 py-4 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-10 py-4 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold hover:shadow-[0_0_30px_rgba(147,51,234,0.3)] transition-all active:scale-95 text-center"
             >
-              Platforma Git
+              Hemen Başla
             </Link>
-            <button className="w-full sm:w-auto px-8 py-4 rounded-full bg-white/5 text-white font-medium hover:bg-white/10 transition-colors border border-white/10">
-              Demo İste
+            <button className="w-full sm:w-auto px-10 py-4 rounded-full bg-white/5 text-white/80 font-bold hover:bg-white/10 transition-all border border-white/10 hover:text-white">
+              Sistemi İncele
             </button>
           </motion.div>
         </div>
 
-        {/* Dashboard Mockup Placeholder */}
+        {/* Elegant Dashboard Mockup Container */}
         <motion.div 
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 0.5, type: 'spring' }}
-          className="max-w-6xl mx-auto mt-20 relative"
+          initial={{ opacity: 0, y: 60 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 1, delay: 0.2 }}
+          className="max-w-6xl mx-auto mt-24 relative"
         >
-          <div className="absolute -inset-1 bg-gradient-to-r from-purple-500 to-blue-600 rounded-2xl blur opacity-30 animate-pulse" />
-          <div className="relative aspect-[16/9] rounded-2xl bg-[#0a0a0a] border border-white/10 overflow-hidden flex flex-col items-center justify-center">
-            {/* 
-              BURAYA EKRAN GÖRÜNTÜSÜ GELECEK
-              İleride buraya <img src="/dashboard-screenshot.png" className="w-full h-full object-cover" /> koyabilirsin.
-            */}
-            <div className="text-center p-8">
-              <div className="w-20 h-20 bg-white/5 rounded-2xl mx-auto mb-4 flex items-center justify-center border border-white/10">
-                <BarChart3 className="w-10 h-10 text-gray-500" />
+          <div className="absolute -inset-[2px] bg-gradient-to-r from-purple-500/50 via-blue-500/50 to-emerald-500/50 rounded-[32px] blur-2xl opacity-20" />
+          <div className="relative rounded-[30px] bg-[#0a0a0a] border border-white/10 p-2 shadow-2xl overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-tr from-purple-500/5 to-transparent pointer-events-none" />
+            <div className="aspect-[16/10] w-full rounded-[22px] bg-zinc-900/50 border border-white/5 flex flex-col items-center justify-center relative overflow-hidden">
+              {/* Burası senin logo/görsel alanın */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center opacity-40">
+                <Layout className="w-24 h-24 text-white/10 mb-6" />
+                <p className="text-white/20 font-mono text-sm tracking-widest uppercase">Dashboard Screenshot Area</p>
               </div>
-              <h3 className="text-xl font-medium text-gray-300">Dashboard Görseli (Placeholder)</h3>
-              <p className="text-gray-500 mt-2">Daha sonra buraya uygulamanın ekran görüntüsünü ekleyebilirsin.</p>
+              
+              {/* Cam efekti parlaması */}
+              <div className="absolute top-0 left-1/4 w-1/2 h-full bg-white/[0.02] skew-x-[-25deg] transform transition-transform duration-1000 group-hover:translate-x-full" />
             </div>
           </div>
         </motion.div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="relative z-10 py-32 px-6 bg-black/30 border-y border-white/5">
+      <section id="features" className="relative z-10 py-32 px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-20">
-            <h2 className="text-3xl md:text-5xl font-bold mb-6">Neden CampusFlow?</h2>
-            <p className="text-gray-400 text-lg max-w-2xl mx-auto">Modern akademik dünyanın ihtiyaç duyduğu tüm araçlar tek bir platformda toplandı.</p>
+          <div className="text-center mb-24">
+            <h2 className="text-4xl md:text-6xl font-bold mb-6 tracking-tight">Akıllı Çözümler</h2>
+            <p className="text-white/40 text-lg max-w-2xl mx-auto">CampusFlow, akademik verimliliği artırmak için geliştirilen son teknoloji araçlarla donatılmıştır.</p>
           </div>
 
-          <motion.div 
-            variants={staggerContainer}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-8"
-          >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { icon: Bot, title: "AI Destekli Asistan", desc: "Hocalar için otomatik notlandırma önerileri ve projeler için yapay zeka analizleri.", color: "text-purple-400", bg: "bg-purple-400/10" },
-              { icon: Shield, title: "İzole Organizasyonlar", desc: "Her üniversite kendi güvenli ve izole veritabanı alanında (tenant) çalışır.", color: "text-blue-400", bg: "bg-blue-400/10" },
-              { icon: Users, title: "Gelişmiş Takım Sistemi", desc: "Rastgele, manuel veya yetenek bazlı gelişmiş takım oluşturma algoritmaları.", color: "text-emerald-400", bg: "bg-emerald-400/10" },
-            ].map((feature, i) => (
+              { icon: Bot, title: "AI Notlandırma", desc: "Yapay zeka ile proje kriterlerini analiz edin ve objektif geri bildirimler oluşturun.", gradient: "from-purple-500/20 to-transparent" },
+              { icon: Shield, title: "Güvenli Altyapı", desc: "Her üniversite için tamamen izole veritabanı ve güvenli kimlik doğrulama süreçleri.", gradient: "from-blue-500/20 to-transparent" },
+              { icon: Users, title: "Takım Yönetimi", desc: "Öğrencileri ilgi alanlarına ve yeteneklerine göre en uygun takımlara yerleştirin.", gradient: "from-emerald-500/20 to-transparent" },
+            ].map((f, i) => (
               <motion.div 
                 key={i}
-                variants={fadeIn}
-                className="p-8 rounded-3xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors group"
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={fadeInUp}
+                custom={i}
+                className="group relative p-1 rounded-3xl bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.05] transition-all"
               >
-                <div className={`w-14 h-14 rounded-2xl ${feature.bg} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
-                  <feature.icon className={`w-7 h-7 ${feature.color}`} />
+                <div className={`absolute inset-0 bg-gradient-to-br ${f.gradient} opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl`} />
+                <div className="relative p-10">
+                  <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500">
+                    <f.icon className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-4 tracking-tight">{f.title}</h3>
+                  <p className="text-white/40 leading-relaxed text-sm md:text-base">{f.desc}</p>
                 </div>
-                <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-                <p className="text-gray-400 leading-relaxed">{feature.desc}</p>
               </motion.div>
             ))}
-          </motion.div>
+          </div>
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section id="pricing" className="relative z-10 py-32 px-6">
+      {/* Pricing Section - REDESIGNED */}
+      <section id="pricing" className="relative z-10 py-32 px-6 bg-[#070707]">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-20">
-            <h2 className="text-3xl md:text-5xl font-bold mb-6">Üniversiteniz İçin En Uygun Plan</h2>
-            <p className="text-gray-400 text-lg max-w-2xl mx-auto">İhtiyacınıza göre ölçeklenebilen, şeffaf fiyatlandırma seçenekleri.</p>
+          <div className="text-center mb-24">
+            <h2 className="text-4xl md:text-6xl font-bold mb-6 tracking-tight">Esnek Paketler</h2>
+            <p className="text-white/40 text-lg">Üniversitenizin ölçeğine uygun planı seçin.</p>
           </div>
 
-          <motion.div 
-            variants={staggerContainer}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto"
-          >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch max-w-6xl mx-auto">
             {/* Trial */}
-            <motion.div variants={fadeIn} className="p-8 rounded-3xl bg-white/5 border border-white/5 flex flex-col">
-              <h3 className="text-xl font-bold mb-2">Deneme (Trial)</h3>
-              <p className="text-gray-400 mb-6">Sistemi test etmek isteyen okullar için.</p>
+            <div className="p-10 rounded-[32px] bg-white/[0.03] border border-white/[0.08] flex flex-col hover:border-white/20 transition-all">
+              <h3 className="text-xl font-medium text-white/60 mb-2">Deneme</h3>
               <div className="text-4xl font-bold mb-8">Ücretsiz</div>
-              <ul className="space-y-4 mb-8 flex-1">
-                <li className="flex items-center gap-3 text-sm text-gray-300"><CheckCircle2 className="w-5 h-5 text-purple-400" /> Max 50 Öğrenci</li>
-                <li className="flex items-center gap-3 text-sm text-gray-300"><CheckCircle2 className="w-5 h-5 text-purple-400" /> 3 Eğitmen (Instructor)</li>
-                <li className="flex items-center gap-3 text-sm text-gray-300"><CheckCircle2 className="w-5 h-5 text-purple-400" /> Temel AI Özellikleri</li>
-              </ul>
-              <button className="w-full py-3 rounded-xl bg-white/10 hover:bg-white/20 transition-colors font-medium">Hemen Başla</button>
-            </motion.div>
+              <div className="space-y-5 mb-10 flex-1">
+                {["50 Öğrenciye kadar", "3 Eğitmen hesabı", "Temel AI desteği"].map(item => (
+                  <div key={item} className="flex items-center gap-3 text-sm text-white/40">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" /> {item}
+                  </div>
+                ))}
+              </div>
+              <button className="w-full py-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all font-bold border border-white/10">Denemeye Başla</button>
+            </div>
 
-            {/* Premium */}
-            <motion.div variants={fadeIn} className="p-8 rounded-3xl bg-gradient-to-b from-purple-600/20 to-blue-600/10 border border-purple-500/30 flex flex-col relative transform md:-translate-y-4">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full text-xs font-bold tracking-wide">EN ÇOK TERCİH EDİLEN</div>
-              <h3 className="text-xl font-bold mb-2">Kurumsal</h3>
-              <p className="text-gray-400 mb-6">Tüm okulu dijitalleştirmek isteyenler için.</p>
-              <div className="text-4xl font-bold mb-8">Özel Fiyat</div>
-              <ul className="space-y-4 mb-8 flex-1">
-                <li className="flex items-center gap-3 text-sm text-gray-300"><CheckCircle2 className="w-5 h-5 text-purple-400" /> Sınırsız Öğrenci</li>
-                <li className="flex items-center gap-3 text-sm text-gray-300"><CheckCircle2 className="w-5 h-5 text-purple-400" /> Sınırsız Eğitmen</li>
-                <li className="flex items-center gap-3 text-sm text-gray-300"><CheckCircle2 className="w-5 h-5 text-purple-400" /> Tam Kapsamlı AI Asistanı</li>
-                <li className="flex items-center gap-3 text-sm text-gray-300"><CheckCircle2 className="w-5 h-5 text-purple-400" /> 7/24 Öncelikli Destek</li>
-              </ul>
-              <button className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:opacity-90 transition-opacity font-medium">İletişime Geçin</button>
-            </motion.div>
+            {/* Premium - Featured */}
+            <div className="relative p-12 rounded-[40px] bg-white/[0.06] border-2 border-purple-500/50 flex flex-col shadow-[0_0_50px_rgba(168,85,247,0.15)] transform md:-translate-y-8 z-20">
+              <div className="absolute -top-5 left-1/2 -translate-x-1/2 px-6 py-1.5 bg-purple-500 text-[10px] font-bold rounded-full tracking-widest uppercase shadow-lg">Kurumsal</div>
+              <h3 className="text-2xl font-bold text-white mb-2 mt-6">Tam Erişim</h3>
+              <div className="text-4xl font-bold mb-8 italic bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-blue-400">Özel Teklif</div>
+              <div className="space-y-5 mb-10 flex-1">
+                {["Sınırsız kullanıcı", "Öncelikli AI işlemci", "Özel üniversite domaini", "7/24 Teknik destek"].map(item => (
+                  <div key={item} className="flex items-center gap-3 text-sm text-white">
+                    <CheckCircle2 className="w-4 h-4 text-purple-500" /> {item}
+                  </div>
+                ))}
+              </div>
+              <button className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 hover:shadow-[0_0_20px_rgba(147,51,234,0.4)] transition-all font-bold">Bize Ulaşın</button>
+            </div>
 
             {/* Basic */}
-            <motion.div variants={fadeIn} className="p-8 rounded-3xl bg-white/5 border border-white/5 flex flex-col">
-              <h3 className="text-xl font-bold mb-2">Başlangıç (Basic)</h3>
-              <p className="text-gray-400 mb-6">Küçük fakülteler ve enstitüler için.</p>
-              <div className="text-4xl font-bold mb-8 flex items-end gap-1">₺9.999 <span className="text-lg text-gray-500 font-normal">/ay</span></div>
-              <ul className="space-y-4 mb-8 flex-1">
-                <li className="flex items-center gap-3 text-sm text-gray-300"><CheckCircle2 className="w-5 h-5 text-purple-400" /> Max 500 Öğrenci</li>
-                <li className="flex items-center gap-3 text-sm text-gray-300"><CheckCircle2 className="w-5 h-5 text-purple-400" /> 20 Eğitmen</li>
-                <li className="flex items-center gap-3 text-sm text-gray-300"><CheckCircle2 className="w-5 h-5 text-purple-400" /> Standart Destek</li>
-              </ul>
-              <button className="w-full py-3 rounded-xl bg-white/10 hover:bg-white/20 transition-colors font-medium">Satın Al</button>
-            </motion.div>
-          </motion.div>
+            <div className="p-10 rounded-[32px] bg-white/[0.03] border border-white/[0.08] flex flex-col hover:border-white/20 transition-all">
+              <h3 className="text-xl font-medium text-white/60 mb-2">Standart</h3>
+              <div className="text-4xl font-bold mb-8">₺9.999 <span className="text-sm font-normal text-white/30">/ay</span></div>
+              <div className="space-y-5 mb-10 flex-1">
+                {["500 Öğrenciye kadar", "25 Eğitmen hesabı", "Gelişmiş raporlama"].map(item => (
+                  <div key={item} className="flex items-center gap-3 text-sm text-white/40">
+                    <CheckCircle2 className="w-4 h-4 text-blue-500" /> {item}
+                  </div>
+                ))}
+              </div>
+              <button className="w-full py-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all font-bold border border-white/10 text-white/80">Satın Al</button>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-white/10 py-12 px-6">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center font-bold text-xs">C</div>
-            <span className="font-semibold text-gray-300">CampusFlow</span>
+      {/* Modern Footer */}
+      <footer className="relative z-10 py-20 px-6 border-t border-white/[0.05]">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-10">
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center font-bold">C</div>
+              <span className="text-xl font-bold tracking-tight">CampusFlow</span>
+            </div>
+            <p className="text-white/30 text-sm max-w-xs leading-relaxed">Yeni nesil akademik yönetim sistemi. Geleceği birlikte inşa edelim.</p>
           </div>
-          <p className="text-gray-500 text-sm">© 2026 CampusFlow Inc. Tüm hakları saklıdır.</p>
-          <div className="flex gap-4">
-            <Link href="#" className="text-gray-500 hover:text-white transition-colors">Twitter</Link>
-            <Link href="#" className="text-gray-500 hover:text-white transition-colors">LinkedIn</Link>
-            <Link href="#" className="text-gray-500 hover:text-white transition-colors">İletişim</Link>
+          <div className="flex gap-12">
+            <div className="flex flex-col gap-4">
+              <span className="text-xs font-bold text-white/20 uppercase tracking-widest">Platform</span>
+              <Link href="#" className="text-sm text-white/40 hover:text-white transition-colors">Özellikler</Link>
+              <Link href="#" className="text-sm text-white/40 hover:text-white transition-colors">Güvenlik</Link>
+            </div>
+            <div className="flex flex-col gap-4">
+              <span className="text-xs font-bold text-white/20 uppercase tracking-widest">İletişim</span>
+              <Link href="#" className="text-sm text-white/40 hover:text-white transition-colors">Twitter</Link>
+              <Link href="#" className="text-sm text-white/40 hover:text-white transition-colors">E-posta</Link>
+            </div>
           </div>
+        </div>
+        <div className="max-w-7xl mx-auto mt-20 pt-8 border-t border-white/[0.05] text-center md:text-left">
+          <p className="text-white/20 text-[10px] tracking-widest uppercase italic">© 2026 CampusFlow Inc. All rights reserved.</p>
         </div>
       </footer>
     </div>
