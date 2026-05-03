@@ -1,5 +1,4 @@
 import { getSuperAdminStats, getOrganizationsWithDomains } from './actions';
-import OrganizationList from './OrganizationList';
 
 export default async function SuperAdminDashboard() {
   const statsList = await getSuperAdminStats();
@@ -41,9 +40,6 @@ export default async function SuperAdminDashboard() {
             </div>
           ))}
         </div>
-
-        {/* Organizasyon Listesi (Client Component) */}
-        <OrganizationList organizations={organizations as any} />
       </div>
     </div>
   );
