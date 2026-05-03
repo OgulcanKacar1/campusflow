@@ -1,5 +1,7 @@
 'use client';
 
+import { logout } from '@/app/auth/actions';
+
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
@@ -139,27 +141,36 @@ export default function Sidebar({ role, fullName, email }: SidebarProps) {
       {/* Alt: Kullanıcı Profili */}
       <div className="p-2 border-t border-white/5">
         {!collapsed ? (
-          <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer group">
-            {/* Avatar */}
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-xs font-bold">
-                {fullName?.charAt(0)?.toUpperCase() ?? 'U'}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-white text-xs font-semibold truncate">{fullName}</p>
-              <p className="text-gray-500 text-[10px] truncate">{email}</p>
-            </div>
-            <LogOut size={14} className="text-gray-600 group-hover:text-red-400 transition-colors flex-shrink-0" />
-          </div>
+          <form action={logout}>
+            <button
+              type="submit"
+              className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer group"
+            >
+              {/* Avatar */}
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-xs font-bold">
+                  {fullName?.charAt(0)?.toUpperCase() ?? 'U'}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-white text-xs font-semibold truncate">{fullName}</p>
+                <p className="text-gray-500 text-[10px] truncate">{email}</p>
+              </div>
+              <LogOut size={14} className="text-gray-600 group-hover:text-red-400 transition-colors flex-shrink-0" />
+            </button>
+          </form>
         ) : (
-          <div className="flex justify-center py-1">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
+          <form action={logout} className="flex justify-center py-1">
+            <button
+              type="submit"
+              title="Çıkış Yap"
+              className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center hover:opacity-80 transition-opacity"
+            >
               <span className="text-white text-xs font-bold">
                 {fullName?.charAt(0)?.toUpperCase() ?? 'U'}
               </span>
-            </div>
-          </div>
+            </button>
+          </form>
         )}
       </div>
 
