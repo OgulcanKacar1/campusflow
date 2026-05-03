@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -9,8 +9,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, ShieldAlert, CheckCircle2, Play, Pause, Loader2 } from 'lucide-react';
-import { createOrganization, updateOrganizationStatus } from './actions';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus, Trash2, ShieldAlert, CheckCircle2, Play, Pause, Loader2, Search } from 'lucide-react';
+import { createOrganization, updateOrganizationStatus, updateOrganizationDetails } from './actions';
 
 type Organization = {
   id: string;
@@ -28,8 +29,35 @@ type Props = {
 
 export default function OrganizationList({ organizations }: Props) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(false);
   const [extraDomains, setExtraDomains] = useState<Array<{ domain: string; role_hint: string }>>([]);
+  
+  // Arama ve filtre state'leri
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  const filteredOrganizations = useMemo(() => {
+    return organizations.filter(org => {
+      // Durum filtrelemesi
+      if (statusFilter !== 'all' && org.status !== statusFilter) {
+        return false;
+      }
+      
+      // Arama filtrelemesi (isim veya alan adlarında)
+      if (search.trim() !== '') {
+        const term = search.toLowerCase();
+        const matchesName = org.name.toLowerCase().includes(term);
+        const matchesDomain = org.domains?.some(d => d.domain.toLowerCase().includes(term));
+        if (!matchesName && !matchesDomain) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+  }, [organizations, search, statusFilter]);
 
   const handleAddExtraDomain = () => {
     setExtraDomains([...extraDomains, { domain: '', role_hint: 'student' }]);
@@ -64,6 +92,24 @@ export default function OrganizationList({ organizations }: Props) {
     setLoading(false);
   };
 
+  const handleEditSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingOrg) return;
+    setLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    const result = await updateOrganizationDetails(editingOrg.id, formData);
+    
+    if (result.error) {
+      alert(result.error);
+    } else {
+      setIsEditOpen(false);
+      setEditingOrg(null);
+    }
+    
+    setLoading(false);
+  };
+
   const handleStatusToggle = async (org: Organization) => {
     const newStatus = org.status === 'active' ? 'suspended' : 'active';
     if (confirm(`${org.name} organizasyonunu ${newStatus === 'active' ? 'aktif etmek' : 'askıya almak'} istediğinize emin misiniz?`)) {
@@ -83,11 +129,9 @@ export default function OrganizationList({ organizations }: Props) {
         </div>
         
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/90">
-              <Plus className="h-4 w-4 mr-2" />
-              Yeni Organizasyon
-            </Button>
+          <DialogTrigger className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
+            <Plus className="h-4 w-4 mr-2" />
+            Yeni Organizasyon
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px] bg-card border-border text-foreground">
             <DialogHeader>
@@ -181,8 +225,76 @@ export default function OrganizationList({ organizations }: Props) {
             </form>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+          <DialogContent className="sm:max-w-[500px] bg-card border-border text-foreground">
+            <DialogHeader>
+              <DialogTitle>Organizasyonu Düzenle</DialogTitle>
+              <DialogDescription>
+                Organizasyon adı, planı ve öğrenci limitini güncelleyebilirsiniz.
+              </DialogDescription>
+            </DialogHeader>
+            {editingOrg && (
+              <form onSubmit={handleEditSubmit} className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name">Organizasyon Adı</Label>
+                  <Input id="edit-name" name="name" required defaultValue={editingOrg.name} className="bg-background" />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Plan</Label>
+                    <Select name="plan" defaultValue={editingOrg.plan}>
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder="Plan seçin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="trial">Trial</SelectItem>
+                        <SelectItem value="basic">Basic</SelectItem>
+                        <SelectItem value="premium">Premium</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-maxStudents">Öğrenci Limiti</Label>
+                    <Input id="edit-maxStudents" name="maxStudents" type="number" defaultValue={editingOrg.max_students || ''} placeholder="Sınırsız için boş bırakın" className="bg-background" />
+                  </div>
+                </div>
+
+                <DialogFooter className="pt-4">
+                  <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)} disabled={loading}>İptal</Button>
+                  <Button type="submit" disabled={loading}>
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Güncelle
+                  </Button>
+                </DialogFooter>
+              </form>
+            )}
+          </DialogContent>
+        </Dialog>
       </CardHeader>
       <CardContent>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-[400px]">
+            <TabsList className="bg-background/50 border border-border">
+              <TabsTrigger value="all">Tümü</TabsTrigger>
+              <TabsTrigger value="active">Aktif</TabsTrigger>
+              <TabsTrigger value="suspended">Askıda</TabsTrigger>
+              <TabsTrigger value="trial">Deneme</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Üniversite veya domain ara..."
+              className="w-full bg-background pl-9"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </div>
         <div className="rounded-md border border-border">
           <Table>
             <TableHeader className="bg-muted/50">
@@ -195,14 +307,14 @@ export default function OrganizationList({ organizations }: Props) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {organizations.length === 0 ? (
+              {filteredOrganizations.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    Henüz hiç organizasyon bulunmuyor.
+                    {search ? 'Aramaya uygun organizasyon bulunamadı.' : 'Henüz hiç organizasyon bulunmuyor.'}
                   </TableCell>
                 </TableRow>
               ) : (
-                organizations.map((org) => (
+                filteredOrganizations.map((org) => (
                   <TableRow key={org.id}>
                     <TableCell>
                       <div className="font-medium text-foreground">{org.name}</div>
@@ -235,7 +347,18 @@ export default function OrganizationList({ organizations }: Props) {
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right whitespace-nowrap">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => {
+                          setEditingOrg(org);
+                          setIsEditOpen(true);
+                        }}
+                        className="mr-2"
+                      >
+                        Düzenle
+                      </Button>
                       <Button 
                         variant="ghost" 
                         size="sm" 
@@ -243,9 +366,9 @@ export default function OrganizationList({ organizations }: Props) {
                         className={org.status === 'active' ? 'text-red-400 hover:text-red-300' : 'text-emerald-400 hover:text-emerald-300'}
                       >
                         {org.status === 'active' ? (
-                          <><Pause className="w-4 h-4 mr-2" /> Askıya Al</>
+                          <><Pause className="w-4 h-4 mr-1" /> Askıya Al</>
                         ) : (
-                          <><Play className="w-4 h-4 mr-2" /> Aktif Et</>
+                          <><Play className="w-4 h-4 mr-1" /> Aktif Et</>
                         )}
                       </Button>
                     </TableCell>
