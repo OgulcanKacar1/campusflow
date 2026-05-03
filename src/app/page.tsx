@@ -174,7 +174,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-24">
             <h2 className="text-4xl md:text-6xl font-bold mb-6 tracking-tight">Esnek Paketler</h2>
-            <p className="text-white/40 text-lg">Üniversitenizin ölçeğine uygun planı seçin.</p>
+            <p className="text-white/40 text-lg">Organizasyonunuzun ölçeğine uygun planı seçin.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch max-w-6xl mx-auto">
