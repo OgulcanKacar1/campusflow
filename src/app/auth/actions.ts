@@ -85,7 +85,7 @@ export async function registerWithPassword(formData: FormData) {
 export async function verifyOTP(formData: FormData) {
   const email = formData.get('email') as string;
   const token = formData.get('code') as string;
-  const type = formData.get('type') as 'email' | 'signup'; // 'email' for login, 'signup' for register
+  const type = formData.get('type') as 'email' | 'signup';
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.verifyOtp({
@@ -98,7 +98,10 @@ export async function verifyOTP(formData: FormData) {
     return { error: 'Kod hatalı veya süresi dolmuş.' };
   }
 
-  return { success: true };
+  // Cookie'ler server action içinde set edildi, artık güvenle yönlendiriyoruz.
+  // Client-side router.push() yerine server-side redirect() kullanıyoruz.
+  // Bu, cookie'lerin tarayıcıya doğru iletilmesini garanti eder.
+  redirect('/dashboard');
 }
 
 export async function logout() {

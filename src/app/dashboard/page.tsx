@@ -5,20 +5,26 @@ export default async function DashboardPage() {
   const supabase = await createClient();
 
   // Oturum kontrolü
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  console.log('[Dashboard] user:', user?.id ?? 'NULL', '| error:', userError?.message ?? 'none');
+
   if (!user) {
+    console.log('[Dashboard] → No user, redirecting to /login');
     redirect('/login');
   }
 
   // Kullanıcının profilini ve rolünü çek
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', user.id)
     .single();
 
+  console.log('[Dashboard] profile:', profile?.role ?? 'NULL', '| error:', profileError?.message ?? 'none');
+
   if (!profile) {
     // Profil yoksa, oturumu kapat ki middleware tekrar dashboard'a yönlendirmesin (sonsuz döngü engeli)
+    console.log('[Dashboard] → No profile, signing out and redirecting to /login');
     await supabase.auth.signOut();
     redirect('/login');
   }
