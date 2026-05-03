@@ -1,12 +1,20 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, Variants } from 'framer-motion';
 import Link from 'next/link';
 import { ArrowRight, Bot, Shield, BarChart3, Users, Zap, CheckCircle2, Layout, Sparkles } from 'lucide-react';
 
-const fadeInUp = {
+const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 40 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } }
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      delay: i * 0.1,
+      duration: 0.8,
+      ease: [0.16, 1, 0.3, 1]
+    }
+  })
 };
 
 export default function Home() {

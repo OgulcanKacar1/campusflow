@@ -35,7 +35,8 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   // Eğer kullanıcı giriş yapmamışsa ve korumalı bir sayfaya girmeye çalışıyorsa login'e at
-  if (!user && !pathname.startsWith('/login') && !pathname.startsWith('/auth')) {
+  // Not: '/' (ana sayfa), '/login' ve '/auth' sayfaları halka açıktır.
+  if (!user && pathname !== '/' && !pathname.startsWith('/login') && !pathname.startsWith('/auth')) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
