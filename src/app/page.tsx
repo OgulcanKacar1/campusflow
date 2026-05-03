@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { ArrowRight, Bot, Shield, BarChart3, Users, Zap, CheckCircle2, Layout, Sparkles } from 'lucide-react';
 
 const fadeInUp: Variants = {
-  hidden: { opacity: 0, y: 40 },
+  hidden: { opacity: 0, y: 20 },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
@@ -140,7 +140,7 @@ export default function Home() {
             <p className="text-white/40 text-lg max-w-2xl mx-auto">CampusFlow, akademik verimliliği artırmak için geliştirilen son teknoloji araçlarla donatılmıştır.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             {[
               { icon: Bot, title: "AI Notlandırma", desc: "Yapay zeka ile proje kriterlerini analiz edin ve objektif geri bildirimler oluşturun.", gradient: "from-purple-500/20 to-transparent" },
               { icon: Shield, title: "Güvenli Altyapı", desc: "Her üniversite için tamamen izole veritabanı ve güvenli kimlik doğrulama süreçleri.", gradient: "from-blue-500/20 to-transparent" },
