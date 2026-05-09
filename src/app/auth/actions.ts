@@ -64,6 +64,20 @@ export async function registerWithPassword(formData: FormData) {
   }
 
   const supabase = await createClient();
+
+  const domain = email.split('@')[1];
+  if (email !== 'ogulcankacarr@gmail.com') {
+    const { data: orgDomain } = await supabase
+      .from('organization_domains')
+      .select('id')
+      .eq('domain', domain)
+      .single();
+
+    if (!orgDomain) {
+      return { error: `Okulunuz (${domain}) henüz CampusFlow sistemine kayıtlı değil.` };
+    }
+  }
+
   const { error } = await supabase.auth.signUp({
     email,
     password,
