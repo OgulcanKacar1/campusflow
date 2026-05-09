@@ -194,7 +194,7 @@ export default function OrganizationList({ organizations }: Props) {
                         />
                         <Select 
                           value={d.role_hint} 
-                          onValueChange={(val) => handleExtraDomainChange(index, 'role_hint', val)}
+                          onValueChange={(val) => handleExtraDomainChange(index, 'role_hint', val as string)}
                         >
                           <SelectTrigger className="w-[130px] bg-background">
                             <SelectValue />
