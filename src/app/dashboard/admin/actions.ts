@@ -129,3 +129,39 @@ export async function updateOrgUserRole(userId: string, newRole: 'student' | 'in
 
   return { success: true };
 }
+
+export async function getOrgSettings() {
+  const supabase = await createClient();
+
+  // 1. Adminin organizasyonunu bul
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Oturum bulunamadı' };
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', user.id)
+    .single();
+
+  const orgId = profile?.organization_id;
+  if (!orgId) return { error: 'Organizasyon bulunamadı' };
+
+  // 2. Organizasyon bilgilerini getir
+  const { data: organization, error: orgError } = await supabase
+    .from('organizations')
+    .select('*')
+    .eq('id', orgId)
+    .single();
+
+  if (orgError) return { error: orgError.message };
+
+  // 3. Organizasyona ait domainleri getir
+  const { data: domains, error: domainsError } = await supabase
+    .from('organization_domains')
+    .select('*')
+    .eq('organization_id', orgId);
+
+  if (domainsError) return { error: domainsError.message };
+
+  return { organization, domains };
+}
