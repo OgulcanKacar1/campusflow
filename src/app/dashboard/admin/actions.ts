@@ -165,3 +165,58 @@ export async function getOrgSettings() {
 
   return { organization, domains };
 }
+
+export async function getOrgCourses() {
+  const supabase = await createClient();
+
+  // 1. Adminin organizasyonunu bul
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Oturum bulunamadı', data: [] };
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', user.id)
+    .single();
+
+  const orgId = profile?.organization_id;
+  if (!orgId) return { error: 'Organizasyon bulunamadı', data: [] };
+
+  // 2. Okuldaki dersleri çek. 
+  // Hocanın adını profiles'dan, öğrenci sayısını da course_enrollments'dan sayacağız.
+  // Not: Supabase'de alt sorgu count'u almak için relations kullanılır.
+  const { data: courses, error } = await supabase
+    .from('courses')
+    .select(`
+      id,
+      code,
+      name,
+      term,
+      year,
+      status,
+      profiles!instructor_id ( full_name ),
+      course_enrollments ( count )
+    `)
+    .eq('organization_id', orgId)
+    .order('year', { ascending: false })
+    .order('term', { ascending: false })
+    .order('code', { ascending: true });
+
+  if (error) {
+    return { error: error.message, data: [] };
+  }
+
+  // Veriyi arayüzün beklediği formata maple
+  const formattedCourses = courses?.map(c => ({
+    id: c.id,
+    code: c.code,
+    name: c.name,
+    term: c.term,
+    year: c.year,
+    status: c.status,
+    instructorName: (c.profiles as any)?.full_name || 'Bilinmiyor',
+    studentCount: (c.course_enrollments as any)?.[0]?.count || 0
+  })) || [];
+
+  return { data: formattedCourses };
+}

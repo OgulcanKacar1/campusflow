@@ -15,12 +15,19 @@ export default async function DashboardLayout({
     redirect('/login');
   }
 
-  // Profil bilgilerini çek
+  // Profil bilgilerini ve bağlı olduğu okulu çek
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, full_name, email')
+    .select(`
+      role, 
+      full_name, 
+      email,
+      organizations ( name )
+    `)
     .eq('id', user.id)
     .single();
+
+  const orgName = (profile?.organizations as any)?.name || null;
 
   if (!profile) {
     await supabase.auth.signOut();
@@ -34,6 +41,7 @@ export default async function DashboardLayout({
         role={profile.role}
         fullName={profile.full_name}
         email={profile.email}
+        orgName={orgName}
       />
 
       {/* Ana İçerik */}

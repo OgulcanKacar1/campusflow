@@ -29,6 +29,7 @@ const menuByRole: Record<string, { label: string; href: string; icon: React.Elem
   ],
   admin: [
     { label: 'Genel Bakış', href: '/dashboard/admin', icon: LayoutDashboard },
+    { label: 'Dersler', href: '/dashboard/admin/courses', icon: BookOpen },
     { label: 'Kullanıcı Yönetimi', href: '/dashboard/admin/users', icon: Users },
     { label: 'Ayarlar', href: '/dashboard/admin/settings', icon: Settings },
   ],
@@ -59,9 +60,10 @@ interface SidebarProps {
   role: string;
   fullName: string;
   email: string;
+  orgName?: string | null;
 }
 
-export default function Sidebar({ role, fullName, email }: SidebarProps) {
+export default function Sidebar({ role, fullName, email, orgName }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
 
@@ -94,12 +96,23 @@ export default function Sidebar({ role, fullName, email }: SidebarProps) {
         )}
       </div>
 
-      {/* Rol Rozeti */}
+      {/* Okul Adı ve Rol Rozeti */}
       {!collapsed && (
-        <div className="mx-3 mt-4 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.06]">
-          <div className={`flex items-center gap-2 text-xs font-semibold ${config.color}`}>
-            <RoleIcon size={13} />
-            <span>{config.label}</span>
+        <div className="mx-3 mt-4 flex flex-col gap-1.5">
+          {orgName ? (
+            <div className="px-2 text-xs font-semibold text-gray-400 truncate" title={orgName}>
+              {orgName}
+            </div>
+          ) : (
+            <div className="px-2 text-xs font-semibold text-purple-300 truncate">
+              Sistem Yöneticisi
+            </div>
+          )}
+          <div className="px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.06]">
+            <div className={`flex items-center gap-2 text-xs font-semibold ${config.color}`}>
+              <RoleIcon size={13} />
+              <span>{config.label}</span>
+            </div>
           </div>
         </div>
       )}
