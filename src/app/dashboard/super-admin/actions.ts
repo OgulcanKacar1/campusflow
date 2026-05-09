@@ -163,3 +163,49 @@ export async function updateOrganizationDetails(orgId: string, formData: FormDat
   revalidatePath('/dashboard/super-admin');
   return { success: true };
 }
+
+// ─────────────────────────────────────────────────────────
+// Phase 2A: Admin Atama Fonksiyonları
+// ─────────────────────────────────────────────────────────
+
+export async function getUsersByOrganization(orgId: string) {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, email, role, created_at')
+    .eq('organization_id', orgId)
+    .order('role', { ascending: true })
+    .order('full_name', { ascending: true });
+
+  if (error) {
+    console.error('getUsersByOrganization error:', error);
+    return { error: error.message, data: [] };
+  }
+
+  return { data: data ?? [] };
+}
+
+export async function updateUserRole(
+  userId: string,
+  newRole: 'student' | 'instructor' | 'admin'
+) {
+  // Güvenlik: super_admin rolüne yükseltmeyi tamamen engelle
+  if ((newRole as string) === 'super_admin') {
+    return { error: 'Bu işlem yetkisiz.' };
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ role: newRole })
+    .eq('id', userId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath('/dashboard/super-admin');
+  return { success: true };
+}

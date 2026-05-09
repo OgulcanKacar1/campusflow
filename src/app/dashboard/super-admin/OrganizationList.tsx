@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Trash2, ShieldAlert, CheckCircle2, Play, Pause, Loader2, Search } from 'lucide-react';
-import { createOrganization, updateOrganizationStatus, updateOrganizationDetails } from './actions';
+import { createOrganization, updateOrganizationStatus, updateOrganizationDetails, getUsersByOrganization, updateUserRole } from './actions';
 
 type Organization = {
   id: string;
@@ -27,6 +27,14 @@ type Props = {
   organizations: Organization[];
 };
 
+type OrgUser = {
+  id: string;
+  full_name: string;
+  email: string;
+  role: string;
+  created_at: string;
+};
+
 export default function OrganizationList({ organizations }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -37,6 +45,13 @@ export default function OrganizationList({ organizations }: Props) {
   // Arama ve filtre state'leri
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+
+  // Kullanıcı Yönetimi state'leri
+  const [isUsersOpen, setIsUsersOpen] = useState(false);
+  const [selectedOrgName, setSelectedOrgName] = useState('');
+  const [orgUsers, setOrgUsers] = useState<OrgUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [roleUpdateLoading, setRoleUpdateLoading] = useState<string | null>(null);
 
   const filteredOrganizations = useMemo(() => {
     return organizations.filter(org => {
@@ -58,6 +73,29 @@ export default function OrganizationList({ organizations }: Props) {
       return true;
     });
   }, [organizations, search, statusFilter]);
+
+  const handleOpenUsers = async (org: Organization) => {
+    setSelectedOrgName(org.name);
+    setIsUsersOpen(true);
+    setUsersLoading(true);
+    setOrgUsers([]);
+    const result = await getUsersByOrganization(org.id);
+    if (result.data) setOrgUsers(result.data as OrgUser[]);
+    setUsersLoading(false);
+  };
+
+  const handleRoleUpdate = async (userId: string, newRole: 'student' | 'instructor' | 'admin') => {
+    setRoleUpdateLoading(userId);
+    const result = await updateUserRole(userId, newRole);
+    if (result.error) {
+      alert(result.error);
+    } else {
+      setOrgUsers(prev =>
+        prev.map(u => (u.id === userId ? { ...u, role: newRole } : u))
+      );
+    }
+    setRoleUpdateLoading(null);
+  };
 
   const handleAddExtraDomain = () => {
     setExtraDomains([...extraDomains, { domain: '', role_hint: 'student' }]);
@@ -350,12 +388,20 @@ export default function OrganizationList({ organizations }: Props) {
                     <TableCell className="text-right whitespace-nowrap">
                       <Button 
                         variant="ghost" 
+                        size="sm"
+                        onClick={() => handleOpenUsers(org)}
+                        className="mr-1 text-blue-400 hover:text-blue-300"
+                      >
+                        Kullanıcılar
+                      </Button>
+                      <Button 
+                        variant="ghost" 
                         size="sm" 
                         onClick={() => {
                           setEditingOrg(org);
                           setIsEditOpen(true);
                         }}
-                        className="mr-2"
+                        className="mr-1"
                       >
                         Düzenle
                       </Button>
@@ -379,6 +425,86 @@ export default function OrganizationList({ organizations }: Props) {
           </Table>
         </div>
       </CardContent>
+
+      {/* Kullanıcı Yönetimi Dialog */}
+      <Dialog open={isUsersOpen} onOpenChange={setIsUsersOpen}>
+        <DialogContent className="sm:max-w-[640px] bg-card border-border text-foreground">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              Kullanıcılar — {selectedOrgName}
+            </DialogTitle>
+            <DialogDescription>
+              Bu organizasyondaki kullanıcıların rollerini görüntüleyin ve düzenleyin.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="max-h-[420px] overflow-y-auto mt-2">
+            {usersLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : orgUsers.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8 text-sm">Bu organizasyonda henüz kayıtlı kullanıcı yok.</p>
+            ) : (
+              <Table>
+                <TableHeader className="bg-muted/50">
+                  <TableRow>
+                    <TableHead>Kullanıcı</TableHead>
+                    <TableHead>Mevcut Rol</TableHead>
+                    <TableHead className="text-right">Rol Değiştir</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {orgUsers.map(user => (
+                    <TableRow key={user.id}>
+                      <TableCell>
+                        <div className="font-medium text-sm">{user.full_name}</div>
+                        <div className="text-xs text-muted-foreground">{user.email}</div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          className={
+                            user.role === 'admin'
+                              ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                              : user.role === 'instructor'
+                              ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                              : 'bg-muted text-muted-foreground'
+                          }
+                        >
+                          {user.role === 'admin' ? 'Admin' : user.role === 'instructor' ? 'Hoca' : 'Öğrenci'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {roleUpdateLoading === user.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin ml-auto" />
+                        ) : (
+                          <Select
+                            value={user.role}
+                            onValueChange={(val) => handleRoleUpdate(user.id, val as 'student' | 'instructor' | 'admin')}
+                          >
+                            <SelectTrigger className="w-[130px] bg-background h-8 text-xs ml-auto">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="student">Öğrenci</SelectItem>
+                              <SelectItem value="instructor">Hoca</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setIsUsersOpen(false)}>Kapat</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
