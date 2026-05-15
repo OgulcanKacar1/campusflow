@@ -27,31 +27,18 @@ export async function loginWithPasswordAndOTP(formData: FormData) {
     return { error: 'Sadece .edu.tr uzantılı e-posta adresleri kullanılabilir.' };
   }
 
-  // 1. Şifreyi doğrula (Ama cookie set etme, yani henüz sisteme sokma)
-  const dummySupabase = createDummyClient();
-  const { error: passwordError } = await dummySupabase.auth.signInWithPassword({
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
-  if (passwordError) {
+  if (error) {
     return { error: 'E-posta veya şifre hatalı.' };
   }
 
-  // 2. Şifre doğruysa asıl client ile mailine OTP gönder.
-  const supabase = await createClient();
-  const { error: otpError } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      shouldCreateUser: false, // Login olduğu için yeni user oluşturma
-    },
-  });
-
-  if (otpError) {
-    return { error: 'Doğrulama kodu gönderilirken bir hata oluştu: ' + otpError.message };
-  }
-
-  return { success: true, step: 'otp', email };
+  // OTP Devre Dışı: Direkt dashboard'a yönlendir
+  redirect('/dashboard');
 }
 
 export async function registerWithPassword(formData: FormData) {
@@ -64,6 +51,20 @@ export async function registerWithPassword(formData: FormData) {
   }
 
   const supabase = await createClient();
+
+  const domain = email.split('@')[1];
+  if (email !== 'ogulcankacarr@gmail.com') {
+    const { data: orgDomain } = await supabase
+      .from('organization_domains')
+      .select('id')
+      .eq('domain', domain)
+      .single();
+
+    if (!orgDomain) {
+      return { error: `Okulunuz (${domain}) henüz CampusFlow sistemine kayıtlı değil.` };
+    }
+  }
+
   const { error } = await supabase.auth.signUp({
     email,
     password,
@@ -78,8 +79,8 @@ export async function registerWithPassword(formData: FormData) {
     return { error: error.message };
   }
 
-  // Kayıt başarılıysa Supabase otomatik OTP gönderir.
-  return { success: true, step: 'otp', email };
+  // OTP Devre Dışı: Direkt dashboard'a yönlendir
+  redirect('/dashboard');
 }
 
 export async function verifyOTP(formData: FormData) {
