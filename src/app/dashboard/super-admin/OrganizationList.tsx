@@ -8,11 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ShieldAlert, CheckCircle2, Play, Pause, Loader2, Search } from 'lucide-react';
-import { updateOrganizationStatus } from './actions';
 import type { Organization } from '@/types/organization';
 import { CreateOrganizationModal } from '@/components/dashboard/super-admin/CreateOrganizationModal';
 import { EditOrganizationModal } from '@/components/dashboard/super-admin/EditOrganizationModal';
 import { OrgUsersDialog } from '@/components/dashboard/super-admin/OrgUsersDialog';
+import { OrgStatusModal } from '@/components/dashboard/super-admin/OrgStatusModal';
 
 type Props = {
   organizations: Organization[];
@@ -23,6 +23,8 @@ export default function OrganizationList({ organizations }: Props) {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [usersOrg, setUsersOrg] = useState<Organization | null>(null);
   const [isUsersOpen, setIsUsersOpen] = useState(false);
+  const [statusOrg, setStatusOrg] = useState<Organization | null>(null);
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
 
   // Arama ve filtre state'leri
   const [search, setSearch] = useState('');
@@ -49,13 +51,6 @@ export default function OrganizationList({ organizations }: Props) {
     });
   }, [organizations, search, statusFilter]);
 
-  const handleStatusToggle = async (org: Organization) => {
-    const newStatus = org.status === 'active' ? 'suspended' : 'active';
-    if (confirm(`${org.name} organizasyonunu ${newStatus === 'active' ? 'aktif etmek' : 'askıya almak'} istediğinize emin misiniz?`)) {
-      const result = await updateOrganizationStatus(org.id, newStatus);
-      if (result.error) alert(result.error);
-    }
-  };
 
   return (
     <Card className="bg-card/50 border-border backdrop-blur-sm mt-8">
@@ -172,7 +167,7 @@ export default function OrganizationList({ organizations }: Props) {
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        onClick={() => handleStatusToggle(org)}
+                        onClick={() => { setStatusOrg(org); setIsStatusOpen(true); }}
                         className={org.status === 'active' ? 'text-red-400 hover:text-red-300' : 'text-emerald-400 hover:text-emerald-300'}
                       >
                         {org.status === 'active' ? (
@@ -194,6 +189,12 @@ export default function OrganizationList({ organizations }: Props) {
         org={usersOrg}
         open={isUsersOpen}
         onOpenChange={setIsUsersOpen}
+      />
+      <OrgStatusModal
+        org={statusOrg}
+        open={isStatusOpen}
+        onOpenChange={setIsStatusOpen}
+        onComplete={() => setStatusOrg(null)}
       />
     </Card>
   );
