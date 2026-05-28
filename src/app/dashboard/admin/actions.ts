@@ -39,12 +39,19 @@ export async function getAdminDashboardStats() {
     .eq('organization_id', orgId)
     .eq('role', 'instructor');
 
+  // 5. Aktif ders sayısını hesapla
+  const { count: activeCourseCount } = await supabase
+    .from('courses')
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', orgId)
+    .eq('status', 'active');
+
   return {
     organization,
     stats: {
       students: studentCount || 0,
       instructors: instructorCount || 0,
-      activeCourses: 0, // İleride ders tablosu eklenince burası dolacak
+      activeCourses: activeCourseCount || 0,
     }
   };
 }

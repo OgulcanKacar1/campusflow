@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { loginWithPasswordAndOTP, registerWithPassword, verifyOTP } from '@/app/auth/actions';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,10 +14,20 @@ import Link from 'next/link';
 type AuthMode = 'login' | 'register' | 'otp';
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<AuthMode>('login');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState('');
+
+  useEffect(() => {
+    const urlMode = searchParams.get('mode');
+    const urlEmail = searchParams.get('email');
+    if (urlMode === 'otp' && urlEmail) {
+      setMode('otp');
+      setEmail(decodeURIComponent(urlEmail));
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -42,11 +53,9 @@ export default function LoginPage() {
       if (mode === 'login') {
         const result = await loginWithPasswordAndOTP(formData);
         if (result?.error) throw new Error(result.error);
-        if (result?.step === 'otp') setMode('otp');
       } else if (mode === 'register') {
         const result = await registerWithPassword(formData);
         if (result?.error) throw new Error(result.error);
-        if (result?.step === 'otp') setMode('otp');
       } else if (mode === 'otp') {
         formData.append('email', email);
         formData.append('type', 'email');

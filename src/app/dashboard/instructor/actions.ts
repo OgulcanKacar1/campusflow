@@ -66,6 +66,7 @@ export async function getInstructorCourses() {
       course_enrollments ( count )
     `)
     .eq('instructor_id', user.id)
+    .neq('status', 'deleted')
     .order('year', { ascending: false })
     .order('term', { ascending: false })
     .order('code', { ascending: true });
@@ -119,8 +120,35 @@ export async function createCourse(formData: FormData) {
     return { error: `Geçmiş yıllar (${year}) için ders oluşturulamaz.` };
   }
 
-  // Rastgele 6 haneli alfa-nümerik katılım kodu üret
-  const joinCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+  // Güvenli 6 haneli alfa-nümerik katılım kodu üret (crypto + retry)
+  function generateJoinCode(): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 6; i++) {
+      result += chars.charAt(crypto.getRandomValues(new Uint32Array(1))[0] % chars.length);
+    }
+    return result;
+  }
+
+  let joinCode: string;
+  let attempts = 0;
+  const maxAttempts = 5;
+
+  do {
+    joinCode = generateJoinCode();
+    const { data: existing } = await supabase
+      .from('courses')
+      .select('id')
+      .eq('join_code', joinCode)
+      .single();
+    
+    if (!existing) break; // Unique code found
+    attempts++;
+  } while (attempts < maxAttempts);
+
+  if (attempts >= maxAttempts) {
+    return { error: 'Katılım kodu oluşturulamadı. Lütfen tekrar deneyin.' };
+  }
 
   const { error } = await supabase
     .from('courses')
@@ -163,6 +191,11 @@ export async function updateCourse(courseId: string, formData: FormData) {
     return { error: 'Lütfen zorunlu alanları doldurun.' };
   }
 
+  const currentYear = new Date().getFullYear();
+  if (year < currentYear) {
+    return { error: `Geçmiş yıllar (${year}) için ders güncellenemez.` };
+  }
+
   const { error } = await supabase
     .from('courses')
     .update({
@@ -186,11 +219,11 @@ export async function deleteCourse(courseId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Oturum bulunamadı' };
 
-  // Soft delete (status = 'deleted') veya tamamen silme
-  // Burada senin kararına göre tamamen siliyoruz (referanslar CASCADE olduğu için her şeyi temizler)
+  // Soft delete: sadece status = 'deleted' olarak işaretle
+  // Veriler korunur, CASCADE ile veri kaybı olmaz
   const { error } = await supabase
     .from('courses')
-    .delete()
+    .update({ status: 'deleted' })
     .eq('id', courseId)
     .eq('instructor_id', user.id);
 
@@ -240,8 +273,18 @@ export async function enrollStudentsFromCSV(courseId: string, csvContent: string
     };
   }
 
-  // 4. Kayıtları oluştur
-  const enrollments = profiles!.map(p => ({
+  // 4. Önce mevcut kayıtları say
+  const { data: existingEnrollments } = await supabase
+    .from('course_enrollments')
+    .select('student_id')
+    .eq('course_id', courseId)
+    .in('student_id', profiles!.map(p => p.id));
+
+  const existingStudentIds = existingEnrollments?.map(e => e.student_id) || [];
+  const newStudents = profiles!.filter(p => !existingStudentIds.includes(p.id));
+
+  // 5. Yeni kayıtları oluştur
+  const enrollments = newStudents.map(p => ({
     course_id: courseId,
     student_id: p.id,
     status: 'enrolled'
@@ -255,7 +298,8 @@ export async function enrollStudentsFromCSV(courseId: string, csvContent: string
 
   return {
     success: true,
-    enrolledCount: registeredEmails.length,
+    enrolledCount: newStudents.length,
+    alreadyEnrolled: existingStudentIds.length,
     unregistered: unregisteredEmails
   };
 }

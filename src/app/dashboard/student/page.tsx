@@ -100,7 +100,7 @@ export default async function StudentDashboard() {
             </div>
           </Link>
 
-          <Link href="/dashboard/student/tasks" className="group">
+          <Link href="/dashboard/student/courses" className="group">
             <div className="rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.05] p-6 transition-all duration-200 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-blue-500/10 rounded-xl group-hover:bg-blue-500/20 transition-colors">
