@@ -82,8 +82,12 @@ export async function registerWithPassword(formData: FormData) {
     return { error: error.message };
   }
 
-  // OTP Devre Dışı: Direkt dashboard'a yönlendir
-  redirect('/dashboard');
+  // Development'ta mail doğrulaması atla, production'da OTP sayfasına yönlendir
+  if (process.env.NEXT_PUBLIC_SKIP_EMAIL_VERIFICATION === 'true') {
+    redirect('/dashboard');
+  }
+
+  redirect(`/login?mode=otp&email=${encodeURIComponent(email)}`);
 }
 
 export async function verifyOTP(formData: FormData) {
