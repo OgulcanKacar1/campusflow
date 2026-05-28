@@ -197,6 +197,20 @@ export async function updateUserRole(
 
   const supabase = await createClient();
 
+  // Caller doğrulaması: sadece super_admin rolündeki kullanıcılar bu işlemi yapabilir
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Oturum bulunamadı.' };
+
+  const { data: callerProfile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (!callerProfile || callerProfile.role !== 'super_admin') {
+    return { error: 'Bu işlem için yetkiniz yok.' };
+  }
+
   const { error } = await supabase
     .from('profiles')
     .update({ role: newRole })

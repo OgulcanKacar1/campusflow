@@ -66,6 +66,7 @@ export async function getInstructorCourses() {
       course_enrollments ( count )
     `)
     .eq('instructor_id', user.id)
+    .neq('status', 'deleted')
     .order('year', { ascending: false })
     .order('term', { ascending: false })
     .order('code', { ascending: true });
@@ -186,11 +187,11 @@ export async function deleteCourse(courseId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Oturum bulunamadı' };
 
-  // Soft delete (status = 'deleted') veya tamamen silme
-  // Burada senin kararına göre tamamen siliyoruz (referanslar CASCADE olduğu için her şeyi temizler)
+  // Soft delete: sadece status = 'deleted' olarak işaretle
+  // Veriler korunur, CASCADE ile veri kaybı olmaz
   const { error } = await supabase
     .from('courses')
-    .delete()
+    .update({ status: 'deleted' })
     .eq('id', courseId)
     .eq('instructor_id', user.id);
 
