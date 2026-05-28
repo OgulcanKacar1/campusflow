@@ -10,14 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Search, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { getOrgUsers, updateOrgUserRole } from '../actions';
-
-type OrgUser = {
-  id: string;
-  full_name: string;
-  email: string;
-  role: string;
-  created_at: string;
-};
+import type { OrgUser } from '@/types/user';
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<OrgUser[]>([]);

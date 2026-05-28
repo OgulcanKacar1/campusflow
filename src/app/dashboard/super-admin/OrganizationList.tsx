@@ -12,27 +12,11 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Trash2, ShieldAlert, CheckCircle2, Play, Pause, Loader2, Search } from 'lucide-react';
 import { createOrganization, updateOrganizationStatus, updateOrganizationDetails, getUsersByOrganization, updateUserRole } from './actions';
-
-type Organization = {
-  id: string;
-  name: string;
-  domain: string;
-  status: 'active' | 'suspended' | 'trial';
-  plan: string;
-  max_students: number | null;
-  domains: Array<{ domain: string; role_hint: string }>;
-};
+import type { Organization } from '@/types/organization';
+import type { OrgUser } from '@/types/user';
 
 type Props = {
   organizations: Organization[];
-};
-
-type OrgUser = {
-  id: string;
-  full_name: string;
-  email: string;
-  role: string;
-  created_at: string;
 };
 
 export default function OrganizationList({ organizations }: Props) {

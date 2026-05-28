@@ -8,19 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Loader2, ArrowLeft, KeyRound, BookOpen, Users, ClipboardList, ChevronRight, GraduationCap } from 'lucide-react';
 import Link from 'next/link';
-
-type Course = {
-  enrollmentId: string;
-  enrollmentStatus: string;
-  id: string;
-  code: string;
-  name: string;
-  term: string;
-  year: number;
-  section: string | null;
-  status: string;
-  instructorName: string;
-};
+import type { StudentCourse as Course } from '@/types/course';
 
 const termColors: Record<string, string> = {
   fall:   'from-orange-500/20 to-amber-500/5   border-orange-500/20',

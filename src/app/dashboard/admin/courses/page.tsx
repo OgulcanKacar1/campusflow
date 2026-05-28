@@ -9,17 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Search, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { getOrgCourses } from '../actions';
-
-type Course = {
-  id: string;
-  code: string;
-  name: string;
-  term: string;
-  year: number;
-  status: string;
-  instructorName: string;
-  studentCount: number;
-};
+import type { AdminCourse as Course } from '@/types/course';
 
 export default function AdminCoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);

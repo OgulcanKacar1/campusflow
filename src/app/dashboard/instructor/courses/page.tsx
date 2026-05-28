@@ -10,18 +10,7 @@ import { Loader2, Search, ArrowLeft, Plus, UserPlus, Upload, Pencil, Trash2 } fr
 import Link from 'next/link';
 import { getInstructorCourses, createCourse, enrollStudentsFromCSV, updateCourse, deleteCourse } from '../actions';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
-
-type Course = {
-  id: string;
-  code: string;
-  name: string;
-  term: string;
-  year: number;
-  section: string | null;
-  status: string;
-  joinCode: string | null;
-  studentCount: number;
-};
+import type { InstructorCourse as Course } from '@/types/course';
 
 export default function InstructorCoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
