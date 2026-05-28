@@ -191,6 +191,11 @@ export async function updateCourse(courseId: string, formData: FormData) {
     return { error: 'Lütfen zorunlu alanları doldurun.' };
   }
 
+  const currentYear = new Date().getFullYear();
+  if (year < currentYear) {
+    return { error: `Geçmiş yıllar (${year}) için ders güncellenemez.` };
+  }
+
   const { error } = await supabase
     .from('courses')
     .update({
