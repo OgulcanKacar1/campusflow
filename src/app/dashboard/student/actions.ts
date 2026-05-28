@@ -7,18 +7,17 @@ export async function getStudentStats() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Oturum bulunamadı' };
 
-  const { data: enrollments, error } = await supabase
-    .from('course_enrollments')
-    .select('id, status, courses(id, name, code, status)')
-    .eq('student_id', user.id);
+  // get_my_enrolled_courses RPC fonksiyonunu kullanarak RLS bypass et
+  const { data: courses, error } = await supabase
+    .rpc('get_my_enrolled_courses');
 
   if (error) return { error: error.message };
 
-  const activeCount = enrollments?.filter(e => (e.courses as any)?.status === 'active').length || 0;
+  const activeCount = courses?.filter((c: any) => c.course_status === 'active').length || 0;
 
   return {
     stats: {
-      enrolledCourses: enrollments?.length || 0,
+      enrolledCourses: courses?.length || 0,
       activeCourses: activeCount,
       teams: 0, // ileride takımlar tablosundan çekilecek
     }

@@ -54,14 +54,17 @@ export async function registerWithPassword(formData: FormData) {
 
   const domain = email.split('@')[1];
   if (email !== 'ogulcankacarr@gmail.com') {
-    const { data: orgDomain } = await supabase
-      .from('organization_domains')
-      .select('id')
-      .eq('domain', domain)
+    // RLS bypass eden RPC fonksiyonu ile domain ve status kontrolü
+    const { data: domainInfo, error } = await supabase
+      .rpc('check_domain_status', { p_domain: domain })
       .single();
 
-    if (!orgDomain) {
+    if (error || !domainInfo) {
       return { error: `Okulunuz (${domain}) henüz CampusFlow sistemine kayıtlı değil.` };
+    }
+
+    if ((domainInfo as any).organization_status === 'suspended') {
+      return { error: `Okulunuz (${domain}) şu anda kayıtlara kapalıdır. Lütfen yönetimle iletişime geçin.` };
     }
   }
 
