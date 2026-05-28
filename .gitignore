@@ -43,7 +43,3 @@ next-env.d.ts
 
 # planning and documentation
 CAMPUSFLOW_HANDOFF.md
-*.md
-
-# database migrations (keep local, sync manually)
-supabase/migrations/*.sql
