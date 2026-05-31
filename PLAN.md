@@ -24,6 +24,17 @@
 | `integration_events` | Webhook logları | — |
 | `webhook_queue` | Webhook kuyruğu | Service role only ✅ |
 
+> **⚠️ GEÇİCİ AÇIKLAMALAR (Test Amaçlı - Geri Getirilecek!)**
+> 
+> Phase 3 testi için aşağıdaki migration'larla RLS gevşetildi:
+> - `0027_disable_rls.sql` — `team_members`, `profiles` RLS kapalı
+> - `0028_grants.sql` — `authenticated` rolüne tüm tablolarda tam yetki
+> 
+> **TODO (Phase 3 tamamlanmadan önce):**
+> 1. `team_members`, `profiles`, `teams` için org-izole SELECT policy'leri
+> 2. Sadece gerekli INSERT/UPDATE/DELETE policy'leri (instructor kontrollü)
+> 3. `0027`, `0028` migration'larını REVERT et (ya da `0029` ile düzelt)
+
 ### 1.2 Mevcut RPC Fonksiyonları
 
 | Fonksiyon | Amaç | Güvenlik |

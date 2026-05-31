@@ -28,7 +28,7 @@ BEGIN
   RETURN QUERY
   INSERT INTO teams (course_id, name, repo_url, status, created_by)
   VALUES (p_course_id, p_name, p_repo_url, 'active', auth.uid())
-  RETURNING id, name, course_id, repo_url, status, created_at;
+  RETURNING teams.id, teams.name, teams.course_id, teams.repo_url, teams.status, teams.created_at;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

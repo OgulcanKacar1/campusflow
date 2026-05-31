@@ -1,12 +1,23 @@
 -- 0024_team_members_select.sql
 -- team_members SELECT policy (geçici olarak açık - test için)
 
--- Mevcut policy'leri kaldır
+-- Tüm mevcut policy'leri kaldır
 DROP POLICY IF EXISTS "team_members_select_all" ON team_members;
 DROP POLICY IF EXISTS "team_members_select_same_org" ON team_members;
+DROP POLICY IF EXISTS "team_members_select" ON team_members;
 
--- Açık SELECT policy (test için - sonra org-izole edilecek)
-CREATE POLICY "team_members_select" ON team_members FOR SELECT USING (true);
+-- RLS'yi tamamen kapat (test için en hızlı çözüm)
+-- ALTER TABLE team_members DISABLE ROW LEVEL SECURITY;
+
+-- VEYA açık SELECT policy
+CREATE POLICY "team_members_select_open" ON team_members FOR SELECT USING (true);
+
+-- INSERT policy de gerekli (hocanın eklemesi için)
+DROP POLICY IF EXISTS "team_members_insert_auth" ON team_members;
+DROP POLICY IF EXISTS "team_members_insert_instructor" ON team_members;
+DROP POLICY IF EXISTS "team_members_insert" ON team_members;
+
+CREATE POLICY "team_members_insert_open" ON team_members FOR INSERT WITH CHECK (true);
 
 -- INSERT policy (hocanın ekleyebilmesi için)
 DROP POLICY IF EXISTS "team_members_insert_auth" ON team_members;
