@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Search, ArrowLeft } from 'lucide-react';
+import { Loader2, Search, ArrowLeft, Users } from 'lucide-react';
 import Link from 'next/link';
 import { getInstructorCourses } from '../actions';
 import type { InstructorCourse as Course } from '@/types/course';
@@ -137,6 +137,13 @@ export default function InstructorCoursesPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1 items-center">
+                            <Link
+                              href={`/dashboard/instructor/courses/${course.id}/teams`}
+                              className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700 h-8 w-8 p-0"
+                              title="Takımlar"
+                            >
+                              <Users className="h-4 w-4" />
+                            </Link>
                             <EnrollModal course={course} onComplete={loadCourses} />
                             <EditCourseModal course={course} onComplete={loadCourses} />
                             <DeleteCourseDialog courseId={course.id} courseCode={course.code} onComplete={loadCourses} />

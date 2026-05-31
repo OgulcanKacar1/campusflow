@@ -1,0 +1,174 @@
+'use client';
+
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Shuffle, Loader2, AlertTriangle } from 'lucide-react';
+import { createRandomTeams } from '@/app/dashboard/instructor/teams/actions';
+
+interface RandomTeamsButtonProps {
+  courseId: string;
+  teamSize: number;
+}
+
+export function RandomTeamsButton({ courseId, teamSize }: RandomTeamsButtonProps) {
+  const [open, setOpen] = useState(false);
+  const [size, setSize] = useState(teamSize.toString());
+  const [prefix, setPrefix] = useState('Takım');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{ teamCount: number; remainder: number } | null>(null);
+
+  const calculatePreview = (s: string) => {
+    const num = parseInt(s, 10);
+    if (isNaN(num) || num < 1) {
+      setPreview(null);
+      return;
+    }
+    // Öğrenci sayısını bilmediğimiz için placeholder gösterelim
+    // Gerçek hesaplama server-side yapılacak
+    setPreview({ teamCount: 0, remainder: 0 });
+  };
+
+  const handleSizeChange = (value: string) => {
+    setSize(value);
+    calculatePreview(value);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const numSize = parseInt(size, 10);
+    if (isNaN(numSize) || numSize < 1) {
+      setError('Geçerli bir takım büyüklüğü girin');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
+    const result = await createRandomTeams({
+      courseId,
+      teamSize: numSize,
+      teamPrefix: prefix.trim() || 'Takım',
+    });
+
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setOpen(false);
+      // Başarılı oluşturma sayısı
+      const createdCount = result.data?.length || 0;
+      if (createdCount === 0) {
+        setError('Derse kayıtlı öğrenci bulunamadı. Önce öğrenci ekleyin.');
+        return;
+      }
+      alert(`${createdCount} takım başarıyla oluşturuldu`);
+    }
+
+    setIsSubmitting(false);
+  };
+
+  return (
+    <>
+      <Button
+        onClick={() => setOpen(true)}
+        variant="outline"
+        className="border-purple-600 text-purple-400 hover:bg-purple-600/10"
+      >
+        <Shuffle className="w-4 h-4 mr-2" />
+        Rastgele Takımlar
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md bg-[#0f1523] border-gray-800 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Shuffle className="w-5 h-5 text-purple-400" />
+              Rastgele Takımlar Oluştur
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="mt-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded flex gap-2">
+            <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0" />
+            <p className="text-sm text-yellow-400">
+              Bu işlem derse kayıtlı tüm öğrencileri rastgele gruplara böler.
+              Mevcut takımlar etkilenmez.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="size" className="text-gray-300">
+                Her Takımdaki Öğrenci Sayısı
+              </Label>
+              <Input
+                id="size"
+                type="number"
+                min={1}
+                max={20}
+                value={size}
+                onChange={(e) => handleSizeChange(e.target.value)}
+                className="bg-[#1a1f2e] border-gray-700 text-white"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="prefix" className="text-gray-300">
+                Takım İsim Öneki
+              </Label>
+              <Input
+                id="prefix"
+                value={prefix}
+                onChange={(e) => setPrefix(e.target.value)}
+                placeholder="Örn: Takım, Grup, Squad..."
+                className="bg-[#1a1f2e] border-gray-700 text-white"
+                disabled={isSubmitting}
+              />
+              <p className="text-xs text-gray-500">
+                Örnek: "{prefix} 1", "{prefix} 2", ...
+              </p>
+            </div>
+
+            {error && (
+              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-sm">
+                {error}
+              </div>
+            )}
+
+            <div className="flex gap-2 justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={isSubmitting}
+                className="border-gray-700 text-gray-300"
+              >
+                İptal
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Oluşturuluyor...
+                  </>
+                ) : (
+                  <>
+                    <Shuffle className="w-4 h-4 mr-2" />
+                    Oluştur
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
