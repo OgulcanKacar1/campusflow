@@ -3,13 +3,20 @@
 -- teams, team_members, sprints, tasks, announcements, calendar_events tabloları
 -- için SELECT policy'lerini org-izole hale getirir.
 
--- 1. Eski açık SELECT policy'leri kaldır
+-- 1. ESKİ POLICY'LERİ TEMİZLE (hem açık hem yeni adlar)
 DROP POLICY IF EXISTS "teams_select_all"        ON teams;
 DROP POLICY IF EXISTS "team_members_select_all" ON team_members;
 DROP POLICY IF EXISTS "sprints_select_all"      ON sprints;
 DROP POLICY IF EXISTS "tasks_select_all"        ON tasks;
 DROP POLICY IF EXISTS "announcements_select_all" ON announcements;
 DROP POLICY IF EXISTS "calendar_select_all"     ON calendar_events;
+
+DROP POLICY IF EXISTS "teams_select_same_org"        ON teams;
+DROP POLICY IF EXISTS "team_members_select_same_org" ON team_members;
+DROP POLICY IF EXISTS "sprints_select_same_org"      ON sprints;
+DROP POLICY IF EXISTS "tasks_select_same_org"        ON tasks;
+DROP POLICY IF EXISTS "announcements_select_same_org" ON announcements;
+DROP POLICY IF EXISTS "calendar_select_same_org"     ON calendar_events;
 
 -- 2. Org-izole SELECT policy'leri ekle
 -- teams: sadece kendi organizasyonunun derslerine ait takımlar
