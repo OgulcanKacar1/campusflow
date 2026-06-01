@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, ExternalLink, Copy, Check, Trash2, UserPlus } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Users, ExternalLink, Copy, Check, Trash2, UserPlus, Mail, UserX } from 'lucide-react';
 import type { Team, TeamMember } from '@/types/team';
 
 interface TeamsListProps {
@@ -13,6 +14,7 @@ interface TeamsListProps {
   onEdit: (team: Team) => void;
   onDelete: (team: Team) => void;
   onAddMember: (team: Team) => void;
+  onRemoveMember?: (team: Team, member: TeamMember) => void;
   onCopyInviteCode: (code: string) => void;
 }
 
@@ -22,9 +24,11 @@ export function TeamsList({
   onEdit,
   onDelete,
   onAddMember,
+  onRemoveMember,
   onCopyInviteCode,
 }: TeamsListProps) {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [selectedMember, setSelectedMember] = useState<{ member: TeamMember; team: Team } | null>(null);
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -135,22 +139,23 @@ export function TeamsList({
           </CardHeader>
 
           {/* Üye Listesi */}
+          {console.log(`Team ${team.name} members:`, team.members)}
           {team.members && team.members.length > 0 && (
             <CardContent className="pt-0">
               <div className="border-t border-gray-800 pt-3">
                 <p className="text-sm text-gray-500 mb-2">Üyeler</p>
                 <div className="flex flex-wrap gap-2">
                   {team.members.map((member) => (
-                    <Badge
+                    <button
                       key={member.id}
-                      variant="secondary"
-                      className="bg-[#1a1f2e] text-gray-300 border-gray-700"
+                      onClick={() => setSelectedMember({ member, team })}
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#1a1f2e] text-gray-300 border border-gray-700 hover:bg-[#2a3142] hover:border-gray-600 transition-colors cursor-pointer"
                     >
                       {member.studentName || 'İsimsiz'}
                       {member.role === 'leader' && (
                         <span className="ml-1 text-yellow-400">★</span>
                       )}
-                    </Badge>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -158,6 +163,56 @@ export function TeamsList({
           )}
         </Card>
       ))}
+
+      {/* Üye Detay Modal'ı */}
+      <Dialog open={!!selectedMember} onOpenChange={() => setSelectedMember(null)}>
+        <DialogContent className="sm:max-w-sm bg-[#0f1523] border-gray-800 text-white">
+          <DialogHeader>
+            <div className="flex flex-col items-center text-center gap-3 py-4">
+              <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-500/10 border border-blue-500/20">
+                <Mail className="w-8 h-8 text-blue-400" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-semibold text-white">
+                  {selectedMember?.member.studentName || 'İsimsiz'}
+                </DialogTitle>
+                <DialogDescription className="mt-1 text-gray-400 text-sm">
+                  {selectedMember?.member.studentEmail}
+                </DialogDescription>
+                <p className="mt-2 text-xs text-gray-500">
+                  Rol: {selectedMember?.member.role === 'leader' ? 'Takım Lideri ★' : 'Üye'}
+                </p>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="flex flex-col gap-2 mt-2">
+            <Button
+              variant="outline"
+              className="border-gray-700 text-gray-300 hover:bg-white/5"
+              onClick={() => {
+                // İleride özel mesaj özelliği
+                alert('Özel mesaj özelliği yakında geliyor!');
+              }}
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              Mesaj Gönder
+            </Button>
+            {onRemoveMember && selectedMember && (
+              <Button
+                variant="outline"
+                className="border-red-700 text-red-400 hover:bg-red-500/10"
+                onClick={() => {
+                  onRemoveMember(selectedMember.team, selectedMember.member);
+                  setSelectedMember(null);
+                }}
+              >
+                <UserX className="w-4 h-4 mr-2" />
+                Takımdan Çıkar
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

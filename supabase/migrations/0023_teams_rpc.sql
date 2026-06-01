@@ -194,6 +194,18 @@ BEGIN
     RAISE EXCEPTION 'Bu takıma üye ekleme yetkiniz yok';
   END IF;
 
+  -- Öğrenci bu dersteki başka bir takımda aktif üye mi kontrol et
+  IF EXISTS (
+    SELECT 1 FROM team_members tm
+    JOIN teams t ON t.id = tm.team_id
+    WHERE tm.student_id = p_student_id
+    AND t.course_id = v_course_id
+    AND tm.left_at IS NULL
+    AND tm.team_id != p_team_id
+  ) THEN
+    RAISE EXCEPTION 'Öğrenci bu derste zaten başka bir takımda aktif üye';
+  END IF;
+
   INSERT INTO team_members (team_id, student_id, role)
   VALUES (p_team_id, p_student_id, 'member');
 
@@ -205,3 +217,40 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 GRANT EXECUTE ON FUNCTION add_team_member(UUID, UUID) TO authenticated;
+
+-- 5.5. Takımdan üye çıkar (soft delete)
+CREATE OR REPLACE FUNCTION remove_team_member(
+  p_team_id UUID,
+  p_student_id UUID
+)
+RETURNS BOOLEAN AS $$
+DECLARE
+  v_course_id UUID;
+BEGIN
+  SELECT t.course_id INTO v_course_id
+  FROM teams t
+  WHERE t.id = p_team_id;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM courses c
+    WHERE c.id = v_course_id
+    AND c.instructor_id = auth.uid()
+  ) THEN
+    RAISE EXCEPTION 'Bu takımdan üye çıkarma yetkiniz yok';
+  END IF;
+
+  UPDATE team_members
+  SET left_at = NOW()
+  WHERE team_id = p_team_id
+  AND student_id = p_student_id
+  AND left_at IS NULL;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Üye bulunamadı veya zaten çıkarılmış';
+  END IF;
+
+  RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION remove_team_member(UUID, UUID) TO authenticated;

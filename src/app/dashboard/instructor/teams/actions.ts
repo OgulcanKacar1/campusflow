@@ -105,6 +105,8 @@ export async function getTeamsByCourse(courseId: string): Promise<ActionResult<T
     
     if (membersError) {
       console.error('Üyeler alınamadı:', membersError);
+    } else {
+      console.log(`Team ${row.team_id} members:`, members?.length || 0);
     }
 
     // 2. Profile bilgilerini ayrı sorguyla al
@@ -112,10 +114,16 @@ export async function getTeamsByCourse(courseId: string): Promise<ActionResult<T
     let profilesMap: Record<string, { full_name: string; email: string }> = {};
     
     if (studentIds.length > 0) {
-      const { data: profiles } = await supabase
+      const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, full_name, email')
         .in('id', studentIds);
+      
+      if (profilesError) {
+        console.error(`Team ${row.team_id} profiles error:`, profilesError);
+      } else {
+        console.log(`Team ${row.team_id} profiles:`, profiles?.length || 0);
+      }
       
       profilesMap = (profiles || []).reduce((acc, p) => {
         acc[p.id] = { full_name: p.full_name || '', email: p.email || '' };
@@ -147,6 +155,7 @@ export async function getTeamsByCourse(courseId: string): Promise<ActionResult<T
     });
   }
   
+  console.log('Final teams:', teams.map(t => ({ name: t.name, members: t.members.length })));
   return { data: teams };
 }
 
@@ -249,6 +258,8 @@ export async function addTeamMember(input: AddMemberInput): Promise<ActionResult
       p_student_id: input.studentId,
     });
   
+  console.log('RPC add_team_member error:', error);
+  
   if (error) {
     if (error.message.includes('zaten')) {
       return { error: 'Öğrenci bu derste zaten başka bir takımda aktif üye' };
@@ -261,34 +272,23 @@ export async function addTeamMember(input: AddMemberInput): Promise<ActionResult
 }
 
 /**
- * Takımdan üye çıkar (soft delete — left_at timestamp)
+ * Takımdan üye çıkar (soft delete — RPC ile RLS bypass)
  */
 export async function removeTeamMember(input: RemoveMemberInput): Promise<ActionResult> {
   const supabase = await createClient();
   
-  // Takımın dersini bul
-  const { data: team, error: teamError } = await supabase
-    .from('teams')
-    .select('course_id')
-    .eq('id', input.teamId)
-    .single();
-  
-  if (teamError || !team) {
-    return { error: 'Takım bulunamadı' };
-  }
-  
+  // RPC ile üye çıkar
   const { error } = await supabase
-    .from('team_members')
-    .update({ left_at: new Date().toISOString() })
-    .eq('team_id', input.teamId)
-    .eq('student_id', input.studentId)
-    .is('left_at', null);
+    .rpc('remove_team_member', {
+      p_team_id: input.teamId,
+      p_student_id: input.studentId,
+    });
   
   if (error) {
     return { error: error.message };
   }
   
-  revalidatePath(`/dashboard/instructor/courses/${team.course_id}/teams`);
+  revalidatePath(`/dashboard/instructor/courses/${input.teamId}/teams`);
   return {};
 }
 

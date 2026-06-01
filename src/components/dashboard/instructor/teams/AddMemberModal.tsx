@@ -9,8 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Loader2, UserPlus, Search } from 'lucide-react';
+import { Loader2, UserPlus, Search, Check } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { addTeamMember } from '@/app/dashboard/instructor/teams/actions';
 import type { Team } from '@/types/team';
@@ -39,7 +38,7 @@ export function AddMemberModal({ team, courseId, open, onOpenChange, onSuccess }
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
 
   const supabase = createClient();
 
@@ -52,64 +51,38 @@ export function AddMemberModal({ team, courseId, open, onOpenChange, onSuccess }
       setIsLoading(true);
       setError(null);
 
-      // 1. Derse kayıtlı tüm öğrencileri al (sadece student_id)
-      const { data: enrollments, error: enrollError } = await supabase
-        .from('course_enrollments')
-        .select('student_id')
-        .eq('course_id', courseId)
-        .eq('status', 'enrolled');
+      // RPC ile bu dersteki takımsız öğrencileri getir
+      const { data: availableStudents, error: rpcError } = await supabase
+        .rpc('get_available_students_for_team', {
+          p_course_id: courseId,
+          p_exclude_team_id: team.id
+        });
 
-      if (enrollError) {
+      if (rpcError) {
+        console.error('RPC hatası:', rpcError);
         setError('Öğrenci listesi alınamadı');
         setIsLoading(false);
         return;
       }
 
-      // 2. Mevcut takım üyelerini hariç tut
-      const { data: members, error: memberError } = await supabase
-        .from('team_members')
-        .select('student_id')
-        .eq('team_id', team.id)
-        .is('left_at', null);
+      const formattedStudents: EnrolledStudent[] = (availableStudents || []).map((s: any) => ({
+        student_id: s.student_id,
+        profiles: {
+          id: s.student_id,
+          full_name: s.full_name || 'İsimsiz',
+          email: s.email || '',
+        },
+      }));
 
-      if (memberError) {
-        setError('Takım üyeleri alınamadı');
-        setIsLoading(false);
-        return;
-      }
-
-      const memberIds = new Set(members?.map((m) => m.student_id) || []);
-      const availableStudentIds = (enrollments || [])
-        .filter((e: any) => !memberIds.has(e.student_id))
-        .map((e: any) => e.student_id) as string[];
-
-      // 3. Profile bilgilerini ayrı sorguyla al (RLS bypass için)
-      let availableStudents: EnrolledStudent[] = [];
-      if (availableStudentIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, full_name, email')
-          .in('id', availableStudentIds);
-
-        availableStudents = (profiles || []).map((p) => ({
-          student_id: p.id,
-          profiles: {
-            id: p.id,
-            full_name: p.full_name || 'İsimsiz',
-            email: p.email || '',
-          },
-        }));
-      }
-
-      setStudents(availableStudents);
-      setFilteredStudents(availableStudents);
+      setStudents(formattedStudents);
+      setFilteredStudents(formattedStudents);
       setIsLoading(false);
     }
 
     fetchStudents();
 
     // Reset state when modal opens
-    setSelectedStudentId(null);
+    setSelectedStudentIds(new Set());
     setSearchQuery('');
   }, [open, team, courseId, supabase]);
 
@@ -129,20 +102,41 @@ export function AddMemberModal({ team, courseId, open, onOpenChange, onSuccess }
     setFilteredStudents(filtered);
   }, [searchQuery, students]);
 
+  const toggleStudent = (studentId: string) => {
+    const newSet = new Set(selectedStudentIds);
+    if (newSet.has(studentId)) {
+      newSet.delete(studentId);
+    } else {
+      newSet.add(studentId);
+    }
+    setSelectedStudentIds(newSet);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!team || !selectedStudentId) return;
+    if (!team || selectedStudentIds.size === 0) return;
 
     setIsSubmitting(true);
     setError(null);
 
-    const result = await addTeamMember({
-      teamId: team.id,
-      studentId: selectedStudentId,
-    });
+    // Her öğrenci için sırayla ekle
+    const promises = Array.from(selectedStudentIds).map((studentId) =>
+      addTeamMember({ teamId: team.id, studentId })
+    );
 
-    if (result.error) {
-      setError(result.error);
+    const results = await Promise.all(promises);
+    const errors = results.filter((r) => r.error);
+    
+    console.log('AddMember results:', results);
+
+    if (errors.length > 0) {
+      console.log('Errors:', errors);
+      const addedCount = selectedStudentIds.size - errors.length;
+      if (addedCount > 0) {
+        setError(`${addedCount} öğrenci eklendi. ${errors.length} öğrenci zaten başka takımda olduğu için eklenemedi.`);
+      } else {
+        setError('Seçtiğiniz öğrencilerin tümü zaten başka takımlarda aktif üye.');
+      }
     } else {
       onOpenChange(false);
       onSuccess?.();
@@ -153,7 +147,7 @@ export function AddMemberModal({ team, courseId, open, onOpenChange, onSuccess }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-[#0f1523] border-gray-800 text-white max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-xl bg-[#0f1523] border-gray-800 text-white max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-white flex items-center gap-2">
             <UserPlus className="w-5 h-5 text-blue-400" />
@@ -174,8 +168,8 @@ export function AddMemberModal({ team, courseId, open, onOpenChange, onSuccess }
             />
           </div>
 
-          {/* Öğrenci Listesi */}
-          <div className="border border-gray-800 rounded-lg max-h-60 overflow-y-auto">
+          {/* Öğrenci Listesi - Grid Layout */}
+          <div className="border border-gray-800 rounded-lg max-h-72 overflow-y-auto p-3">
             {isLoading ? (
               <div className="p-4 text-center text-gray-500">
                 <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
@@ -186,35 +180,55 @@ export function AddMemberModal({ team, courseId, open, onOpenChange, onSuccess }
                 {searchQuery ? 'Arama sonucu bulunamadı' : 'Eklenecek öğrenci kalmadı'}
               </div>
             ) : (
-              <div className="divide-y divide-gray-800">
-                {filteredStudents.map((student) => (
-                  <label
-                    key={student.student_id}
-                    className={`flex items-center gap-3 p-3 cursor-pointer transition-colors ${
-                      selectedStudentId === student.student_id
-                        ? 'bg-blue-600/20'
-                        : 'hover:bg-[#1a1f2e]'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="student"
-                      value={student.student_id}
-                      checked={selectedStudentId === student.student_id}
-                      onChange={() => setSelectedStudentId(student.student_id)}
-                      className="w-4 h-4 text-blue-600 border-gray-600 bg-[#1a1f2e]"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">
-                        {student.profiles.full_name}
-                      </p>
-                      <p className="text-xs text-gray-500 truncate">
-                        {student.profiles.email}
-                      </p>
-                    </div>
-                  </label>
-                ))}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {filteredStudents.map((student) => {
+                  const isSelected = selectedStudentIds.has(student.student_id);
+                  return (
+                    <button
+                      key={student.student_id}
+                      type="button"
+                      onClick={() => toggleStudent(student.student_id)}
+                      className={`relative p-3 rounded-lg border text-left transition-all ${
+                        isSelected
+                          ? 'border-blue-500 bg-blue-500/10'
+                          : 'border-gray-700 bg-[#1a1f2e] hover:border-gray-600 hover:bg-[#2a3142]'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-1">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-white leading-tight">
+                            {student.profiles.full_name}
+                          </p>
+                          <p className="text-[10px] text-gray-500 mt-0.5 break-all leading-tight">
+                            {student.profiles.email}
+                          </p>
+                        </div>
+                        {isSelected && (
+                          <div className="flex-shrink-0">
+                            <Check className="w-4 h-4 text-blue-400" />
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
+            )}
+          </div>
+
+          {/* Seçili Sayısı */}
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-400">
+              <span className="text-blue-400 font-medium">{selectedStudentIds.size}</span> öğrenci seçildi
+            </p>
+            {selectedStudentIds.size > 0 && (
+              <button
+                type="button"
+                onClick={() => setSelectedStudentIds(new Set())}
+                className="text-xs text-gray-500 hover:text-gray-300"
+              >
+                Tümünü Kaldır
+              </button>
             )}
           </div>
 
@@ -238,7 +252,7 @@ export function AddMemberModal({ team, courseId, open, onOpenChange, onSuccess }
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting || !selectedStudentId}
+              disabled={isSubmitting || selectedStudentIds.size === 0}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {isSubmitting ? (
@@ -247,7 +261,7 @@ export function AddMemberModal({ team, courseId, open, onOpenChange, onSuccess }
                   Ekleniyor...
                 </>
               ) : (
-                'Ekle'
+                `Ekle (${selectedStudentIds.size})`
               )}
             </Button>
           </div>

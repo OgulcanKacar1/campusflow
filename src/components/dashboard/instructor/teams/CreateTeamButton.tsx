@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, CheckCircle } from 'lucide-react';
 import { createTeam } from '@/app/dashboard/instructor/teams/actions';
 
 interface CreateTeamButtonProps {
@@ -18,6 +18,7 @@ export function CreateTeamButton({ courseId }: CreateTeamButtonProps) {
   const [repoUrl, setRepoUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successOpen, setSuccessOpen] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,6 +42,9 @@ export function CreateTeamButton({ courseId }: CreateTeamButtonProps) {
       setOpen(false);
       setName('');
       setRepoUrl('');
+      setSuccessOpen(true);
+      // Sayfayı yenile - yeni takımı göster
+      window.location.reload();
     }
 
     setIsSubmitting(false);
@@ -123,6 +127,35 @@ export function CreateTeamButton({ courseId }: CreateTeamButtonProps) {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Başarı Modal'ı */}
+      <Dialog open={successOpen} onOpenChange={setSuccessOpen}>
+        <DialogContent className="sm:max-w-sm bg-[#0f1523] border-gray-800 text-white">
+          <DialogHeader>
+            <div className="flex flex-col items-center text-center gap-3 py-4">
+              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                <CheckCircle className="w-7 h-7 text-emerald-400" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-semibold text-white">
+                  Takım Oluşturuldu
+                </DialogTitle>
+                <DialogDescription className="mt-2 text-gray-400">
+                  Yeni takım başarıyla oluşturuldu.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="flex justify-center mt-2">
+            <Button
+              onClick={() => setSuccessOpen(false)}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Tamam
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </>

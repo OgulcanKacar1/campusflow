@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -22,19 +22,24 @@ interface EditTeamModalProps {
 }
 
 export function EditTeamModal({ team, open, onOpenChange, onSuccess }: EditTeamModalProps) {
-  const [name, setName] = useState(team?.name || '');
-  const [repoUrl, setRepoUrl] = useState(team?.repoUrl || '');
+  const [name, setName] = useState('');
+  const [repoUrl, setRepoUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // team değişince form'u güncelle
-  const handleOpenChange = (isOpen: boolean) => {
-    if (isOpen && team) {
+  useEffect(() => {
+    if (team) {
       setName(team.name);
       setRepoUrl(team.repoUrl || '');
       setError(null);
     }
-    onOpenChange(isOpen);
+  }, [team]);
+
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      onOpenChange(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

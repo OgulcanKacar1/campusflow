@@ -8,8 +8,9 @@ import { RandomTeamsButton } from './RandomTeamsButton';
 import { EditTeamModal } from './EditTeamModal';
 import { DeleteTeamDialog } from './DeleteTeamDialog';
 import { AddMemberModal } from './AddMemberModal';
-import { updateCourseTeamSettings } from '@/app/dashboard/instructor/teams/actions';
-import type { Team, TeamSettings } from '@/types/team';
+import { RemoveMemberDialog } from './RemoveMemberDialog';
+import { updateCourseTeamSettings, removeTeamMember } from '@/app/dashboard/instructor/teams/actions';
+import type { Team, TeamSettings, TeamMember } from '@/types/team';
 
 interface TeamsPageClientProps {
   courseId: string;
@@ -34,6 +35,9 @@ export function TeamsPageClient({
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [addMemberTeam, setAddMemberTeam] = useState<Team | null>(null);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
+  const [removeMemberTeam, setRemoveMemberTeam] = useState<Team | null>(null);
+  const [removeMember, setRemoveMember] = useState<TeamMember | null>(null);
+  const [isRemoveMemberOpen, setIsRemoveMemberOpen] = useState(false);
 
   const handleSaveSettings = async (newSettings: TeamSettings) => {
     const result = await updateCourseTeamSettings(courseId, newSettings);
@@ -56,6 +60,31 @@ export function TeamsPageClient({
   const handleAddMember = (team: Team) => {
     setAddMemberTeam(team);
     setIsAddMemberOpen(true);
+  };
+
+  const handleRemoveMemberClick = (team: Team, member: TeamMember) => {
+    setRemoveMemberTeam(team);
+    setRemoveMember(member);
+    setIsRemoveMemberOpen(true);
+  };
+
+  const handleRemoveMemberConfirm = async () => {
+    if (!removeMemberTeam || !removeMember) return;
+    
+    const result = await removeTeamMember({ 
+      teamId: removeMemberTeam.id, 
+      studentId: removeMember.studentId 
+    });
+    
+    if (result.error) {
+      alert('Üye çıkarılırken hata: ' + result.error);
+    } else {
+      setIsRemoveMemberOpen(false);
+      setRemoveMemberTeam(null);
+      setRemoveMember(null);
+      // Listeyi yenile
+      window.location.reload();
+    }
   };
 
   const handleSuccess = () => {
@@ -120,6 +149,7 @@ export function TeamsPageClient({
               onEdit={handleEdit}
               onDelete={handleDelete}
               onAddMember={handleAddMember}
+              onRemoveMember={handleRemoveMemberClick}
               onCopyInviteCode={handleCopyInviteCode}
             />
           </div>
@@ -147,6 +177,14 @@ export function TeamsPageClient({
         open={isAddMemberOpen}
         onOpenChange={setIsAddMemberOpen}
         onSuccess={handleSuccess}
+      />
+
+      <RemoveMemberDialog
+        team={removeMemberTeam}
+        member={removeMember}
+        open={isRemoveMemberOpen}
+        onOpenChange={setIsRemoveMemberOpen}
+        onConfirm={handleRemoveMemberConfirm}
       />
     </div>
   );
