@@ -1,7 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import type {
   Team,
   TeamMember,
@@ -103,11 +103,7 @@ export async function getTeamsByCourse(courseId: string): Promise<ActionResult<T
       .is('left_at', null)
       .order('joined_at', { ascending: true });
     
-    if (membersError) {
-      console.error('Üyeler alınamadı:', membersError);
-    } else {
-      console.log(`Team ${row.team_id} members:`, members?.length || 0);
-    }
+    // Debug: if (membersError) console.error('Üyeler alınamadı:', membersError);
 
     // 2. Profile bilgilerini ayrı sorguyla al
     const studentIds = (members || []).map((m: any) => m.student_id);
@@ -119,11 +115,7 @@ export async function getTeamsByCourse(courseId: string): Promise<ActionResult<T
         .select('id, full_name, email')
         .in('id', studentIds);
       
-      if (profilesError) {
-        console.error(`Team ${row.team_id} profiles error:`, profilesError);
-      } else {
-        console.log(`Team ${row.team_id} profiles:`, profiles?.length || 0);
-      }
+      // Debug: if (profilesError) console.error(`Team ${row.team_id} profiles error:`, profilesError);
       
       profilesMap = (profiles || []).reduce((acc, p) => {
         acc[p.id] = { full_name: p.full_name || '', email: p.email || '' };
@@ -155,7 +147,6 @@ export async function getTeamsByCourse(courseId: string): Promise<ActionResult<T
     });
   }
   
-  console.log('Final teams:', teams.map(t => ({ name: t.name, members: t.members.length })));
   return { data: teams };
 }
 
@@ -178,6 +169,7 @@ export async function createTeam(input: CreateTeamInput): Promise<ActionResult<T
   
   const row = data[0];
   revalidatePath(`/dashboard/instructor/courses/${input.courseId}/teams`);
+  revalidateTag(`teams-${input.courseId}`);
   
   return {
     data: {
@@ -257,8 +249,6 @@ export async function addTeamMember(input: AddMemberInput): Promise<ActionResult
       p_team_id: input.teamId,
       p_student_id: input.studentId,
     });
-  
-  console.log('RPC add_team_member error:', error);
   
   if (error) {
     if (error.message.includes('zaten')) {

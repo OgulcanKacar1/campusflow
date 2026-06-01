@@ -193,7 +193,11 @@ export function RandomTeamsButton({ courseId, teamSize }: RandomTeamsButtonProps
           </DialogHeader>
           <div className="flex justify-center mt-2">
             <Button
-              onClick={() => setSuccessOpen(false)}
+              onClick={() => {
+                // Cache bypass - direkt URL'ye git
+                const courseId = window.location.pathname.split('/')[4];
+                window.location.href = `/dashboard/instructor/courses/${courseId}/teams?t=${Date.now()}`;
+              }}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               Tamam

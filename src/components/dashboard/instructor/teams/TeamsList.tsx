@@ -139,7 +139,6 @@ export function TeamsList({
           </CardHeader>
 
           {/* Üye Listesi */}
-          {console.log(`Team ${team.name} members:`, team.members)}
           {team.members && team.members.length > 0 && (
             <CardContent className="pt-0">
               <div className="border-t border-gray-800 pt-3">

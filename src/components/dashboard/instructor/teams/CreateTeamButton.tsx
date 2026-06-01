@@ -43,8 +43,6 @@ export function CreateTeamButton({ courseId }: CreateTeamButtonProps) {
       setName('');
       setRepoUrl('');
       setSuccessOpen(true);
-      // Sayfayı yenile - yeni takımı göster
-      window.location.reload();
     }
 
     setIsSubmitting(false);
@@ -150,7 +148,11 @@ export function CreateTeamButton({ courseId }: CreateTeamButtonProps) {
           </DialogHeader>
           <div className="flex justify-center mt-2">
             <Button
-              onClick={() => setSuccessOpen(false)}
+              onClick={() => {
+                // Cache bypass - direkt URL'ye git
+                const courseId = window.location.pathname.split('/')[4];
+                window.location.href = `/dashboard/instructor/courses/${courseId}/teams?t=${Date.now()}`;
+              }}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               Tamam
