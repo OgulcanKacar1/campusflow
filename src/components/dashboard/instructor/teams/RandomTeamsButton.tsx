@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -10,19 +10,42 @@ import { createRandomTeams } from '@/app/dashboard/instructor/teams/actions';
 
 interface RandomTeamsButtonProps {
   courseId: string;
-  teamSize: number;
+  defaultTeamSize?: number;
+  minTeamSize?: number;
+  maxTeamSize?: number;
   onSuccess?: () => void;
 }
 
-export function RandomTeamsButton({ courseId, teamSize, onSuccess }: RandomTeamsButtonProps) {
+export function RandomTeamsButton({
+  courseId,
+  defaultTeamSize = 3,
+  minTeamSize,
+  maxTeamSize,
+  onSuccess,
+}: RandomTeamsButtonProps) {
   const [open, setOpen] = useState(false);
-  const [size, setSize] = useState(teamSize.toString());
+  const normalizedMinSize = Math.max(1, minTeamSize ?? 1);
+  const normalizedMaxSize = Math.max(normalizedMinSize, maxTeamSize ?? Math.max(normalizedMinSize, 20));
+
+  const clampSize = (value: number) => {
+    if (Number.isNaN(value) || value <= 0) return normalizedMinSize;
+    return Math.min(Math.max(value, normalizedMinSize), normalizedMaxSize);
+  };
+
+  const [size, setSize] = useState(clampSize(defaultTeamSize).toString());
   const [prefix, setPrefix] = useState('Takım');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ teamCount: number; remainder: number } | null>(null);
   const [successOpen, setSuccessOpen] = useState(false);
   const [createdCount, setCreatedCount] = useState(0);
+
+  useEffect(() => {
+    const initial = clampSize(defaultTeamSize);
+    const initialStr = initial.toString();
+    setSize(initialStr);
+    calculatePreview(initialStr);
+  }, [defaultTeamSize, normalizedMinSize, normalizedMaxSize]);
 
   const calculatePreview = (s: string) => {
     const num = parseInt(s, 10);
@@ -37,14 +60,20 @@ export function RandomTeamsButton({ courseId, teamSize, onSuccess }: RandomTeams
 
   const handleSizeChange = (value: string) => {
     setSize(value);
+    setError(null);
     calculatePreview(value);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const numSize = parseInt(size, 10);
-    if (isNaN(numSize) || numSize < 1) {
+    if (isNaN(numSize)) {
       setError('Geçerli bir takım büyüklüğü girin');
+      return;
+    }
+
+    if (numSize < normalizedMinSize || numSize > normalizedMaxSize) {
+      setError(`Takım büyüklüğü ${normalizedMinSize}-${normalizedMaxSize} arasında olmalı`);
       return;
     }
 
@@ -110,13 +139,16 @@ export function RandomTeamsButton({ courseId, teamSize, onSuccess }: RandomTeams
               <Input
                 id="size"
                 type="number"
-                min={1}
-                max={20}
+                min={normalizedMinSize}
+                max={normalizedMaxSize}
                 value={size}
                 onChange={(e) => handleSizeChange(e.target.value)}
                 className="bg-[#1a1f2e] border-gray-700 text-white"
                 disabled={isSubmitting}
               />
+              <p className="text-xs text-gray-500">
+                Min: {normalizedMinSize}, Max: {normalizedMaxSize}
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -196,8 +228,7 @@ export function RandomTeamsButton({ courseId, teamSize, onSuccess }: RandomTeams
             <Button
               onClick={() => {
                 setSuccessOpen(false);
-                // Aynı sayfada yenile
-                window.location.href = window.location.pathname + '?t=' + Date.now();
+                onSuccess?.();
               }}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >

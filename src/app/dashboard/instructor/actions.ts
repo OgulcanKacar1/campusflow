@@ -2,23 +2,12 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import type { InstructorCourse } from '@/types/course';
 
 // Types
 interface ActionResult<T = void> {
   data?: T;
   error?: string;
-}
-
-interface InstructorCourse {
-  id: string;
-  code: string;
-  name: string;
-  term: string;
-  year: number;
-  section: string | null;
-  status: string;
-  joinCode: string;
-  studentCount: number;
 }
 
 export async function getInstructorStats() {
@@ -305,6 +294,9 @@ export async function getCourseById(courseId: string): Promise<ActionResult<Inst
       section,
       status,
       join_code,
+      team_mode,
+      team_min_size,
+      team_max_size,
       course_enrollments ( count )
     `)
     .eq('id', courseId)
@@ -325,7 +317,10 @@ export async function getCourseById(courseId: string): Promise<ActionResult<Inst
       section: course.section,
       status: course.status,
       joinCode: course.join_code,
-      studentCount: (course.course_enrollments as any)?.[0]?.count || 0
+      studentCount: (course.course_enrollments as any)?.[0]?.count || 0,
+      teamMode: (course.team_mode as 'instructor' | 'random' | 'student') ?? 'instructor',
+      teamMinSize: course.team_min_size ?? null,
+      teamMaxSize: course.team_max_size ?? null
     }
   };
 }

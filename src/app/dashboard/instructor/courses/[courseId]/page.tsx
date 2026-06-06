@@ -75,6 +75,11 @@ export default function CourseDetailPage() {
         code: result.data.code,
         section: result.data.section || ''
       });
+      setTeamMode(result.data.teamMode ?? 'instructor');
+      setTeamSettings({
+        minSize: result.data.teamMinSize ?? 3,
+        maxSize: result.data.teamMaxSize ?? 5
+      });
     }
     setLoading(false);
   };
@@ -137,8 +142,9 @@ export default function CourseDetailPage() {
     }
   };
 
-  const handleSuccess = () => {
-    loadTeams();
+  const handleTeamsRefresh = async () => {
+    await Promise.all([loadTeams(), loadStudents()]);
+    showToast('Takımlar güncellendi', 'success');
   };
 
   const handleMoveMember = async (studentId: string, fromTeamId: string, toTeamId: string) => {
@@ -252,7 +258,9 @@ export default function CourseDetailPage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Öğrenci</p>
-                  <p className="text-2xl font-bold text-white">4</p>
+                  <p className="text-2xl font-bold text-white">
+                    {studentsLoading ? '…' : students.length || course?.studentCount || 0}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -266,7 +274,9 @@ export default function CourseDetailPage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Takım</p>
-                  <p className="text-2xl font-bold text-white">2</p>
+                  <p className="text-2xl font-bold text-white">
+                    {teamsLoading ? '…' : teams.length}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -280,7 +290,9 @@ export default function CourseDetailPage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Katılım Kodu</p>
-                  <p className="text-lg font-mono font-semibold text-purple-400">P6EPOX</p>
+                  <p className="text-lg font-mono font-semibold text-purple-400">
+                    {course?.joinCode || '—'}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -338,7 +350,13 @@ export default function CourseDetailPage() {
                       <CreateTeamButton courseId={courseId} />
                     )}
                     {teamMode === 'random' && (
-                      <RandomTeamsButton courseId={courseId} teamSize={3} onSuccess={handleSuccess} />
+                      <RandomTeamsButton
+                        courseId={courseId}
+                        defaultTeamSize={teamSettings.maxSize ?? 3}
+                        minTeamSize={teamSettings.minSize ?? 1}
+                        maxTeamSize={teamSettings.maxSize ?? 3}
+                        onSuccess={handleTeamsRefresh}
+                      />
                     )}
                     {teamMode === 'student' && (
                       <p className="text-gray-400 text-sm">Öğrenciler kendi takımlarını seçebilir</p>
@@ -548,14 +566,14 @@ export default function CourseDetailPage() {
         team={editTeam}
         open={isEditOpen}
         onOpenChange={setIsEditOpen}
-        onSuccess={handleSuccess}
+        onSuccess={handleTeamsRefresh}
       />
 
       <DeleteTeamDialog
         team={deleteTeam}
         open={isDeleteOpen}
         onOpenChange={setIsDeleteOpen}
-        onSuccess={handleSuccess}
+        onSuccess={handleTeamsRefresh}
       />
 
       <AddMemberModal
@@ -563,7 +581,7 @@ export default function CourseDetailPage() {
         courseId={courseId}
         open={isAddMemberOpen}
         onOpenChange={setIsAddMemberOpen}
-        onSuccess={handleSuccess}
+        onSuccess={handleTeamsRefresh}
       />
 
       <RemoveMemberDialog
