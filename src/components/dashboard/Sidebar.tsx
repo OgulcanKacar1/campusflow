@@ -36,8 +36,6 @@ const menuByRole: Record<string, { label: string; href: string; icon: React.Elem
   instructor: [
     { label: 'Genel Bakış', href: '/dashboard/instructor', icon: LayoutDashboard },
     { label: 'Derslerim', href: '/dashboard/instructor/courses', icon: BookOpen },
-    { label: 'Takımlar', href: '/dashboard/instructor/teams', icon: Users },
-    { label: 'Görevler', href: '/dashboard/instructor/tasks', icon: ClipboardList },
     { label: 'Ayarlar', href: '/dashboard/instructor/settings', icon: Settings },
   ],
   student: [

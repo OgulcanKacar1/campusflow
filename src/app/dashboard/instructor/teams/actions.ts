@@ -78,7 +78,6 @@ export async function updateCourseTeamSettings(
  */
 export async function getTeamsByCourse(courseId: string): Promise<ActionResult<Team[]>> {
   const supabase = await createClient();
-  
   // RPC: get_course_teams — üye sayısı dahil
   const { data: teamsData, error: teamsError } = await supabase
     .rpc('get_course_teams', { p_course_id: courseId });
@@ -224,6 +223,55 @@ export async function deleteTeam(teamId: string, courseId: string): Promise<Acti
   }
   
   revalidatePath(`/dashboard/instructor/courses/${courseId}/teams`);
+  return {};
+}
+
+/**
+ * Üyeyi takımdan çıkar ve başka takıma ekle
+ */
+export async function moveTeamMember(
+  studentId: string,
+  fromTeamId: string,
+  toTeamId: string
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  
+  // Önce hedef takımın dersini bul (revalidate için)
+  const { data: toTeam, error: toTeamError } = await supabase
+    .from('teams')
+    .select('course_id')
+    .eq('id', toTeamId)
+    .single();
+  
+  if (toTeamError || !toTeam) {
+    return { error: 'Hedef takım bulunamadı' };
+  }
+  
+  // 1. Eski takımdan sil (student_id ile)
+  const { error: deleteError } = await supabase
+    .from('team_members')
+    .delete()
+    .eq('student_id', studentId)
+    .eq('team_id', fromTeamId);
+  
+  if (deleteError) {
+    return { error: deleteError.message };
+  }
+  
+  // 2. Yeni takıma ekle
+  const { error: addError } = await supabase
+    .from('team_members')
+    .insert({
+      team_id: toTeamId,
+      student_id: studentId,
+      role: 'member'
+    });
+  
+  if (addError) {
+    return { error: addError.message };
+  }
+  
+  revalidatePath(`/dashboard/instructor/courses/${toTeam.course_id}`);
   return {};
 }
 

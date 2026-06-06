@@ -1,6 +1,25 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { revalidatePath } from 'next/cache';
+
+// Types
+interface ActionResult<T = void> {
+  data?: T;
+  error?: string;
+}
+
+interface InstructorCourse {
+  id: string;
+  code: string;
+  name: string;
+  term: string;
+  year: number;
+  section: string | null;
+  status: string;
+  joinCode: string;
+  studentCount: number;
+}
 
 export async function getInstructorStats() {
   const supabase = await createClient();
@@ -174,44 +193,6 @@ export async function createCourse(formData: FormData) {
   return { success: true };
 }
 
-export async function updateCourse(courseId: string, formData: FormData) {
-  const supabase = await createClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: 'Oturum bulunamadı' };
-
-  const code = formData.get('code') as string;
-  const name = formData.get('name') as string;
-  const term = formData.get('term') as string;
-  const year = parseInt(formData.get('year') as string);
-  const section = formData.get('section') as string;
-  const status = formData.get('status') as string;
-
-  if (!code || !name || !term || !year) {
-    return { error: 'Lütfen zorunlu alanları doldurun.' };
-  }
-
-  const currentYear = new Date().getFullYear();
-  if (year < currentYear) {
-    return { error: `Geçmiş yıllar (${year}) için ders güncellenemez.` };
-  }
-
-  const { error } = await supabase
-    .from('courses')
-    .update({
-      code,
-      name,
-      term,
-      year,
-      section: section || null,
-      status: status as any,
-    })
-    .eq('id', courseId)
-    .eq('instructor_id', user.id); // Sadece kendi dersini güncelleyebilir
-
-  if (error) return { error: error.message };
-  return { success: true };
-}
 
 export async function deleteCourse(courseId: string) {
   const supabase = await createClient();
@@ -302,4 +283,138 @@ export async function enrollStudentsFromCSV(courseId: string, csvContent: string
     alreadyEnrolled: existingStudentIds.length,
     unregistered: unregisteredEmails
   };
+}
+
+/**
+ * Tek ders detayını getir
+ */
+export async function getCourseById(courseId: string): Promise<ActionResult<InstructorCourse>> {
+  const supabase = await createClient();
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Oturum bulunamadı' };
+
+  const { data: course, error } = await supabase
+    .from('courses')
+    .select(`
+      id,
+      code,
+      name,
+      term,
+      year,
+      section,
+      status,
+      join_code,
+      course_enrollments ( count )
+    `)
+    .eq('id', courseId)
+    .eq('instructor_id', user.id)
+    .single();
+
+  if (error || !course) {
+    return { error: 'Ders bulunamadı' };
+  }
+
+  return {
+    data: {
+      id: course.id,
+      code: course.code,
+      name: course.name,
+      term: course.term,
+      year: course.year,
+      section: course.section,
+      status: course.status,
+      joinCode: course.join_code,
+      studentCount: (course.course_enrollments as any)?.[0]?.count || 0
+    }
+  };
+}
+
+interface UpdateCourseInput {
+  courseId: string;
+  name?: string;
+  code?: string;
+  section?: string;
+  teamMode?: 'instructor' | 'random' | 'student';
+  minTeamSize?: number;
+  maxTeamSize?: number;
+}
+
+export async function getCourseStudents(courseId: string): Promise<ActionResult<any[]>> {
+  const supabase = await createClient();
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Oturum bulunamadı' };
+
+  // 1. Öğrencileri çek
+  const { data: enrollments, error } = await supabase
+    .from('course_enrollments')
+    .select(`
+      student_id,
+      created_at,
+      profiles:student_id (id, full_name, email)
+    `)
+    .eq('course_id', courseId)
+    .eq('status', 'enrolled');
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  // 2. Her öğrencinin takım bilgisini ayrı çek
+  const studentIds = enrollments?.map((e: any) => e.student_id) || [];
+  
+  let teamMembers: any[] = [];
+  if (studentIds.length > 0) {
+    const { data: tmData } = await supabase
+      .from('team_members')
+      .select('student_id, team_id, teams(name)')
+      .in('student_id', studentIds);
+    teamMembers = tmData || [];
+  }
+
+  // 3. Takım bilgisini eşleştir
+  const students = enrollments?.map((e: any) => {
+    const teamMember = teamMembers.find((tm: any) => tm.student_id === e.student_id);
+    return {
+      id: e.student_id,
+      name: e.profiles?.full_name || 'İsimsiz',
+      email: e.profiles?.email || '',
+      team: teamMember?.teams?.name || '-',
+      date: new Date(e.created_at).toLocaleDateString('tr-TR')
+    };
+  }) || [];
+
+  return { data: students };
+}
+
+export async function updateCourse(input: UpdateCourseInput): Promise<ActionResult> {
+  const supabase = await createClient();
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Oturum bulunamadı' };
+
+  const updateData: any = {
+    updated_at: new Date().toISOString()
+  };
+  
+  if (input.name !== undefined) updateData.name = input.name;
+  if (input.code !== undefined) updateData.code = input.code;
+  if (input.section !== undefined) updateData.section = input.section;
+  if (input.teamMode !== undefined) updateData.team_mode = input.teamMode;
+  if (input.minTeamSize !== undefined) updateData.team_min_size = input.minTeamSize;
+  if (input.maxTeamSize !== undefined) updateData.team_max_size = input.maxTeamSize;
+
+  const { error } = await supabase
+    .from('courses')
+    .update(updateData)
+    .eq('id', input.courseId)
+    .eq('instructor_id', user.id);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath(`/dashboard/instructor/courses/${input.courseId}`);
+  return {};
 }

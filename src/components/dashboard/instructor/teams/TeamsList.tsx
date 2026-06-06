@@ -16,6 +16,7 @@ interface TeamsListProps {
   onAddMember: (team: Team) => void;
   onRemoveMember?: (team: Team, member: TeamMember) => void;
   onCopyInviteCode: (code: string) => void;
+  onMoveMember?: (memberId: string, fromTeamId: string, toTeamId: string) => void;
 }
 
 export function TeamsList({
@@ -26,6 +27,7 @@ export function TeamsList({
   onAddMember,
   onRemoveMember,
   onCopyInviteCode,
+  onMoveMember,
 }: TeamsListProps) {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<{ member: TeamMember; team: Team } | null>(null);
@@ -54,9 +56,30 @@ export function TeamsList({
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {teams.map((team) => (
-        <Card key={team.id} className="bg-[#0f1523] border-gray-800">
+        <Card 
+          key={team.id} 
+          className="bg-[#0f1523] border-gray-800 transition-all"
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.currentTarget.classList.add('border-blue-500', 'border-2');
+          }}
+          onDragLeave={(e) => {
+            e.currentTarget.classList.remove('border-blue-500', 'border-2');
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.currentTarget.classList.remove('border-blue-500', 'border-2');
+            const data = e.dataTransfer.getData('application/json');
+            if (data && onMoveMember) {
+              const { studentId, fromTeamId } = JSON.parse(data);
+              if (fromTeamId !== team.id) {
+                onMoveMember(studentId, fromTeamId, team.id);
+              }
+            }
+          }}
+        >
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between">
               <div>
@@ -147,13 +170,41 @@ export function TeamsList({
                   {team.members.map((member) => (
                     <button
                       key={member.id}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('application/json', JSON.stringify({
+                          studentId: member.studentId,
+                          fromTeamId: team.id
+                        }));
+                      }}
                       onClick={() => setSelectedMember({ member, team })}
-                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#1a1f2e] text-gray-300 border border-gray-700 hover:bg-[#2a3142] hover:border-gray-600 transition-colors cursor-pointer"
+                      className="group inline-flex items-center gap-2 pl-1 pr-3 py-1.5 rounded-xl bg-[#161b22] hover:bg-[#1e2535] border border-gray-700/50 hover:border-blue-500/50 transition-all duration-200 cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md"
+                      title="Başka takıma sürükle"
                     >
-                      {member.studentName || 'İsimsiz'}
+                      {/* Avatar Circle */}
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/30 flex items-center justify-center text-xs font-semibold text-blue-300 group-hover:scale-105 transition-transform">
+                        {member.studentName?.charAt(0).toUpperCase() || '?'}
+                      </div>
+                      
+                      {/* Name */}
+                      <span className="text-sm font-medium text-gray-200 group-hover:text-white">
+                        {member.studentName || 'İsimsiz'}
+                      </span>
+                      
+                      {/* Leader Badge */}
                       {member.role === 'leader' && (
-                        <span className="ml-1 text-yellow-400">★</span>
+                        <span className="flex items-center gap-0.5 text-amber-400 text-xs">
+                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                          </svg>
+                          Lider
+                        </span>
                       )}
+                      
+                      {/* Drag Indicator */}
+                      <svg className="w-3.5 h-3.5 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                      </svg>
                     </button>
                   ))}
                 </div>

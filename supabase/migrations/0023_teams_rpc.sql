@@ -61,12 +61,18 @@ BEGIN
     RAISE EXCEPTION 'Bu ders için takım oluşturma yetkiniz yok';
   END IF;
 
-  -- Derse kayıtlı öğrencileri al
+  -- Derse kayıtlı ve henüz hiçbir takımda olmayan öğrencileri al
   SELECT ARRAY_AGG(ce.student_id)
   INTO v_student_ids
   FROM course_enrollments ce
   WHERE ce.course_id = p_course_id
-  AND ce.status = 'enrolled';
+  AND ce.status = 'enrolled'
+  AND NOT EXISTS (
+    SELECT 1 FROM team_members tm
+    JOIN teams t ON t.id = tm.team_id
+    WHERE t.course_id = p_course_id
+    AND tm.student_id = ce.student_id
+  );
 
   IF v_student_ids IS NULL OR array_length(v_student_ids, 1) IS NULL THEN
     RETURN; -- Boş dön, hata değil

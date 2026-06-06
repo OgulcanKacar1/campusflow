@@ -11,9 +11,10 @@ import { createRandomTeams } from '@/app/dashboard/instructor/teams/actions';
 interface RandomTeamsButtonProps {
   courseId: string;
   teamSize: number;
+  onSuccess?: () => void;
 }
 
-export function RandomTeamsButton({ courseId, teamSize }: RandomTeamsButtonProps) {
+export function RandomTeamsButton({ courseId, teamSize, onSuccess }: RandomTeamsButtonProps) {
   const [open, setOpen] = useState(false);
   const [size, setSize] = useState(teamSize.toString());
   const [prefix, setPrefix] = useState('Takım');
@@ -194,9 +195,9 @@ export function RandomTeamsButton({ courseId, teamSize }: RandomTeamsButtonProps
           <div className="flex justify-center mt-2">
             <Button
               onClick={() => {
-                // Cache bypass - direkt URL'ye git
-                const courseId = window.location.pathname.split('/')[4];
-                window.location.href = `/dashboard/instructor/courses/${courseId}/teams?t=${Date.now()}`;
+                setSuccessOpen(false);
+                // Aynı sayfada yenile
+                window.location.href = window.location.pathname + '?t=' + Date.now();
               }}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
