@@ -147,3 +147,36 @@
 - [ ] Paydaşlarla yayın penceresini planla; destek ekibine bilgi ver.
 
 > Bu dosyayı Faz 4 için yaşayan doküman olarak tut. Her haftanın sonunda tamamlanan maddeleri işaretle, kapsam değiştiyse not düş.
+
+---
+
+## 9. Mimari Prensipler & Kod Düzeni
+
+### 9.1 Katmanlı Akış
+- [ ] Migration → server action → UI sıralamasını koru; Supabase erişimi yalnızca server tarafındaki “service/action” katmanında toplansın.
+- [ ] Kanban iş mantığını `src/app/dashboard/shared/` altında merkezi dosyalara taşı; UI bileşenleri yalnızca props ile çalışsın.
+- [ ] Form/veri doğrulamaları için `zod` gibi şema çözümlerini server action veya helper katmanında kullan.
+
+### 9.2 Tip Güvenliği
+- [ ] Yeni tablolar için `src/types/kanban.ts` (veya benzeri) altında TypeScript tipleri tanımla.
+- [ ] Server action dönüş tiplerini tek bir DTO dosyasından export et; UI bileşenleri aynı tipleri import etsin.
+- [ ] API girdi/çıktıları için ortak hata/success tipleri oluştur (ör. `KanbanActionResult`).
+
+### 9.3 React Yapısı
+- [ ] Kanban pano bileşenlerini küçük, saf bileşenlere ayır (`KanbanBoard`, `KanbanColumn`, `TaskCard`).
+- [ ] Drag-drop mantığını özel hook’ta topla (`useKanbanDragDrop`); UI sadece event tetiklesin.
+- [ ] Optimistic update yapılan her mutasyon için geri alma (`onError` → state revert) mekanizması hazır olsun.
+
+### 9.4 Dizin Düzeni Önerisi
+- [ ] `src/app/dashboard/_shared/kanban/` altında:
+  - `KanbanBoard.tsx`
+  - `KanbanColumn.tsx`
+  - `KanbanCard.tsx`
+  - `hooks/useKanbanState.ts`
+  - `hooks/useKanbanDragDrop.ts`
+- [ ] Server action dosyalarını `src/app/dashboard/shared/teamActions.ts` ve `teamTasks.ts` gibi modüllerde grupla.
+
+### 9.5 Test & QA Prensipleri
+- [ ] Server action testleri (mutlu yol + yetki reddi) yazılmadan merge etme.
+- [ ] Manuel regresyon checklist’ini her sprint sonunda güncelle ve sonuçları bu dosyaya işle.
+- [ ] Kod review’lerde RLS, optimistic update ve tip güvenliği maddelerini kontrol listesine ekle.
