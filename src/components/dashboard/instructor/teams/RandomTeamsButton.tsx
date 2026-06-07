@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -27,41 +27,33 @@ export function RandomTeamsButton({
   const normalizedMinSize = Math.max(1, minTeamSize ?? 1);
   const normalizedMaxSize = Math.max(normalizedMinSize, maxTeamSize ?? Math.max(normalizedMinSize, 20));
 
-  const clampSize = (value: number) => {
-    if (Number.isNaN(value) || value <= 0) return normalizedMinSize;
-    return Math.min(Math.max(value, normalizedMinSize), normalizedMaxSize);
-  };
+  const [, startTransition] = useTransition();
 
-  const [size, setSize] = useState(clampSize(defaultTeamSize).toString());
+  const clampSize = useCallback(
+    (value: number) => {
+      if (Number.isNaN(value) || value <= 0) return normalizedMinSize;
+      return Math.min(Math.max(value, normalizedMinSize), normalizedMaxSize);
+    },
+    [normalizedMinSize, normalizedMaxSize]
+  );
+
+  const [size, setSize] = useState(() => clampSize(defaultTeamSize).toString());
   const [prefix, setPrefix] = useState('Takım');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [preview, setPreview] = useState<{ teamCount: number; remainder: number } | null>(null);
   const [successOpen, setSuccessOpen] = useState(false);
   const [createdCount, setCreatedCount] = useState(0);
 
   useEffect(() => {
-    const initial = clampSize(defaultTeamSize);
-    const initialStr = initial.toString();
-    setSize(initialStr);
-    calculatePreview(initialStr);
-  }, [defaultTeamSize, normalizedMinSize, normalizedMaxSize]);
-
-  const calculatePreview = (s: string) => {
-    const num = parseInt(s, 10);
-    if (isNaN(num) || num < 1) {
-      setPreview(null);
-      return;
-    }
-    // Öğrenci sayısını bilmediğimiz için placeholder gösterelim
-    // Gerçek hesaplama server-side yapılacak
-    setPreview({ teamCount: 0, remainder: 0 });
-  };
+    startTransition(() => {
+      const initial = clampSize(defaultTeamSize);
+      setSize(initial.toString());
+    });
+  }, [defaultTeamSize, clampSize, startTransition]);
 
   const handleSizeChange = (value: string) => {
     setSize(value);
     setError(null);
-    calculatePreview(value);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,6 +90,7 @@ export function RandomTeamsButton({
       }
       setCreatedCount(createdCount);
       setSuccessOpen(true);
+      onSuccess?.();
     }
 
     setIsSubmitting(false);
@@ -164,7 +157,7 @@ export function RandomTeamsButton({
                 disabled={isSubmitting}
               />
               <p className="text-xs text-gray-500">
-                Örnek: "{prefix} 1", "{prefix} 2", ...
+                Örnek: &quot;{prefix} 1&quot;, &quot;{prefix} 2&quot;, ...
               </p>
             </div>
 
@@ -226,10 +219,7 @@ export function RandomTeamsButton({
           </DialogHeader>
           <div className="flex justify-center mt-2">
             <Button
-              onClick={() => {
-                setSuccessOpen(false);
-                onSuccess?.();
-              }}
+              onClick={() => setSuccessOpen(false)}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               Tamam

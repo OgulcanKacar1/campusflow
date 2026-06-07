@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -26,15 +26,24 @@ export function EditTeamModal({ team, open, onOpenChange, onSuccess }: EditTeamM
   const [repoUrl, setRepoUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
 
   // team değişince form'u güncelle
   useEffect(() => {
     if (team) {
-      setName(team.name);
-      setRepoUrl(team.repoUrl || '');
-      setError(null);
+      startTransition(() => {
+        setName(team.name);
+        setRepoUrl(team.repoUrl || '');
+        setError(null);
+      });
+    } else {
+      startTransition(() => {
+        setName('');
+        setRepoUrl('');
+        setError(null);
+      });
     }
-  }, [team]);
+  }, [team, startTransition]);
 
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {

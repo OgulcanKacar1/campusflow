@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useTransition } from 'react';
 import { getStudentCourses, joinCourseByCode } from '../actions';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Loader2, ArrowLeft, KeyRound, BookOpen, Users, ClipboardList, ChevronRight, GraduationCap } from 'lucide-react';
+import { Loader2, ArrowLeft, KeyRound, BookOpen, Users, ClipboardList, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import type { StudentCourse as Course } from '@/types/course';
 
@@ -29,14 +29,35 @@ export default function StudentCoursesPage() {
   const [joining, setJoining] = useState(false);
   const [joinResult, setJoinResult] = useState<{ error?: string; success?: boolean } | null>(null);
 
-  useEffect(() => { loadCourses(); }, []);
+  const [, startTransition] = useTransition();
 
-  async function loadCourses() {
-    setLoading(true);
+  const fetchCourses = useCallback(async () => {
     const result = await getStudentCourses();
-    if (result.data) setCourses(result.data as Course[]);
-    setLoading(false);
-  }
+    return result.data ?? [];
+  }, []);
+
+  const refreshCourses = useCallback(() => {
+    fetchCourses().then((list) => {
+      startTransition(() => setCourses(list));
+    });
+  }, [fetchCourses, startTransition]);
+
+  useEffect(() => {
+    let cancelled = false;
+    startTransition(() => setLoading(true));
+
+    fetchCourses().then((list) => {
+      if (cancelled) return;
+      startTransition(() => {
+        setCourses(list);
+        setLoading(false);
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchCourses, startTransition]);
 
   async function handleJoin(e: React.FormEvent) {
     e.preventDefault();
@@ -45,7 +66,10 @@ export default function StudentCoursesPage() {
     const result = await joinCourseByCode(joinCode);
     setJoinResult(result);
     setJoining(false);
-    if (result.success) { setJoinCode(''); loadCourses(); }
+    if (result.success) {
+      setJoinCode('');
+      refreshCourses();
+    }
   }
 
   return (

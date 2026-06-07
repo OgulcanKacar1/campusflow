@@ -1,5 +1,26 @@
 # CampusFlow — Geliştirme Planı
 
+## Güncel Durum (2026-06-07)
+
+### Tamamlananlar
+- Öğrenci takım akışındaki kritik hatalar giderildi: davet koduyla tekrar katılım duplicate hatası çözüldü, boş kalan student-led takımlar otomatik siliniyor.
+- `student_join_team_by_invite` ve `student_leave_team` RPC'leri yeniden yazılarak rejoin senaryoları ve odak sorunları düzeltildi.
+- Öğrenci kurs sayfasındaki *TeamSection* bileşeni yeniden tasarlandı (odak kaybı, kart düzeni, responsive grid, davet kodu gizleme).
+- Instructor ve student takım güncellemeleri `develop` üzerine merge edildi; feature branch kapatıldı.
+
+### Gündemdeki İşler
+- Phase 3 güvenlik sertleştirmesi: geçici olarak açılmış RLS/policy gevşetmelerini (0027–0028) kaldırıp org-izolasyon policy’lerini yeniden aktive etmek.
+- Instructor takım yönetimi tarafındaki geniş lint hataları (özellikle `setState` çağrıları, `any` tipleri, kullanılmayan değişkenler) temizlenmeli.
+- Öğrenci/instructor takım sayfalarına toast/notification katmanı ve success geri bildirimleri eklemek.
+- Phase 4 (Sprint & Kanban) için veri modeli hazırlığı: `task_members`, sprint şablonları ve UI keşfi.
+- Test planı: lint workflow’unu CI’da bloklayacak hale getirmek ve kritik takım akışları için manuel regresyon checklist’i hazırlamak.
+
+### Kısa Vadeli Öncelikler
+1. **RLS Sertleştirme:** `0027_disable_rls.sql` ve `0028_grants.sql` etkilerini geri al, `0030_restore_team_security.sql` tamamlandı mı kontrol et, eksik policy varsa ekle.
+2. **Instructor Takım Yönetimi Refactor:** `TeamModeSettings`, `TeamsPageClient` ve modal bileşenlerdeki effect/setState uyarılarını düzelt, `window.location.reload()` bağımlılıklarını async aksiyonlarla değiştir.
+3. **Lint Temizliği:** Lint raporundaki `react/no-unescaped-entities`, `no-unused-vars`, `no-explicit-any` hatalarını modül modül kapat.
+4. **Dokümantasyon:** Öğrenci takım akışındaki kurallar (min/max, davet kodu paylaşımı) için README/handbook güncellemesi yap.
+
 ## 1. VERİTABANI ANALİZİ (0001 → 0018)
 
 ### 1.1 Mevcut Tablolar
@@ -227,14 +248,16 @@ CREATE POLICY "task_members_delete_team" ON task_members FOR DELETE USING (
 - `addTeamMember(teamId, studentId)` → RPC (başka takım kontrolü ile)
 - `removeTeamMember(teamId, studentId)` → RPC (soft delete)
 
-**Components:**
-- `CreateTeamButton` → Modal ile takım oluştur
-- `EditTeamModal` → Takım düzenle
-- `AddMemberModal` → Çoklu seçim (3 kolon grid), takımsız öğrenciler
-- `RemoveMemberDialog` → Modal onaylı üye çıkarma
-- `DeleteTeamDialog` → Takım silme onayı
-- `RandomTeamsButton` → Rastgele takım oluşturma
-- `TeamModeSettings` → Mod ayarları (instructor/random/student)
+**Components (mevcut):**
+- `TeamsPageClient.tsx` → Instructor takım yönetimi sayfasının client kabuğu
+- `TeamModeSettings.tsx` → Mod & min/max ayar kartı
+- `CreateTeamButton.tsx` → Modal ile takım oluşturma
+- `EditTeamModal.tsx` → Takım adı / repo düzenleme
+- `DeleteTeamDialog.tsx` → Takım silme onayı
+- `AddMemberModal.tsx` → Takıma üye ekleme (takımsız öğrenci listesi + arama)
+- `RemoveMemberDialog.tsx` → Üye çıkarma onayı
+- `RandomTeamsButton.tsx` → Rastgele takım oluşturma sihirbazı
+- `TeamsList.tsx` → Takım kartları, sürükle-bırak üye taşıma taslağı
 
 #### 3.4 Student Sayfaları
 
@@ -253,13 +276,9 @@ CREATE POLICY "task_members_delete_team" ON task_members FOR DELETE USING (
 - `createTeam(courseId, name)` → insert (student mod açıksa)
 - `joinTeamByInviteCode(inviteCode)` → invite_code'a göre takım bul + üye ekle
 
-**Components (yeni):**
-- `src/components/dashboard/instructor/teams/CreateTeamModal.tsx`
-- `src/components/dashboard/instructor/teams/EditTeamModal.tsx`
-- `src/components/dashboard/instructor/teams/AddMemberModal.tsx`
-- `src/components/dashboard/instructor/teams/DeleteTeamDialog.tsx`
-- `src/components/dashboard/instructor/teams/RandomTeamModal.tsx`
-- `src/components/dashboard/instructor/teams/TeamModeSettings.tsx`
+**Kilit Component:**
+- `src/app/dashboard/student/courses/[courseId]/TeamSection.client.tsx` — Team summary, üyeler, diğer takımlar ve aksiyon kartları tek yerde toplandı.
+- Instructor bileşenleriyle paylaşılan aksiyonlar `src/app/dashboard/student/actions.ts` üzerinden RPC çağrıları yapıyor.
 
 ---
 

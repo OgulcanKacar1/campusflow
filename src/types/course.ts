@@ -25,4 +25,6 @@ export type StudentCourse = BaseCourse & {
   enrollmentId: string;
   enrollmentStatus: string;
   instructorName: string;
+  enrolledAt: string;
+  joinCode?: string | null;
 };

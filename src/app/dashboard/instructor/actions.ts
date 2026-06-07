@@ -54,7 +54,22 @@ export async function getInstructorStats() {
   };
 }
 
-export async function getInstructorCourses() {
+interface InstructorCourseRow {
+  id: string;
+  code: string;
+  name: string;
+  term: string;
+  year: number;
+  section: string | null;
+  status: string;
+  join_code: string | null;
+  team_mode: 'instructor' | 'random' | 'student';
+  team_min_size: number | null;
+  team_max_size: number | null;
+  course_enrollments: { count: number | null }[] | null;
+}
+
+export async function getInstructorCourses(): Promise<{ data: InstructorCourse[]; error?: string }> {
   const supabase = await createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
@@ -71,6 +86,9 @@ export async function getInstructorCourses() {
       section,
       status,
       join_code,
+      team_mode,
+      team_min_size,
+      team_max_size,
       course_enrollments ( count )
     `)
     .eq('instructor_id', user.id)
@@ -83,7 +101,9 @@ export async function getInstructorCourses() {
     return { error: error.message, data: [] };
   }
 
-  const formattedCourses = courses?.map(c => ({
+  const rows = (courses ?? []) as InstructorCourseRow[];
+
+  const formattedCourses: InstructorCourse[] = rows.map((c) => ({
     id: c.id,
     code: c.code,
     name: c.name,
@@ -92,8 +112,11 @@ export async function getInstructorCourses() {
     section: c.section,
     status: c.status,
     joinCode: c.join_code,
-    studentCount: (c.course_enrollments as any)?.[0]?.count || 0
-  })) || [];
+    studentCount: c.course_enrollments?.[0]?.count ?? 0,
+    teamMode: c.team_mode,
+    teamMinSize: c.team_min_size,
+    teamMaxSize: c.team_max_size,
+  }));
 
   return { data: formattedCourses };
 }

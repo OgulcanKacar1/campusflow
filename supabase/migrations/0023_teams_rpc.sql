@@ -187,9 +187,15 @@ CREATE OR REPLACE FUNCTION add_team_member(
 RETURNS BOOLEAN AS $$
 DECLARE
   v_course_id UUID;
+  v_team_max_size INT;
+  v_member_count INT;
+  v_existing_member_id UUID;
+  v_existing_left_at TIMESTAMPTZ;
 BEGIN
-  SELECT t.course_id INTO v_course_id
+  SELECT t.course_id, c.team_max_size
+  INTO v_course_id, v_team_max_size
   FROM teams t
+  JOIN courses c ON c.id = t.course_id
   WHERE t.id = p_team_id;
 
   IF NOT EXISTS (
@@ -210,6 +216,48 @@ BEGIN
     AND tm.team_id != p_team_id
   ) THEN
     RAISE EXCEPTION 'Öğrenci bu derste zaten başka bir takımda aktif üye';
+  END IF;
+
+  SELECT tm.id, tm.left_at
+  INTO v_existing_member_id, v_existing_left_at
+  FROM team_members tm
+  WHERE tm.team_id = p_team_id
+    AND tm.student_id = p_student_id
+  ORDER BY tm.joined_at DESC
+  LIMIT 1;
+
+  IF v_existing_member_id IS NOT NULL THEN
+    IF v_existing_left_at IS NULL THEN
+      RAISE EXCEPTION 'Bu öğrenci zaten bu takımda';
+    END IF;
+
+    SELECT COUNT(*)
+    INTO v_member_count
+    FROM team_members tm
+    WHERE tm.team_id = p_team_id
+      AND tm.left_at IS NULL;
+
+    IF v_team_max_size IS NOT NULL AND v_member_count >= v_team_max_size THEN
+      RAISE EXCEPTION 'Takım dolu';
+    END IF;
+
+    UPDATE team_members
+    SET left_at = NULL,
+        joined_at = NOW(),
+        role = 'member'
+    WHERE id = v_existing_member_id;
+
+    RETURN TRUE;
+  END IF;
+
+  SELECT COUNT(*)
+  INTO v_member_count
+  FROM team_members tm
+  WHERE tm.team_id = p_team_id
+    AND tm.left_at IS NULL;
+
+  IF v_team_max_size IS NOT NULL AND v_member_count >= v_team_max_size THEN
+    RAISE EXCEPTION 'Takım dolu';
   END IF;
 
   INSERT INTO team_members (team_id, student_id, role)

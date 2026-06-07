@@ -7,7 +7,7 @@ export default async function OrganizationsPage() {
   return (
     <div className="p-8">
       <div className="max-w-5xl mx-auto">
-        <OrganizationList organizations={organizations as any} />
+        <OrganizationList organizations={organizations} />
       </div>
     </div>
   );

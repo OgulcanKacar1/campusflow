@@ -316,17 +316,72 @@ export async function moveTeamMember(
 ): Promise<ActionResult> {
   const supabase = await createClient();
   
-  // Önce hedef takımın dersini bul (revalidate için)
+  // Hedef ve kaynak takım bilgilerini çek
   const { data: toTeam, error: toTeamError } = await supabase
     .from('teams')
-    .select('course_id')
+    .select('id, course_id')
     .eq('id', toTeamId)
     .single();
-  
-  if (toTeamError || !toTeam) {
-    return { error: 'Hedef takım bulunamadı' };
+
+  const { data: fromTeam, error: fromTeamError } = await supabase
+    .from('teams')
+    .select('id, course_id')
+    .eq('id', fromTeamId)
+    .single();
+
+  if (toTeamError || !toTeam || fromTeamError || !fromTeam) {
+    return { error: 'Takım bilgileri alınamadı' };
   }
-  
+
+  // Ders ayarlarını çek (min/max)
+  const { data: courseSettings, error: courseError } = await supabase
+    .from('courses')
+    .select('team_min_size, team_max_size')
+    .eq('id', toTeam.course_id)
+    .single();
+
+  if (courseError || !courseSettings) {
+    return { error: 'Ders ayarları alınamadı' };
+  }
+
+  const { count: toTeamCount, error: toCountError } = await supabase
+    .from('team_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('team_id', toTeamId)
+    .is('left_at', null);
+
+  if (toCountError) {
+    return { error: toCountError.message };
+  }
+
+  if (
+    courseSettings.team_max_size !== null &&
+    courseSettings.team_max_size !== undefined &&
+    toTeamCount !== null &&
+    toTeamCount + 1 > courseSettings.team_max_size
+  ) {
+    return { error: 'Hedef takım üye limitine ulaştı' };
+  }
+
+  const { count: fromTeamCount, error: fromCountError } = await supabase
+    .from('team_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('team_id', fromTeamId)
+    .is('left_at', null);
+
+  if (fromCountError) {
+    return { error: fromCountError.message };
+  }
+
+  if (
+    courseSettings.team_min_size !== null &&
+    courseSettings.team_min_size !== undefined &&
+    fromTeamCount !== null &&
+    fromTeamCount - 1 < courseSettings.team_min_size
+  ) {
+    return { error: 'Kaynak takım minimum üye sayısının altına düşemez' };
+  }
+
   // 1. Eski takımdan sil (student_id ile)
   const { error: deleteError } = await supabase
     .from('team_members')

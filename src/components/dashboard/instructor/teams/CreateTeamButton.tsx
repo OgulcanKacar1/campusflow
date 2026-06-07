@@ -10,9 +10,10 @@ import { createTeam } from '@/app/dashboard/instructor/teams/actions';
 
 interface CreateTeamButtonProps {
   courseId: string;
+  onSuccess?: () => void;
 }
 
-export function CreateTeamButton({ courseId }: CreateTeamButtonProps) {
+export function CreateTeamButton({ courseId, onSuccess }: CreateTeamButtonProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [repoUrl, setRepoUrl] = useState('');
@@ -43,6 +44,7 @@ export function CreateTeamButton({ courseId }: CreateTeamButtonProps) {
       setName('');
       setRepoUrl('');
       setSuccessOpen(true);
+      onSuccess?.();
     }
 
     setIsSubmitting(false);
@@ -148,10 +150,7 @@ export function CreateTeamButton({ courseId }: CreateTeamButtonProps) {
           </DialogHeader>
           <div className="flex justify-center mt-2">
             <Button
-              onClick={() => {
-                // Aynı sayfada yenile (cache bypass)
-                window.location.href = window.location.pathname + '?t=' + Date.now();
-              }}
+              onClick={() => setSuccessOpen(false)}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               Tamam

@@ -1,8 +1,51 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import type { Team, TeamMember } from '@/types/team';
+import type { StudentCourse } from '@/types/course';
 
-export async function getStudentStats() {
+export interface StudentStats {
+  enrolledCourses: number;
+  activeCourses: number;
+  teams: number;
+}
+
+interface EnrolledCourseRow {
+  enrollment_id: string;
+  enrollment_status: string;
+  enrolled_at: string;
+  course_id: string;
+  code: string;
+  name: string;
+  term: string;
+  year: number;
+  section: string | null;
+  course_status: string;
+  join_code: string | null;
+  instructor_name: string | null;
+}
+
+interface TeamMemberRow {
+  id: string;
+  student_id: string;
+  role: 'member' | 'leader';
+  joined_at: string;
+  left_at: string | null;
+  profiles: {
+    full_name: string | null;
+    email: string | null;
+  } | null;
+}
+
+interface TeamRow {
+  id: string;
+  name: string;
+  invite_code: string | null;
+  created_at: string;
+  team_members: TeamMemberRow[] | null;
+}
+
+export async function getStudentStats(): Promise<{ stats?: StudentStats; error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Oturum bulunamadı' };
@@ -13,18 +56,19 @@ export async function getStudentStats() {
 
   if (error) return { error: error.message };
 
-  const activeCount = courses?.filter((c: any) => c.course_status === 'active').length || 0;
+  const courseRows = (courses ?? []) as EnrolledCourseRow[];
+  const activeCount = courseRows.filter((c) => c.course_status === 'active').length;
 
   return {
     stats: {
-      enrolledCourses: courses?.length || 0,
+      enrolledCourses: courseRows.length,
       activeCourses: activeCount,
       teams: 0, // ileride takımlar tablosundan çekilecek
     }
   };
 }
 
-export async function getStudentCourses() {
+export async function getStudentCourses(): Promise<{ data: StudentCourse[]; error?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Oturum bulunamadı', data: [] };
@@ -33,22 +77,27 @@ export async function getStudentCourses() {
 
   if (error) return { error: error.message, data: [] };
 
-  const courses = (data || []).map((row: any) => ({
-    enrollmentId:     row.enrollment_id,
-    enrollmentStatus: row.enrollment_status,
-    enrolledAt:       row.enrolled_at,
-    id:               row.course_id,
-    code:             row.code,
-    name:             row.name,
-    term:             row.term,
-    year:             row.year,
-    section:          row.section,
-    status:           row.course_status,
-    joinCode:         row.join_code,
-    instructorName:   row.instructor_name || 'Bilinmiyor',
-  }));
+  const courseRows = (data ?? []) as EnrolledCourseRow[];
+  const courses = courseRows.map(mapCourseRow);
 
   return { data: courses };
+}
+
+function mapCourseRow(row: EnrolledCourseRow): StudentCourse {
+  return {
+    enrollmentId: row.enrollment_id,
+    enrollmentStatus: row.enrollment_status,
+    enrolledAt: row.enrolled_at,
+    id: row.course_id,
+    code: row.code,
+    name: row.name,
+    term: row.term,
+    year: row.year,
+    section: row.section,
+    status: row.course_status,
+    joinCode: row.join_code,
+    instructorName: row.instructor_name ?? 'Bilinmiyor',
+  };
 }
 
 export async function getMyTeamInCourse(courseId: string) {
@@ -104,6 +153,70 @@ export async function studentLeaveTeam(teamId: string) {
   if (error) return { error: error.message };
 
   return { success: true };
+}
+
+export async function getStudentTeamsSnapshot(courseId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Oturum bulunamadı' };
+
+  const { data: teamsData, error } = await supabase
+    .from('teams')
+    .select(`
+      id,
+      name,
+      invite_code,
+      created_at,
+      team_members (
+        id,
+        student_id,
+        role,
+        joined_at,
+        left_at,
+        profiles:student_id (
+          full_name,
+          email
+        )
+      )
+    `)
+    .eq('course_id', courseId);
+
+  if (error) return { error: error.message };
+
+  const rawTeams = (teamsData ?? []) as unknown as TeamRow[];
+
+  const teams: Team[] = rawTeams.map((team) => {
+    const memberSource = Array.isArray(team.team_members) ? team.team_members : [];
+    const members = memberSource
+      .filter((member) => member.left_at === null)
+      .map<TeamMember>((member) => ({
+        id: member.id,
+        teamId: team.id,
+        studentId: member.student_id,
+        role: member.role,
+        joinedAt: member.joined_at,
+        leftAt: member.left_at,
+        studentName: member.profiles?.full_name ?? 'Bilinmiyor',
+        studentEmail: member.profiles?.email ?? '—',
+      }));
+
+    return {
+      id: team.id,
+      courseId,
+      name: team.name,
+      inviteCode: team.invite_code,
+      status: 'active',
+      createdAt: team.created_at,
+      updatedAt: team.created_at,
+      members,
+      memberCount: members.length,
+    };
+  });
+
+  const myTeam =
+    teams.find((team) => team.members?.some((member) => member.studentId === user.id)) || null;
+
+  return { data: { teams, myTeam } };
 }
 
 export async function joinCourseByCode(joinCode: string) {

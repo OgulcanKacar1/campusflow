@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Team } from '@/types/team';
-import { studentCreateTeam, studentJoinTeamByInvite, studentLeaveTeam } from '../../actions';
+import { studentCreateTeam, studentJoinTeamByInvite, studentLeaveTeam, getStudentTeamsSnapshot } from '../../actions';
 
 interface TeamSectionProps {
   courseId: string;
@@ -32,10 +32,17 @@ export function TeamSection({
   const [copied, setCopied] = useState<string | null>(null);
   const teamNameInputRef = useRef<HTMLInputElement | null>(null);
   const [teamNameFocused, setTeamNameFocused] = useState(false);
+  const [localTeams, setLocalTeams] = useState(allTeams);
+  const [localMyTeam, setLocalMyTeam] = useState(myTeam);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const otherTeams = useMemo(
-    () => (myTeam ? allTeams.filter((team) => team.id !== myTeam.id) : allTeams),
-    [allTeams, myTeam]
+    () => (localMyTeam ? localTeams.filter((team) => team.id !== localMyTeam.id) : localTeams),
+    [localTeams, localMyTeam]
   );
+  const getMemberInitial = (name?: string | null, email?: string | null) => {
+    const source = (name && name.trim()) || (email && email.trim());
+    return source ? source.charAt(0).toUpperCase() : '?';
+  };
 
   const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
     setMessage({ text, type });
@@ -54,6 +61,33 @@ export function TeamSection({
     }
   }, [teamNameFocused, teamName]);
 
+  useEffect(() => {
+    startTransition(() => {
+      setLocalTeams(allTeams);
+    });
+  }, [allTeams, startTransition]);
+
+  useEffect(() => {
+    startTransition(() => {
+      setLocalMyTeam(myTeam);
+    });
+  }, [myTeam, startTransition]);
+
+  const refreshTeams = async () => {
+    setIsRefreshing(true);
+    try {
+      const snapshot = await getStudentTeamsSnapshot(courseId);
+      if (snapshot.error) {
+        showMessage(snapshot.error, 'error');
+      } else if (snapshot.data) {
+        setLocalTeams(snapshot.data.teams);
+        setLocalMyTeam(snapshot.data.myTeam);
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const handleCreateTeam = () => {
     if (teamName.trim().length < 2) {
       showMessage('Takım adı en az 2 karakter olmalı', 'error');
@@ -66,8 +100,8 @@ export function TeamSection({
         showMessage(result.error, 'error');
       } else {
         setTeamName('');
-        showMessage('Takım oluşturuldu. Sayfa yenileniyor...', 'success');
-        window.location.reload();
+        showMessage('Takım oluşturuldu 🎉', 'success');
+        await refreshTeams();
       }
     });
   };
@@ -82,21 +116,22 @@ export function TeamSection({
       if (result.error) {
         showMessage(result.error, 'error');
       } else {
-        showMessage('Takıma katıldın. Sayfa yenileniyor...', 'success');
-        window.location.reload();
+        setInviteInput('');
+        showMessage('Takıma katıldın! 🎉', 'success');
+        await refreshTeams();
       }
     });
   };
 
   const handleLeaveTeam = () => {
-    if (!myTeam) return;
+    if (!localMyTeam) return;
     startTransition(async () => {
-      const result = await studentLeaveTeam(myTeam.id);
+      const result = await studentLeaveTeam(localMyTeam.id);
       if (result.error) {
         showMessage(result.error, 'error');
       } else {
         showMessage('Takımdan ayrıldın.', 'success');
-        window.location.reload();
+        await refreshTeams();
       }
     });
   };
@@ -108,7 +143,7 @@ export function TeamSection({
   };
 
   const renderSummaryCard = () => {
-    if (myTeam) {
+    if (localMyTeam) {
       return (
         <Card className="bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-blue-500/5 border-white/10">
           <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -117,7 +152,7 @@ export function TeamSection({
                 <Users className="w-4 h-4" />
                 Takım Bilgisi
               </div>
-              <CardTitle className="text-2xl text-white mt-2">{myTeam.name}</CardTitle>
+              <CardTitle className="text-2xl text-white mt-2">{localMyTeam.name}</CardTitle>
               <p className="text-white/60 text-sm mt-2">
                 {teamMode === 'student'
                   ? 'Takım kodunu paylaşabilir ve arkadaşların katılmasına izin verebilirsin.'
@@ -129,24 +164,24 @@ export function TeamSection({
                 variant="outline"
                 className="border-red-500/40 text-red-300 hover:bg-red-500/10"
                 onClick={handleLeaveTeam}
-                disabled={isPending}
+                disabled={isBusy}
               >
-                {isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <LogOut className="w-4 h-4 mr-2" />}
+                {isBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <LogOut className="w-4 h-4 mr-2" />}
                 Takımdan Ayrıl
               </Button>
             )}
           </CardHeader>
-          {teamMode === 'student' && myTeam.inviteCode && (
+          {teamMode === 'student' && localMyTeam.inviteCode && (
             <CardContent className="flex flex-wrap items-center gap-3 bg-black/30 border border-white/10 rounded-xl mx-6 mb-6 px-4 py-3">
               <KeyRound className="w-4 h-4 text-purple-200" />
-              <span className="font-mono text-sm tracking-widest text-white">{myTeam.inviteCode}</span>
+              <span className="font-mono text-sm tracking-widest text-white">{localMyTeam.inviteCode}</span>
               <Button
                 variant="ghost"
                 size="sm"
                 className="text-white/70 hover:text-white"
-                onClick={() => copyToClipboard(myTeam.inviteCode!)}
+                onClick={() => copyToClipboard(localMyTeam.inviteCode!)}
               >
-                {copied === myTeam.inviteCode ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                {copied === localMyTeam.inviteCode ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
               </Button>
             </CardContent>
           )}
@@ -173,13 +208,9 @@ export function TeamSection({
   };
 
   const renderMembersCard = () => {
-    if (!myTeam) return null;
+    if (!localMyTeam) return null;
 
-    const memberCount = myTeam.members?.length ?? 0;
-    const getInitial = (name?: string | null, email?: string | null) => {
-      const source = (name && name.trim()) || (email && email.trim());
-      return source ? source.charAt(0).toUpperCase() : '?';
-    };
+    const memberCount = localMyTeam.members?.length ?? 0;
 
     return (
       <Card className="relative overflow-hidden border-white/10 bg-white/[0.03]">
@@ -199,8 +230,8 @@ export function TeamSection({
         </CardHeader>
         <CardContent className="relative z-10 space-y-3 pb-5">
           {memberCount > 0 ? (
-            myTeam.members!.map((member) => {
-              const initial = getInitial(member.studentName, member.studentEmail);
+            localMyTeam.members!.map((member) => {
+              const initial = getMemberInitial(member.studentName, member.studentEmail);
               const isLeader = member.role === 'leader';
 
               return (
@@ -239,10 +270,7 @@ export function TeamSection({
   };
 
   const renderOtherTeamsCard = () => {
-    const allowCopy = teamMode !== 'student';
-    const headerSubtitle = allowCopy
-      ? 'Davet kodunu paylaşarak takımları yönetebilirsin.'
-      : 'Davet kodları liderler tarafından özel olarak paylaşılır.';
+    const headerSubtitle = 'Davet kodları liderler tarafından özel olarak paylaşılır.';
 
     return (
       <Card className="relative overflow-hidden border-white/10 bg-white/[0.02]">
@@ -260,36 +288,55 @@ export function TeamSection({
           {otherTeams.length === 0 ? (
             <p className="text-sm text-white/40">Henüz başka takım yok.</p>
           ) : (
-            otherTeams.map((team) => (
-              <div
-                key={team.id}
-                className="group flex items-start gap-3 rounded-xl border border-white/10 bg-black/30 px-3 py-3 transition hover:border-blue-400/40 hover:bg-blue-500/10"
-              >
-                <div className="min-w-0 flex-1 space-y-1">
-                  <p className="text-sm font-medium text-white">{team.name}</p>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-white/40">
-                    <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-widest">
-                      {team.memberCount ?? team.members?.length ?? 0} üye
-                    </span>
-                    {allowCopy && team.inviteCode ? (
-                      <span className="font-mono text-[11px] tracking-widest text-white/30">{team.inviteCode}</span>
-                    ) : null}
+            otherTeams.map((team) => {
+              const members = team.members ?? [];
+              const visibleMembers = members.slice(0, 4);
+              const remaining = members.length - visibleMembers.length;
+
+              return (
+                <div
+                  key={team.id}
+                  className="group rounded-xl border border-white/10 bg-black/30 px-3 py-3 transition hover:border-blue-400/40 hover:bg-blue-500/10"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <p className="text-sm font-medium text-white">{team.name}</p>
+                      <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-widest text-white/40">
+                        {team.memberCount ?? members.length} üye
+                      </span>
+                    </div>
+                    <span className="text-[11px] uppercase tracking-widest text-white/30">Kod liderde</span>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {visibleMembers.length > 0 ? (
+                      <>
+                        {visibleMembers.map((member) => (
+                          <div
+                            key={member.id}
+                            className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1"
+                          >
+                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-xs font-semibold text-white/80">
+                              {getMemberInitial(member.studentName, member.studentEmail)}
+                            </div>
+                            <span className="text-xs font-medium text-white/80">
+                              {member.studentName ?? 'Bilinmiyor'}
+                            </span>
+                          </div>
+                        ))}
+                        {remaining > 0 && (
+                          <span className="flex items-center rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/60">
+                            +{remaining} üye
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-xs text-white/40">Bu takımda henüz aktif üye yok.</span>
+                    )}
                   </div>
                 </div>
-                {allowCopy && team.inviteCode ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-purple-200 hover:text-purple-100"
-                    onClick={() => copyToClipboard(team.inviteCode!)}
-                  >
-                    Davet Kodunu Kopyala
-                  </Button>
-                ) : (
-                  <span className="text-[11px] uppercase tracking-widest text-white/30">Kod liderde</span>
-                )}
-              </div>
-            ))
+              );
+            })
           )}
         </CardContent>
       </Card>
@@ -315,7 +362,7 @@ export function TeamSection({
               }}
               maxLength={40}
               className="bg-white/10 border-white/20 text-white placeholder:text-white/30"
-              disabled={isPending}
+              disabled={isBusy}
               ref={teamNameInputRef}
               onFocus={() => setTeamNameFocused(true)}
               onBlur={() => setTeamNameFocused(false)}
@@ -327,9 +374,9 @@ export function TeamSection({
           <Button
             className="bg-purple-600 hover:bg-purple-700 text-white"
             onClick={handleCreateTeam}
-            disabled={isPending}
+            disabled={isBusy}
           >
-            {isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+            {isBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
             Takım Oluştur
           </Button>
         </CardContent>
@@ -353,7 +400,7 @@ export function TeamSection({
               variant="outline"
               className="border-white/30 text-white hover:bg-white/10"
               onClick={handleJoinTeam}
-              disabled={isPending}
+              disabled={isBusy}
             >
               Katıl
             </Button>
@@ -364,7 +411,9 @@ export function TeamSection({
     </div>
   );
 
-  const showActionCards = teamMode === 'student' && !myTeam;
+  const showActionCards = teamMode === 'student' && !localMyTeam;
+
+  const isBusy = isPending || isRefreshing;
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 space-y-6">
@@ -392,7 +441,7 @@ export function TeamSection({
         </div>
       </div>
 
-      {isPending && (
+      {isBusy && (
         <div className="flex items-center justify-center gap-2 text-white/60 text-sm">
           <Loader2 className="w-4 h-4 animate-spin" />
           İşlem devam ediyor...
