@@ -1,149 +1,149 @@
-# Phase 4 Execution Plan — Sprint & Kanban Management
+# Faz 4 Uygulama Planı — Sprint & Kanban Yönetimi
 
-> **Goal:** Deliver a production-ready sprint planning and kanban workflow for CampusFlow teams, with clear permissions, typed APIs, and regression coverage.
-
----
-
-## 1. Objectives & Success Metrics
-
-- [ ] Instructor can create/manage sprints (manual + template) and view a kanban board for any team.
-- [ ] Students can manage their own team’s kanban when `sprint_mode = 'team'`; otherwise read-only.
-- [ ] Drag-and-drop task movement updates status, sprint, and ordering without page reload.
-- [ ] RLS policies guarantee that users only access data belonging to their organization/team.
-- [ ] `npm run lint` & migration rollback/forward pass without errors; manual QA checklist is green.
-
-### Dependencies
-- [ ] Phase 3 RLS hardening completed (`teams`, `team_members`, `sprints`, `tasks`).
-- [ ] Feature flag infrastructure ready (optional but recommended).
+> **Hedef:** CampusFlow takımlarına net yetkilendirme, tip güvenli API'ler ve regresyon kapsamı sağlayan üretime hazır bir sprint planlama ve kanban akışı sunmak.
 
 ---
 
-## 2. Timeline & Workstream Owners
+## 1. Amaçlar & Başarı Göstergeleri
 
-| Week | Focus | Key Deliverables |
+- [ ] Eğitmenler (instructor) manuel veya şablon tabanlı sprint oluşturup yönetebiliyor ve tüm takımlar için kanban panosu görüntüleyebiliyor.
+- [ ] Öğrenciler `sprint_mode = 'team'` olduğunda kendi takımlarının kanbanını yönetebiliyor, diğer durumlarda yalnızca okuyabiliyor.
+- [ ] Sürükle-bırak ile görev taşıma sayfa yenilemeden durum, sprint ve sıralamayı güncelliyor.
+- [ ] RLS politikaları kullanıcıların yalnızca kendi organizasyon/ takım verilerine erişmesini garanti ediyor.
+- [ ] `npm run lint` ve migration ileri/geri çalıştırmaları hatasız; manuel QA checklist'i yeşil.
+
+### Bağımlılıklar
+- [ ] Faz 3 RLS sertleştirmesi tamamlandı (`teams`, `team_members`, `sprints`, `tasks`).
+- [ ] Feature flag altyapısı hazır (opsiyonel ama önerilir).
+
+---
+
+## 2. Zaman Çizelgesi & Akış Sahipleri
+
+| Hafta | Odak | Ana Teslimatlar |
 | --- | --- | --- |
-| 1 | Database & RLS foundation | Migrations for `sprints`, `task_members`, new columns; base server actions |
-| 2 | Sprint creation UX | Instructor sprint list, manual form, template generator |
-| 3 | Kanban core | Drag-drop infrastructure, task CRUD, member management |
-| 4 | Student board & QA | Student UI, permissions polish, regression suite, release prep |
+| 1 | Veritabanı & RLS temeli | `sprints`, `task_members`, yeni kolonlar için migration'lar; temel server action'lar |
+| 2 | Sprint oluşturma UX'i | Eğitmen sprint listesi, manuel form, şablon üretici |
+| 3 | Kanban çekirdeği | Drag-drop altyapısı, görev CRUD, üye yönetimi |
+| 4 | Öğrenci panosu & QA | Öğrenci UI'ı, yetki cilası, regresyon paketi, yayın hazırlığı |
 
-> Use this table as the baseline; if scope shifts, note changes in this file.
-
----
-
-## 3. Database & RLS Checklist
-
-### 3.1 Schema
-- [ ] `courses` table: add `sprint_mode`, `sprint_start`, `sprint_end` columns.
-- [ ] `tasks` table: add `position` (INT) and `priority` (enum TEXT) columns.
-- [ ] Create `sprints` table (id/team_id/name/start_at/end_at/status/position timestamps).
-- [ ] Create `task_members` table for many-to-many assignments.
-
-### 3.2 RLS Policies
-- [ ] `sprints` SELECT/INSERT/UPDATE/DELETE → allow instructors + team members only.
-- [ ] `task_members` SELECT → team members & instructors/admin; INSERT/DELETE → team leader, instructors/admin.
-- [ ] Update `tasks` policies to respect new `position`/`priority` columns.
-- [ ] Add helper RPCs (if needed) under SECURITY DEFINER for aggregated views (`get_team_kanban`).
-
-### 3.3 Migration Hygiene
-- [ ] Write forward migration (`0040_phase4_sprints.sql`).
-- [ ] Write down migration rollback script (drop new tables/columns) for safety.
-- [ ] Apply migrations on staging; verify with sample data.
-- [ ] Document schema changes in PLAN.md and README (DB section).
+> Bu tabloyu giriş seviyesi plan olarak kullanın; kapsam değişirse bu dosyada not alın.
 
 ---
 
-## 4. Backend / Server Actions
+## 3. Veritabanı & RLS Kontrol Listesi
 
-### 4.1 Sprint Actions (`src/app/dashboard/shared/teamActions.ts`)
-- [ ] `getTeamSprints(teamId)` (with aggregated task counts).
-- [ ] `createSprint(teamId, payload)` (manual form).
+### 3.1 Şema
+- [ ] `courses` tablosuna `sprint_mode`, `sprint_start`, `sprint_end` kolonları ekle.
+- [ ] `tasks` tablosuna `position` (INT) ve `priority` (enum TEXT) kolonları ekle.
+- [ ] `sprints` tablosunu oluştur (id/team_id/name/start_at/end_at/status/position zaman damgaları).
+- [ ] Çoktan çoğa atamalar için `task_members` tablosunu oluştur.
+
+### 3.2 RLS Politikaları
+- [ ] `sprints` SELECT/INSERT/UPDATE/DELETE → yalnızca eğitmenler ve takım üyeleri erişebilsin.
+- [ ] `task_members` SELECT → takım üyeleri & eğitmen/admin; INSERT/DELETE → takım lideri, eğitmen/admin.
+- [ ] `tasks` politikalarını yeni `position`/`priority` kolonlarını gözeterek güncelle.
+- [ ] Gerekirse SECURITY DEFINER altında toplu görünümler için yardımcı RPC'ler ekle (`get_team_kanban`).
+
+### 3.3 Migration Hijyeni
+- [ ] İleri migration dosyasını yaz (`0040_phase4_sprints.sql`).
+- [ ] Geri alma script'ini hazırla (yeni tablo/kolonları silmek için).
+- [ ] Migration'ları staging ortamında uygula, örnek veriyle doğrula.
+- [ ] Şema değişikliklerini PLAN.md ve README (DB bölümü) içinde belgeleyin.
+
+---
+
+## 4. Backend / Server Action'lar
+
+### 4.1 Sprint Action'ları (`src/app/dashboard/shared/teamActions.ts`)
+- [ ] `getTeamSprints(teamId)` (görev sayılarıyla birlikte).
+- [ ] `createSprint(teamId, payload)` (manuel form).
 - [ ] `createSprintsFromTemplate(teamId, template, { startAt, endAt })`.
-- [ ] `updateSprint(sprintId, payload)` (name, dates, status).
+- [ ] `updateSprint(sprintId, payload)` (isim, tarihler, durum).
 - [ ] `reorderSprints(teamId, orderedIds[])`.
 - [ ] `deleteSprint(sprintId)`.
 
-### 4.2 Task Actions (`teamTasks.ts` or shared module)
-- [ ] `getTeamTasks(teamId, filters)` (optional `sprintId`, `status`).
+### 4.2 Görev Action'ları (`teamTasks.ts` veya paylaşılan modül)
+- [ ] `getTeamTasks(teamId, filters)` (opsiyonel `sprintId`, `status`).
 - [ ] `createTask(teamId, payload)`.
 - [ ] `updateTask(taskId, payload)`.
 - [ ] `moveTask(taskId, { targetStatus, targetSprintId, position })`.
 - [ ] `setTaskMembers(taskId, memberIds[])`.
 - [ ] `deleteTask(taskId)`.
-- [ ] Ensure responses are typed with shared DTOs.
+- [ ] Yanıtların paylaşılan DTO'larla tiplenmesini garanti et.
 
-### 4.3 Error & Optimistic Handling
-- [ ] Define reusable error formatter for kanban actions.
-- [ ] Decide where optimistic updates are acceptable; add rollback logic if API fails.
-- [ ] Surface success/error toasts (shared util) for each mutation.
-
----
-
-## 5. Frontend Deliverables
-
-### 5.1 Instructor Sprint Console (`/dashboard/instructor/courses/[courseId]/teams/[teamId]`)
-- [ ] Sprint list component (accordion) with status badges & counts.
-- [ ] Sprint creation dialog (manual form).
-- [ ] Template modal (dropdown + timeline preview).
-- [ ] Sprint reorder (drag handle or buttons).
-- [ ] Kanban board skeleton (columns, cards, placeholders).
-- [ ] Task detail drawer/modal (markdown editor, assignee, multi-select members).
-- [ ] Global toasts for actions.
-
-### 5.2 Student Kanban (`/dashboard/student/courses/[courseId]/team`)
-- [ ] Reuse instructor kanban component with restricted perms.
-- [ ] Handling for `sprint_mode = 'instructor'` (read-only banner).
-- [ ] Sprint creation only if `sprint_mode = 'team'` and user is team member.
-- [ ] Access guard (non-team members redirected/blocked).
-
-### 5.3 UI/UX Notes
-- [ ] Confirm drag-drop library (dnd-kit recommended for Next.js 16).
-- [ ] Ensure columns and cards are keyboard accessible.
-- [ ] Provide skeleton/loading states for board and forms.
-- [ ] Dark theme alignment with existing palette (#060b18 background).
+### 4.3 Hata & Optimistic Yönetimi
+- [ ] Kanban action'ları için tekrar kullanılabilir hata formatlayıcı tanımla.
+- [ ] Hangi noktalarda optimistic update kabul edilebilir belirle; API hata alırsa geri alma akışı ekle.
+- [ ] Her mutasyon için başarı/hata toast'larını (paylaşılan util) yüzeye çıkar.
 
 ---
 
-## 6. Testing & QA
+## 5. Frontend Teslimatları
 
-### 6.1 Automated
-- [ ] Unit tests for server actions (happy path + permission denied).
-- [ ] Migration smoke tests (if using script in CI).
-- [ ] Optional: component tests for kanban board interactions (Playwright/Cypress).
+### 5.1 Eğitmen Sprint Konsolu (`/dashboard/instructor/courses/[courseId]/teams/[teamId]`)
+- [ ] Durum rozetleri ve sayımlarla sprint liste bileşeni (akordeon).
+- [ ] Sprint oluşturma dialogu (manuel form).
+- [ ] Şablon modali (dropdown + zaman çizelgesi ön izlemesi).
+- [ ] Sprint sıralama (drag handle veya butonlar).
+- [ ] Kanban pano iskeleti (kolonlar, kartlar, placeholder'lar).
+- [ ] Görev detay çekmecesi/modalı (markdown editör, sorumlu seçimi, çoklu üye seçimi).
+- [ ] Aksiyonlar için global toast'lar.
 
-### 6.2 Manual Regression Checklist
-- [ ] Instructor creates sprint (manual + template) → appears in list with correct dates.
-- [ ] Task drag-drop updates status/sprint/position; board refresh reflects order.
-- [ ] Student in same team sees updates in real time (after refresh) and can edit when allowed.
-- [ ] Student from different organization cannot access kanban URLs (403/redirect).
-- [ ] RLS: direct Supabase query attempts from other org fail.
-- [ ] Delete sprint → associated tasks become backlog or handled gracefully.
-- [ ] Feature flag off → UI elements hidden, server actions blocked with proper error.
+### 5.2 Öğrenci Kanban'ı (`/dashboard/student/courses/[courseId]/team`)
+- [ ] Eğitmen kanban bileşenini izin kısıtlamalarıyla yeniden kullan.
+- [ ] `sprint_mode = 'instructor'` için yalnızca okuma banner'ı.
+- [ ] Sprint oluşturma yalnızca `sprint_mode = 'team'` ve kullanıcı takım üyesiyse aktif.
+- [ ] Erişim koruması (takım üyesi olmayan yönlendirilsin/bloke edilsin).
 
-### 6.3 Release Checklist
-- [ ] Toggle feature flag ON in staging, run manual checklist.
-- [ ] Update PLAN.md + docs with final status.
-- [ ] Announce release notes to stakeholders (Slack/email).
-- [ ] Monitor Supabase logs for policy violations or slow queries.
+### 5.3 UI/UX Notları
+- [ ] Drag-drop kütüphanesini doğrula (Next.js 16 için dnd-kit önerilir).
+- [ ] Kolon ve kartların klavye erişilebilirliğini sağla.
+- [ ] Pano ve formlar için skeleton/yükleniyor durumları ekle.
+- [ ] Karanlık tema mevcut paletle hizalı kalsın (#060b18 arka plan).
 
 ---
 
-## 7. Risks & Mitigations
+## 6. Test & QA
 
-| Risk | Mitigation |
+### 6.1 Otomasyon
+- [ ] Server action'lar için unit test (mutlu yol + yetki reddi).
+- [ ] Migration smoke test'leri (CI script'i varsa).
+- [ ] Opsiyonel: Kanban pano etkileşimleri için komponent testleri (Playwright/Cypress).
+
+### 6.2 Manuel Regresyon Kontrol Listesi
+- [ ] Eğitmen sprint oluşturuyor (manuel + şablon) → doğru tarihlerle listede görünüyor.
+- [ ] Görevi sürükleyip bırakmak durum/sprint/sıralamayı güncelliyor; pano yenilenince sıralama korunuyor.
+- [ ] Aynı takımdaki öğrenci (refresh sonrası) güncellemeleri görüyor ve yetki varsa düzenleyebiliyor.
+- [ ] Farklı organizasyondaki öğrenci kanban URL'lerine erişemiyor (403/yönlendirme).
+- [ ] RLS: Diğer organizasyon dışarıdan Supabase sorgusu yapınca yetki hatası alıyor.
+- [ ] Sprint silinince ilişkili görevler backlog'a düşüyor veya kontrollü şekilde yönetiliyor.
+- [ ] Feature flag kapalıyken UI öğeleri gizleniyor, server action'lar uygun uyarıyla engelleniyor.
+
+### 6.3 Yayın Kontrol Listesi
+- [ ] Staging'de feature flag aç, manuel checklist'i çalıştır.
+- [ ] PLAN.md + dokümanları nihai durumla güncelle.
+- [ ] Paydaşlara release notlarını duyur (Slack/e-posta).
+- [ ] Supabase loglarını politika ihlali veya yavaş sorgu için izle.
+
+---
+
+## 7. Riskler & Azaltma Stratejileri
+
+| Risk | Azaltma |
 | --- | --- |
-| RLS misconfiguration exposes other org sprint/task data | Double-check policies on staging; run manual Supabase queries; keep feature flag off until verified. |
-| Drag-drop library issues with Next.js 16 SSR | Test early with sample data; fall back to CSS reorder handles if needed. |
-| Scope creep (e.g., realtime updates) | Treat realtime as stretch goal; deliver optimistic UI first. |
-| Markdown/XSS vulnerabilities in task descriptions | Use existing sanitized markdown component; encode user input; add tests. |
+| RLS yanlış yapılandırması farklı organizasyonların sprint/görev verisini açar | Staging'de politikaları iki kez kontrol et; manuel Supabase sorguları çalıştır; doğrulanana kadar feature flag kapalı kalsın. |
+| Next.js 16 SSR ile drag-drop kütüphanesi sorun çıkarır | Erken aşamada örnek veriyle test et; gerekirse CSS tabanlı sıralama butonlarına dön. |
+| Scope creep (ör. realtime güncellemeler) | Realtime'ı stretch goal olarak ele al; önce optimistic UI teslim et. |
+| Görev açıklamalarında Markdown/XSS açıkları | Mevcut sanitize edilmiş markdown bileşenini kullan; kullanıcı girdisini encode et; test ekle. |
 
 ---
 
-## 8. Documentation & Rollout
+## 8. Dokümantasyon & Yayın
 
-- [ ] Update `PLAN.md` (done) and keep this `docs/phase4-plan.md` synced.
-- [ ] Create instructor & student user guides (Confluence/Notion or `docs/` folder).
-- [ ] Record short Loom walkthrough once MVP is ready.
-- [ ] Schedule release window with stakeholders; ensure support team informed.
+- [ ] `PLAN.md`'yi güncelle (tamam) ve bu `docs/phase4-plan.md` dosyasını senkron tut.
+- [ ] Eğitmen ve öğrenci kullanıcı rehberleri oluştur (Confluence/Notion veya `docs/` klasörü).
+- [ ] MVP hazır olduğunda kısa bir Loom anlatımı kaydet.
+- [ ] Paydaşlarla yayın penceresini planla; destek ekibine bilgi ver.
 
-> Keep this file as the living document for Phase 4. After each week, tick completed items and add notes if scope changes.
+> Bu dosyayı Faz 4 için yaşayan doküman olarak tut. Her haftanın sonunda tamamlanan maddeleri işaretle, kapsam değiştiyse not düş.
