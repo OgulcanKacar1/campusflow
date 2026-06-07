@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, BookOpen, Users, Settings, Loader2, CheckCircle } from 'lucide-react';
 import { getCourseById, updateCourse, getCourseStudents } from '../../actions';
-import { getTeamsByCourse, removeTeamMember, moveTeamMember } from '@/app/dashboard/instructor/teams/actions';
+import { getTeamsByCourse, removeTeamMember, moveTeamMember, regenerateTeamInviteCode } from '@/app/dashboard/instructor/teams/actions';
 import { TeamsList } from '@/components/dashboard/instructor/teams/TeamsList';
 import { EditTeamModal } from '@/components/dashboard/instructor/teams/EditTeamModal';
 import { DeleteTeamDialog } from '@/components/dashboard/instructor/teams/DeleteTeamDialog';
@@ -145,6 +145,16 @@ export default function CourseDetailPage() {
   const handleTeamsRefresh = async () => {
     await Promise.all([loadTeams(), loadStudents()]);
     showToast('Takımlar güncellendi', 'success');
+  };
+
+  const handleRegenerateInvite = async (team: Team) => {
+    const result = await regenerateTeamInviteCode(team.id);
+    if (result.error) {
+      showToast('Hata: ' + result.error, 'error');
+      return;
+    }
+    showToast('Yeni davet kodu oluşturuldu', 'success');
+    await loadTeams();
   };
 
   const handleMoveMember = async (studentId: string, fromTeamId: string, toTeamId: string) => {
@@ -373,6 +383,7 @@ export default function CourseDetailPage() {
                   onDelete={handleDelete}
                   onAddMember={handleAddMember}
                   onCopyInviteCode={handleCopyInviteCode}
+                  onRegenerateInviteCode={handleRegenerateInvite}
                   onRemoveMember={handleRemoveMemberClick}
                   onMoveMember={handleMoveMember}
                 />

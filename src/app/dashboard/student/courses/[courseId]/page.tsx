@@ -1,15 +1,15 @@
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, Users, ClipboardList, Calendar, KeyRound } from 'lucide-react';
+import { ArrowLeft, ClipboardList, Calendar, KeyRound } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { TeamSection } from './TeamSection.client';
 
 async function getCourseDetail(courseId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // Öğrencinin bu derse kayıtlı olduğunu doğrula
   const { data: enrollment } = await supabase
     .from('course_enrollments')
     .select('id')
@@ -19,9 +19,84 @@ async function getCourseDetail(courseId: string) {
 
   if (!enrollment) return null;
 
-  // Ders detaylarını RPC ile çek
-  const { data: courses } = await supabase.rpc('get_my_enrolled_courses');
-  return (courses || []).find((c: any) => c.course_id === courseId) || null;
+  const { data: course } = await supabase
+    .from('courses')
+    .select('id, name, code, term, year, section, status, join_code, team_mode, team_min_size, team_max_size, instructor_id')
+    .eq('id', courseId)
+    .single();
+
+  if (!course) return null;
+
+  const { data: instructor } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', course.instructor_id)
+    .single();
+
+  return {
+    ...course,
+    instructor_name: instructor?.full_name || 'Bilinmiyor',
+  };
+}
+
+async function getTeamsData(courseId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { teams: [], myTeam: null };
+
+  const { data: teamsData } = await supabase
+    .from('teams')
+    .select(`
+      id,
+      name,
+      invite_code,
+      created_at,
+      course_id,
+      team_members (
+        id,
+        student_id,
+        role,
+        joined_at,
+        left_at,
+        profiles:student_id (
+          full_name,
+          email
+        )
+      )
+    `)
+    .eq('course_id', courseId);
+
+  const teams = (teamsData || []).map((team: any) => {
+    const members = (team.team_members || [])
+      .filter((member: any) => member.left_at === null)
+      .map((member: any) => ({
+        id: member.id,
+        teamId: team.id,
+        studentId: member.student_id,
+        role: member.role,
+        joinedAt: member.joined_at,
+        leftAt: member.left_at,
+        studentName: member.profiles?.full_name || 'Bilinmiyor',
+        studentEmail: member.profiles?.email || '—',
+      }));
+
+    return {
+      id: team.id,
+      courseId,
+      name: team.name,
+      inviteCode: team.invite_code,
+      status: 'active' as const,
+      createdAt: team.created_at,
+      updatedAt: team.created_at,
+      members,
+      memberCount: members.length,
+    };
+  });
+
+  const myTeam =
+    teams.find((team) => team.members?.some((member: { studentId: string }) => member.studentId === user.id)) || null;
+
+  return { teams, myTeam };
 }
 
 const termLabels: Record<string, string> = {
@@ -38,9 +113,11 @@ export default async function CourseDetailPage({
 
   if (!course) return notFound();
 
+  const { teams, myTeam } = await getTeamsData(courseId);
+
   return (
     <div className="p-8">
-      <div className="max-w-5xl">
+      <div className="max-w-6xl">
         {/* Breadcrumb */}
         <Link href="/dashboard/student/courses" className="text-gray-400 hover:text-white flex items-center text-sm w-fit mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4 mr-1" /> Derslerime Dön
@@ -62,8 +139,8 @@ export default async function CourseDetailPage({
                     Şube {course.section}
                   </Badge>
                 )}
-                <Badge className={`font-normal text-sm ${course.course_status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'}`}>
-                  {course.course_status === 'active' ? 'Aktif' : 'Arşiv'}
+                <Badge className={`font-normal text-sm ${course.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'}`}>
+                  {course.status === 'active' ? 'Aktif' : 'Arşiv'}
                 </Badge>
               </div>
             </div>
@@ -93,20 +170,15 @@ export default async function CourseDetailPage({
         </div>
 
         {/* Content Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Takımlar */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
-            <div className="flex items-center gap-2 mb-5">
-              <div className="p-2 bg-purple-500/10 rounded-lg">
-                <Users className="w-5 h-5 text-purple-400" />
-              </div>
-              <h2 className="text-lg font-semibold text-white">Takımlar</h2>
-            </div>
-            <div className="flex flex-col items-center justify-center h-32 text-center">
-              <p className="text-white/30 text-sm">Henüz takım atanmadı</p>
-              <p className="text-white/20 text-xs mt-1">Hocan takımları oluşturduğunda burada görünecek.</p>
-            </div>
-          </div>
+        <div className="grid gap-6 lg:[grid-template-columns:minmax(0,1.65fr)_minmax(0,1fr)] items-start">
+          <TeamSection
+            courseId={courseId}
+            teamMode={course.team_mode as 'instructor' | 'random' | 'student'}
+            minSize={course.team_min_size ?? 2}
+            maxSize={course.team_max_size ?? 5}
+            myTeam={myTeam}
+            allTeams={teams}
+          />
 
           {/* Görevler */}
           <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6">

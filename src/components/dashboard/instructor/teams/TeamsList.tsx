@@ -16,6 +16,7 @@ interface TeamsListProps {
   onAddMember: (team: Team) => void;
   onRemoveMember?: (team: Team, member: TeamMember) => void;
   onCopyInviteCode: (code: string) => void;
+  onRegenerateInviteCode?: (team: Team) => void;
   onMoveMember?: (memberId: string, fromTeamId: string, toTeamId: string) => void;
 }
 
@@ -27,6 +28,7 @@ export function TeamsList({
   onAddMember,
   onRemoveMember,
   onCopyInviteCode,
+  onRegenerateInviteCode,
   onMoveMember,
 }: TeamsListProps) {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -139,23 +141,33 @@ export function TeamsList({
             </div>
 
             {/* Davet Kodu (Student modunda) */}
-            {teamMode === 'student' && team.inviteCode && (
-              <div className="mt-3 flex items-center gap-2">
+            {teamMode === 'student' && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className="text-sm text-gray-500">Davet Kodu:</span>
                 <code className="px-2 py-1 bg-[#1a1f2e] rounded text-sm font-mono text-blue-400">
-                  {team.inviteCode}
+                  {team.inviteCode ?? '—'}
                 </code>
+                {team.inviteCode ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleCopyCode(team.inviteCode!)}
+                    className="h-6 px-2 text-gray-400 hover:text-white"
+                  >
+                    {copiedCode === team.inviteCode ? (
+                      <Check className="w-4 h-4 text-green-400" />
+                    ) : (
+                      <Copy className="w-4 h-4" />
+                    )}
+                  </Button>
+                ) : null}
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleCopyCode(team.inviteCode!)}
+                  onClick={() => onRegenerateInviteCode?.(team)}
                   className="h-6 px-2 text-gray-400 hover:text-white"
                 >
-                  {copiedCode === team.inviteCode ? (
-                    <Check className="w-4 h-4 text-green-400" />
-                  ) : (
-                    <Copy className="w-4 h-4" />
-                  )}
+                  Kod Yenile
                 </Button>
               </div>
             )}

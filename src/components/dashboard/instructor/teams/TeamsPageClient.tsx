@@ -92,6 +92,13 @@ export function TeamsPageClient({
     window.location.reload();
   };
 
+  const handleRegenerateInviteCode = async (team: Team) => {
+    // Instructor server component tarafında revalidate ettiği için burada da yenileyelim
+    const query = new URLSearchParams(window.location.search);
+    query.set('refresh', Date.now().toString());
+    window.location.href = `${window.location.pathname}?${query.toString()}`;
+  };
+
   const handleCopyInviteCode = (code: string) => {
     // Code copied to clipboard
     console.log('Davet kodu kopyalandı:', code);
@@ -114,7 +121,10 @@ export function TeamsPageClient({
               {settings.teamMode === 'random' && (
                 <RandomTeamsButton
                   courseId={courseId}
-                  teamSize={settings.teamMaxSize}
+                  defaultTeamSize={settings.teamMaxSize}
+                  minTeamSize={settings.teamMinSize}
+                  maxTeamSize={settings.teamMaxSize}
+                  onSuccess={handleSuccess}
                 />
               )}
             </div>
@@ -151,6 +161,7 @@ export function TeamsPageClient({
               onAddMember={handleAddMember}
               onRemoveMember={handleRemoveMemberClick}
               onCopyInviteCode={handleCopyInviteCode}
+              onRegenerateInviteCode={handleRegenerateInviteCode}
             />
           </div>
         </div>

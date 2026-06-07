@@ -1,7 +1,9 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidatePath } from 'next/cache';
+import { generateInviteCode } from '@/lib/invite';
+import type { PostgrestError } from '@supabase/supabase-js';
 import type {
   Team,
   TeamMember,
@@ -17,6 +19,64 @@ import type {
 interface ActionResult<T = void> {
   data?: T;
   error?: string;
+}
+
+async function assignInviteCode(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  teamId: string,
+  options: { force?: boolean } = {}
+): Promise<string | null> {
+  const { force = false } = options;
+  const maxAttempts = 5;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const code = generateInviteCode();
+
+    let query = supabase
+      .from('teams')
+      .update({ invite_code: code })
+      .eq('id', teamId);
+
+    if (!force) {
+      query = query.is('invite_code', null);
+    }
+
+    const { data, error } = await query.select('invite_code').single();
+
+    if (!error && data) {
+      return data.invite_code;
+    }
+
+    if (error?.code === '23505') {
+      // Unique violation → generate a new code and retry
+      continue;
+    }
+
+    if (!force && (error?.code === 'PGRST116' || error?.details?.includes('Results contain 0 rows'))) {
+      const { data: existing } = await supabase
+        .from('teams')
+        .select('invite_code')
+        .eq('id', teamId)
+        .single();
+      return existing?.invite_code ?? null;
+    }
+
+    if (force && (error?.code === 'PGRST116' || error?.details?.includes('Results contain 0 rows'))) {
+      // Team not found or update blocked — exit loop
+      break;
+    }
+
+    if (error) {
+      return null;
+    }
+  }
+
+  return null;
+}
+
+function formatPostgrestError(error: PostgrestError | null): string | undefined {
+  if (!error) return undefined;
+  return error.message || 'Bilinmeyen bir hata oluştu';
 }
 
 /**
@@ -90,6 +150,16 @@ export async function getTeamsByCourse(courseId: string): Promise<ActionResult<T
     return { data: [] };
   }
   
+  const inviteMap = new Map<string, string | null>();
+  const { data: inviteRows } = await supabase
+    .from('teams')
+    .select('id, invite_code')
+    .eq('course_id', courseId);
+  
+  (inviteRows || []).forEach((row) => {
+    inviteMap.set(row.id, row.invite_code);
+  });
+  
   // Her takımın üyelerini ayrı çek
   const teams: Team[] = [];
   
@@ -133,6 +203,14 @@ export async function getTeamsByCourse(courseId: string): Promise<ActionResult<T
       studentEmail: profilesMap[m.student_id]?.email,
     }));
     
+    let inviteCode = inviteMap.get(row.team_id) ?? null;
+    if (!inviteCode) {
+      inviteCode = await assignInviteCode(supabase, row.team_id);
+      if (inviteCode) {
+        inviteMap.set(row.team_id, inviteCode);
+      }
+    }
+    
     teams.push({
       id: row.team_id,
       courseId,
@@ -142,6 +220,7 @@ export async function getTeamsByCourse(courseId: string): Promise<ActionResult<T
       createdAt: row.created_at,
       updatedAt: row.created_at,
       memberCount: row.member_count,
+      inviteCode,
       members: formattedMembers,
     });
   }
@@ -167,8 +246,8 @@ export async function createTeam(input: CreateTeamInput): Promise<ActionResult<T
   }
   
   const row = data[0];
+  const inviteCode = await assignInviteCode(supabase, row.team_id);
   revalidatePath(`/dashboard/instructor/courses/${input.courseId}/teams`);
-  revalidateTag(`teams-${input.courseId}`);
   
   return {
     data: {
@@ -179,6 +258,7 @@ export async function createTeam(input: CreateTeamInput): Promise<ActionResult<T
       status: row.status,
       createdAt: row.created_at,
       updatedAt: row.created_at,
+      inviteCode,
     },
   };
 }
@@ -362,7 +442,48 @@ export async function createRandomTeams(
     updatedAt: new Date().toISOString(),
     memberCount: row.member_count,
   }));
+
+  for (const team of teams) {
+    team.inviteCode = await assignInviteCode(supabase, team.id);
+  }
   
   revalidatePath(`/dashboard/instructor/courses/${input.courseId}/teams`);
   return { data: teams };
+}
+
+export async function regenerateTeamInviteCode(teamId: string): Promise<ActionResult<{ inviteCode: string }>> {
+  const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Oturum bulunamadı' };
+
+  const { data: team, error: teamError } = await supabase
+    .from('teams')
+    .select('id, course_id')
+    .eq('id', teamId)
+    .single();
+
+  if (teamError || !team) {
+    return { error: formatPostgrestError(teamError) ?? 'Takım bulunamadı' };
+  }
+
+  const { data: course, error: courseError } = await supabase
+    .from('courses')
+    .select('id')
+    .eq('id', team.course_id)
+    .eq('instructor_id', user.id)
+    .single();
+
+  if (courseError || !course) {
+    return { error: 'Bu takım üzerinde yetkiniz yok' };
+  }
+
+  const inviteCode = await assignInviteCode(supabase, teamId, { force: true });
+
+  if (!inviteCode) {
+    return { error: 'Davet kodu oluşturulamadı' };
+  }
+
+  revalidatePath(`/dashboard/instructor/courses/${team.course_id}/teams`);
+  return { data: { inviteCode } };
 }
