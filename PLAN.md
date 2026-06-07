@@ -3,23 +3,23 @@
 ## Güncel Durum (2026-06-07)
 
 ### Tamamlananlar
-- Öğrenci takım akışındaki kritik hatalar giderildi: davet koduyla tekrar katılım duplicate hatası çözüldü, boş kalan student-led takımlar otomatik siliniyor.
-- `student_join_team_by_invite` ve `student_leave_team` RPC'leri yeniden yazılarak rejoin senaryoları ve odak sorunları düzeltildi.
-- Öğrenci kurs sayfasındaki *TeamSection* bileşeni yeniden tasarlandı (odak kaybı, kart düzeni, responsive grid, davet kodu gizleme).
-- Instructor ve student takım güncellemeleri `develop` üzerine merge edildi; feature branch kapatıldı.
+- Instructor & student takım yönetimi tamamen reloadsuz hale getirildi; `TeamsPageClient`, `TeamSection` ve modal bileşenleri server-actions + `startTransition` akışıyla güncellendi.
+- `add_team_member` RPC’si eski üyeleri yeniden aktive edebilecek şekilde genişletildi; duplicate hata senaryoları kapatıldı.
+- Öğrenci ve eğitmen dashboard sayfalarındaki Supabase aksiyonları tip güvenli hale getirildi (`any` bağımlılıkları kaldırıldı, snapshot helper’ları eklendi).
+- Süper admin dashboard’unda trend/top university verileri typed hale getirildi; login ve middleware tarafında lint uyarılarına yol açan desenler temizlendi.
+- IDE’nin ürettiği kopya dosyalar temizlenip `.eslintignore` eklendi; repository tekrar stabilize edildi.
 
 ### Gündemdeki İşler
-- Phase 3 güvenlik sertleştirmesi: geçici olarak açılmış RLS/policy gevşetmelerini (0027–0028) kaldırıp org-izolasyon policy’lerini yeniden aktive etmek.
-- Instructor takım yönetimi tarafındaki geniş lint hataları (özellikle `setState` çağrıları, `any` tipleri, kullanılmayan değişkenler) temizlenmeli.
-- Öğrenci/instructor takım sayfalarına toast/notification katmanı ve success geri bildirimleri eklemek.
-- Phase 4 (Sprint & Kanban) için veri modeli hazırlığı: `task_members`, sprint şablonları ve UI keşfi.
-- Test planı: lint workflow’unu CI’da bloklayacak hale getirmek ve kritik takım akışları için manuel regresyon checklist’i hazırlamak.
+- Phase 3 güvenlik sertleştirmesi: RLS gevşetmelerini (0027–0028) kapatıp `teams/teams_members` SELECT policy’lerini org izolasyonu ile yeniden tanımlamak.
+- Phase 4 (Sprint & Kanban) implementasyonu için veri modeli, UI akışı ve test planını netleştirmek.
+- Instructor/student dashboard’larında kalan lint uyarılarını (özellikle `react/no-unescaped-entities`, `no-explicit-any`) kapatıp CI lint kontrolünü zorunlu hale getirmek.
+- Toast/notification katmanını (özellikle takım CRUD başarı/hataları) ortak util olarak çıkarmak.
 
 ### Kısa Vadeli Öncelikler
-1. **RLS Sertleştirme:** `0027_disable_rls.sql` ve `0028_grants.sql` etkilerini geri al, `0030_restore_team_security.sql` tamamlandı mı kontrol et, eksik policy varsa ekle.
-2. **Instructor Takım Yönetimi Refactor:** `TeamModeSettings`, `TeamsPageClient` ve modal bileşenlerdeki effect/setState uyarılarını düzelt, `window.location.reload()` bağımlılıklarını async aksiyonlarla değiştir.
-3. **Lint Temizliği:** Lint raporundaki `react/no-unescaped-entities`, `no-unused-vars`, `no-explicit-any` hatalarını modül modül kapat.
-4. **Dokümantasyon:** Öğrenci takım akışındaki kurallar (min/max, davet kodu paylaşımı) için README/handbook güncellemesi yap.
+1. **Phase 4 Kick-off:** Sprint & Kanban altyapısı için DB şeması + API taslaklarını finalize et, görev listesini oluştur (aşağıdaki detaylı plan).
+2. **RLS Sertleştirme (Phase 3 Kapanışı):** `teams`, `team_members`, `sprints`, `tasks` SELECT policy’lerini org bazlı hale getir; `0027`, `0028` migration’larını revert veya yeni migration ile kapat.
+3. **Lint/QA:** Instructor ve student sayfalarındaki kalan lint uyarılarını (quotes, unused vars, explicit any) temizle; manuel regresyon checklist’ini güncelle.
+4. **Dokümantasyon:** Yeni takım akışları ve Phase 4 gereksinimleri için README/handbook güncellemesi hazırla.
 
 ## 1. VERİTABANI ANALİZİ (0001 → 0018)
 
@@ -284,69 +284,118 @@ CREATE POLICY "task_members_delete_team" ON task_members FOR DELETE USING (
 
 ### PHASE 4 — Sprint & Görev Yönetimi (Kanban)
 
-#### 4.1 Sprint Senaryoları
+#### 4.1 Amaç & Başarı Kriterleri
+- Takım bazlı sprint planlama ve kanban yönetimini CampusFlow’a kazandırmak.
+- Instructor panelinde tüm takımların sprint/görev durumunu izleyebilir hale getirmek, öğrencilere kendi kanbanını sağlayarak self-management’ı desteklemek.
+- **Başarı ölçütleri:**
+  - En az 1 takım için sprint şablonu → sprint oluşturma → görev atama → drag-drop ile durum değiştirme akışı QA’dan geçer.
+  - Öğrenciler sprint ve görevleri yalnızca kendi takımları için görebilir/editleyebilir; RLS ihlali yok.
+  - Lint/test (varsa) kırmızı olmadan deploy edilebilir.
 
-**Kim oluşturabilir:** Hoca veya öğrenciler (hoca ayarlar — `courses.sprint_mode`)
-```sql
-ALTER TABLE courses ADD COLUMN sprint_mode TEXT DEFAULT 'instructor'
-  CHECK (sprint_mode IN ('instructor', 'team'));
-```
+#### 4.2 Mimari & Migration Planı
+1. **Yeni Kolonlar** (`courses`, `tasks`)
+   ```sql
+   ALTER TABLE courses
+     ADD COLUMN sprint_mode TEXT DEFAULT 'instructor'
+       CHECK (sprint_mode IN ('instructor', 'team')),
+     ADD COLUMN sprint_start DATE NULL,
+     ADD COLUMN sprint_end DATE NULL;
 
-**Sprint Oluşturma Modları:**
+   ALTER TABLE tasks
+     ADD COLUMN position INTEGER DEFAULT 0,
+     ADD COLUMN priority TEXT DEFAULT 'medium'
+       CHECK (priority IN ('low','medium','high','critical'));
+   ```
+2. **Yeni Tablolar**
+   - `sprints`: `id`, `team_id`, `name`, `start_at`, `end_at`, `status`, `position`.
+   - `task_members`: Çoklu sorumlu ilişkisi (daha önce taslak haldeydi, Phase 4’te aktive edilecek).
+3. **RLS Politikaları**
+   - `sprints`: SELECT/INSERT/UPDATE/DELETE → takım üyeleri ve instructor’lar.
+   - `task_members`: SELECT → takım üyeleri, instructor/admin; INSERT/DELETE → takım lideri + instructor.
+4. **Migration Sırası**
+   1. Schema değişiklikleri (`sprints`, `task_members`, yeni kolonlar).
+   2. RLS policy scriptleri.
+   3. Seed/örnek sprint verisi (staging için opsiyonel).
 
-| Mod | Açıklama |
-|---|---|
-| **Hazır Şablon** | Hoca 3 şablondan seçer, sprint'ler otomatik oluşur |
-| **Manuel** | Hoca veya öğrenci (izinliyse) başlık + tarih girer |
-| **Otomatik bölme** | Proje başlangıç-bitiş tarihleri girilir, sistem haftalık sprint'lere böler |
+#### 4.3 API / Server Action Tasarımı
+- **Sprints**
+  - `getTeamSprints(teamId)` → sprint listesi (status + görev sayıları aggregate ile).
+  - `createSprint(teamId, payload)` → manual sprint; `createSprintsFromTemplate(teamId, templateId, dateRange)` → şablon.
+  - `updateSprint(sprintId, payload)` → ad, tarih, status.
+  - `reorderSprints(teamId, orderedIds)` → drag-drop sıralaması.
+- **Tasks**
+  - `getTeamTasks(teamId, { sprintId, status })` → Kanban board feed’i.
+  - `createTask(teamId, payload)` → backlog veya sprint.
+  - `updateTask(taskId, payload)` → inline edit.
+  - `moveTask(taskId, { targetStatus, targetSprintId, position })` → drag-drop handler.
+  - `setTaskMembers(taskId, memberIds[])` → çoklu atama.
+- **Utilities**
+  - `getSprintTemplates()` → UI için hazır şablon listesi.
+  - Ortak hata formatı ve optimistic update stratejisi (client tarafında).
 
-**Hazır Şablonlar:**
+#### 4.4 UI/UX Deliverables
+**Instructor Paneli** — `/dashboard/instructor/courses/[courseId]/teams/[teamId]`
+1. Sprint kart listesi (accordion): sprint adı, tarih aralığı, status, görev sayısı, actions.
+2. “Sprint oluştur” diyaloğu
+   - Manuel form (ad + tarih)
+   - Şablondan oluşturma (select + date range)
+3. Kanban Board (takım bazlı)
+   - Sütun heading: backlog + 4 statü
+   - Her kart: başlık, assignee avatar, öncelik badge, due (opsiyonel)
+   - Drag-drop ile sütun/th sprint değişimi
+4. Modal/Drawer: görev detayını düzenleme
+   - Markdown açıklama editörü
+   - Sprint seçimi (dropdown)
+   - Birincil sorumlu ve ek ekip üyeleri multi select
 
-| Şablon | Sprint'ler |
-|---|---|
-| **Scrum (6 sprint)** | Planlama / Analiz & Tasarım / Backend / Frontend / Test & Entegrasyon / Sunum |
-| **Hızlı (3 sprint)** | Tasarım & Planlama / Geliştirme / Test & Sunum |
-| **Boş** | Hiç sprint oluşturulmaz, elle eklenir |
+**Student Paneli** — `/dashboard/student/courses/[courseId]/team`
+1. Kendi takım sprint listesi (read/write): sprint oluşturma yalnızca `sprint_mode=team` ise aktif.
+2. Kanban board (yalnızca kendi takımı)
+   - Yetki kontrolü: sadece takım üyeleri edit, instructor read-only.
+3. Bilgilendirme barı: `sprint_mode` override ise (örn. instructor modunda) açıklama banner’ı.
 
-> Şablon seçilince sprint isimleri belirlenir, tarihler proje başlangıç/bitiş'e göre eşit bölünür. Hoca tarihleri sonradan düzenleyebilir.
+#### 4.5 Teknik Görev Dağılımı (Sprint Bazlı)
+**Hafta 1**
+- Migration’lar + RLS (DB)
+- Server actions & types (Sprints + Tasks)
+- Instructor sprint listesi UI (read-only)
 
-**`sprints.status`:** `planning | active | completed`  
-Sprint başlangıç tarihi geçince otomatik `active`, bitiş geçince `completed` olabilir (cron job veya sayfa yüklenirken kontrol).
+**Hafta 2**
+- Sprint oluşturma dialogları + şablon motoru
+- Kanban board temel iskeleti (statik veri)
+- Drag-drop altyapısı (dnd-kit veya sortable-data-structure)
 
-#### 4.2 Kanban / Görev Senaryoları
+**Hafta 3**
+- Kanban board → gerçek server action entegrasyonu
+- Task detay modalı + Markdown editoru
+- Task member management (multi select + API)
 
-**Kim oluşturabilir:** Takım üyeleri + hoca
+**Hafta 4**
+- Student kanban sayfası (permissions ile)
+- Realtime / optimistic update iyileştirmesi (opsiyonel)
+- QA & regresyon: takımlar, sprintler, görevler, RLS verification
 
-**Backlog:** Sprint'e bağlanmayan görevler. Kanban'da ayrı bir "Backlog" sütunu. Görev sprint'e sürüklenince `sprint_id` dolar.
+#### 4.6 Test & QA Check List
+- **Unit/E2E**: (Var olan test frameworküne göre) server action’lar için basic unit test veya integration.
+- **Manual**
+  - Instructor sprint oluştur → task atama → öğrenci kanban’da görünür mü?
+  - Öğrenci `sprint_mode=instructor` iken sprint ekleyemiyor mu?
+  - RLS: farklı organization öğrencisi sprint/görev verisini göremiyor.
+  - Drag-drop sonrası position’lar doğru güncelleniyor mu (API response & DB)?
+- **Tooling**
+  - `npm run lint` & format → clean.
+  - DB migration rollback/forward testi (staging).
 
-**Sütunlar (sabit):** `Backlog | Todo | In Progress | Review | Done`
+#### 4.7 Yayın Stratejisi & Dokümantasyon
+- Release öncesi: Sprint/Görev modülünün feature flag’i (`feature_flags.sprint_management` vb.) ile aç/kapa.
+- Kullanım kılavuzu: Instructor için “Sprint & Kanban nasıl kullanılır?” wiki maddesi; öğrenci için kısa onboarding.
+- Monitoring: Supabase loglarında `task_members` ve `sprints` policy ihlali var mı kontrol.
 
-**Görev Alanları:**
-- Başlık (zorunlu)
-- Açıklama (opsiyonel, markdown)
-- Sprint (opsiyonel → backlog)
-- Birincil sorumlu (`tasks.assigned_to` — tek kişi)
-- Ek atananlar (`task_members` tablosu — çoklu)
-- Öncelik: `low | medium | high | critical`
-- Durum: `todo | in_progress | review | done`
-- Pozisyon (drag & drop sıralama)
-
-**Drag & Drop:** Jira benzeri sütun bazlı kanban. Görev sürüklenince `status` + `position` güncellenir.
-
-**Hoca:** Görevi görüntüler, oluşturur, atar. Aynı zamanda tüm takımların kanban'ını görebilir (read-only veya düzenleyebilir).
-
-**Sayfalar:**
-- `/dashboard/instructor/courses/[courseId]/teams/[teamId]` → Sprint listesi + Kanban
-- `/dashboard/student/courses/[courseId]/team` → Kendi takımının Kanban'ı
-
-**Actions (`src/app/dashboard/shared/teamActions.ts`):**
-- `getTeamSprints(teamId)`
-- `createSprint(teamId, data)` / `createSprintsFromTemplate(teamId, template, startDate, endDate)`
-- `updateSprint(sprintId, data)` / `deleteSprint(sprintId)`
-- `getTeamTasks(teamId, sprintId?)` → sprintId yoksa backlog
-- `createTask(teamId, data)` / `updateTask(taskId, data)` / `deleteTask(taskId)`
-- `updateTaskStatus(taskId, status, position)`
-- `setTaskMembers(taskId, studentIds[])`
+#### 4.8 Bağımlılıklar & Riskler
+- Phase 3 RLS sertleştirmesi tamamlanmadan Phase 4’e geçilmemeli (policy güvenliği).
+- Drag-drop kütüphanesi seçimi (dnd-kit vs react-beautiful-dnd) → performans & SSR uyumluluğu test edilmeli.
+- Markdown editörü (mevcut component kullanılacak mı?) → XSS temizliği.
+- Potansiyel scope creep: Kanban için realtime (Supabase Realtime) opsiyonel, MVP’de optimistic update yeterli.
 
 ---
 
