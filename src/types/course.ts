@@ -11,6 +11,9 @@ export type BaseCourse = {
 export type InstructorCourse = BaseCourse & {
   joinCode: string | null;
   studentCount: number;
+  teamMode: 'instructor' | 'random' | 'student';
+  teamMinSize: number | null;
+  teamMaxSize: number | null;
 };
 
 export type AdminCourse = BaseCourse & {

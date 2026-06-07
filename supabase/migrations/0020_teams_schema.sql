@@ -33,7 +33,9 @@ ALTER TABLE task_members ENABLE ROW LEVEL SECURITY;
 
 GRANT SELECT, INSERT, DELETE ON public.task_members TO authenticated;
 
-CREATE POLICY IF NOT EXISTS "task_members_same_org" ON task_members FOR SELECT USING (
+-- Önce varsa sil, sonra oluştur
+DROP POLICY IF EXISTS "task_members_same_org" ON task_members;
+CREATE POLICY "task_members_same_org" ON task_members FOR SELECT USING (
   EXISTS (
     SELECT 1 FROM tasks t 
     JOIN teams tm ON tm.id = t.team_id
@@ -42,7 +44,8 @@ CREATE POLICY IF NOT EXISTS "task_members_same_org" ON task_members FOR SELECT U
   ) OR get_my_role() = 'super_admin'
 );
 
-CREATE POLICY IF NOT EXISTS "task_members_insert_team" ON task_members FOR INSERT WITH CHECK (
+DROP POLICY IF EXISTS "task_members_insert_team" ON task_members;
+CREATE POLICY "task_members_insert_team" ON task_members FOR INSERT WITH CHECK (
   EXISTS (
     SELECT 1 FROM tasks t 
     JOIN team_members tm ON tm.team_id = t.team_id
@@ -50,7 +53,8 @@ CREATE POLICY IF NOT EXISTS "task_members_insert_team" ON task_members FOR INSER
   ) OR get_my_role() IN ('instructor', 'admin', 'super_admin')
 );
 
-CREATE POLICY IF NOT EXISTS "task_members_delete_team" ON task_members FOR DELETE USING (
+DROP POLICY IF EXISTS "task_members_delete_team" ON task_members;
+CREATE POLICY "task_members_delete_team" ON task_members FOR DELETE USING (
   EXISTS (
     SELECT 1 FROM tasks t 
     JOIN team_members tm ON tm.team_id = t.team_id

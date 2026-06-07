@@ -1,15 +1,28 @@
--- 0019_fix_teams_rls.sql
--- Phase 3 öncesi KRİTİK güvenlik düzeltmesi
--- teams, team_members, sprints, tasks, announcements, calendar_events tabloları
--- için SELECT policy'lerini org-izole hale getirir.
+-- 0030_restore_team_security.sql
+-- Phase 3: Test için açılan policy/grant gevşetmelerini geri al ve org-izolasyonu yeniden kur.
 
--- 1. ESKİ POLICY'LERİ TEMİZLE (hem açık hem yeni adlar)
+-- 1. İlgili tablolar için RLS'i tekrar aktif et
+ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
+ALTER TABLE team_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sprints ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE calendar_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+-- 2. Geçici açık policy'leri temizle
+DROP POLICY IF EXISTS "team_members_select_open" ON team_members;
+DROP POLICY IF EXISTS "team_members_insert_open" ON team_members;
+DROP POLICY IF EXISTS "profiles_select" ON profiles;
+
+-- 3. Var olan (eski) policy'leri sıfırla
 DROP POLICY IF EXISTS "teams_select_all"        ON teams;
 DROP POLICY IF EXISTS "team_members_select_all" ON team_members;
 DROP POLICY IF EXISTS "sprints_select_all"      ON sprints;
 DROP POLICY IF EXISTS "tasks_select_all"        ON tasks;
 DROP POLICY IF EXISTS "announcements_select_all" ON announcements;
 DROP POLICY IF EXISTS "calendar_select_all"     ON calendar_events;
+DROP POLICY IF EXISTS "profiles_select_same_org" ON profiles;
 
 DROP POLICY IF EXISTS "teams_select_same_org"        ON teams;
 DROP POLICY IF EXISTS "team_members_select_same_org" ON team_members;
@@ -18,13 +31,12 @@ DROP POLICY IF EXISTS "tasks_select_same_org"        ON tasks;
 DROP POLICY IF EXISTS "announcements_select_same_org" ON announcements;
 DROP POLICY IF EXISTS "calendar_select_same_org"     ON calendar_events;
 
--- 2. Org-izole SELECT policy'leri ekle
--- teams: sadece kendi organizasyonunun derslerine ait takımlar
+-- 4. Org-izole SELECT policy'lerini yeniden oluştur
 CREATE POLICY "teams_select_same_org" ON teams FOR SELECT USING (
   EXISTS (
     SELECT 1 FROM courses c
     WHERE c.id = teams.course_id
-    AND c.organization_id = get_my_org_id()
+      AND c.organization_id = get_my_org_id()
   )
   OR get_my_role() = 'super_admin'
 );
@@ -34,7 +46,7 @@ CREATE POLICY "team_members_select_same_org" ON team_members FOR SELECT USING (
     SELECT 1 FROM teams t
     JOIN courses c ON c.id = t.course_id
     WHERE t.id = team_members.team_id
-    AND c.organization_id = get_my_org_id()
+      AND c.organization_id = get_my_org_id()
   )
   OR get_my_role() = 'super_admin'
 );
@@ -44,7 +56,7 @@ CREATE POLICY "sprints_select_same_org" ON sprints FOR SELECT USING (
     SELECT 1 FROM teams t
     JOIN courses c ON c.id = t.course_id
     WHERE t.id = sprints.team_id
-    AND c.organization_id = get_my_org_id()
+      AND c.organization_id = get_my_org_id()
   )
   OR get_my_role() = 'super_admin'
 );
@@ -54,7 +66,7 @@ CREATE POLICY "tasks_select_same_org" ON tasks FOR SELECT USING (
     SELECT 1 FROM teams t
     JOIN courses c ON c.id = t.course_id
     WHERE t.id = tasks.team_id
-    AND c.organization_id = get_my_org_id()
+      AND c.organization_id = get_my_org_id()
   )
   OR get_my_role() = 'super_admin'
 );
@@ -63,7 +75,7 @@ CREATE POLICY "announcements_select_same_org" ON announcements FOR SELECT USING 
   EXISTS (
     SELECT 1 FROM courses c
     WHERE c.id = announcements.course_id
-    AND c.organization_id = get_my_org_id()
+      AND c.organization_id = get_my_org_id()
   )
   OR get_my_role() = 'super_admin'
 );
@@ -72,12 +84,21 @@ CREATE POLICY "calendar_select_same_org" ON calendar_events FOR SELECT USING (
   EXISTS (
     SELECT 1 FROM courses c
     WHERE c.id = calendar_events.course_id
-    AND c.organization_id = get_my_org_id()
+      AND c.organization_id = get_my_org_id()
   )
   OR get_my_role() = 'super_admin'
 );
 
--- 3. Hoca için takım verisi RPC
+CREATE POLICY "profiles_select_same_org" ON profiles FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'
+  )
+  OR organization_id = (
+    SELECT organization_id FROM profiles WHERE id = auth.uid()
+  )
+);
+
+-- 5. Instructor & öğrenci RPC'lerini tekrar tanımla (güncel RLS ile çalışmaları için)
 CREATE OR REPLACE FUNCTION get_course_teams(p_course_id UUID)
 RETURNS TABLE (
   team_id       UUID,
@@ -103,7 +124,6 @@ $$ LANGUAGE SQL SECURITY DEFINER STABLE;
 
 GRANT EXECUTE ON FUNCTION get_course_teams(UUID) TO authenticated;
 
--- 4. Öğrenci için kendi takımı RPC
 CREATE OR REPLACE FUNCTION get_my_team_in_course(p_course_id UUID)
 RETURNS TABLE (
   team_id      UUID,
