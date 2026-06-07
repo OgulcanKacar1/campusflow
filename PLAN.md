@@ -24,6 +24,17 @@
 | `integration_events` | Webhook logları | — |
 | `webhook_queue` | Webhook kuyruğu | Service role only ✅ |
 
+> **⚠️ GEÇİCİ AÇIKLAMALAR (Test Amaçlı - Geri Getirilecek!)**
+> 
+> Phase 3 testi için aşağıdaki migration'larla RLS gevşetildi:
+> - `0027_disable_rls.sql` — `team_members`, `profiles` RLS kapalı
+> - `0028_grants.sql` — `authenticated` rolüne tüm tablolarda tam yetki
+> 
+> **TODO (Phase 3 tamamlanmadan önce):**
+> 1. `team_members`, `profiles`, `teams` için org-izole SELECT policy'leri
+> 2. Sadece gerekli INSERT/UPDATE/DELETE policy'leri (instructor kontrollü)
+> 3. `0027`, `0028` migration'larını REVERT et (ya da `0029` ile düzelt)
+
 ### 1.2 Mevcut RPC Fonksiyonları
 
 | Fonksiyon | Amaç | Güvenlik |
@@ -34,6 +45,14 @@
 | `get_course_by_join_code(p_join_code TEXT)` | Org izole edilmiş kod ile ders bul | SECURITY DEFINER ✅ |
 | `get_registration_trend(days_back INT)` | Super admin grafik verisi | SECURITY DEFINER ✅ |
 | `check_domain_status(p_domain TEXT)` | Kayıt öncesi domain kontrolü | SECURITY DEFINER ✅ |
+| `get_course_teams(p_course_id UUID)` | Dersteki takımları üyeleriyle getir | SECURITY DEFINER ✅ |
+| `create_team(p_course_id, p_name, p_repo_url)` | Takım oluştur + invite_code | SECURITY DEFINER ✅ |
+| `update_team(p_team_id, p_name, p_repo_url)` | Takım bilgilerini güncelle | SECURITY DEFINER ✅ |
+| `delete_team(p_team_id UUID)` | Takımı sil (CASCADE) | SECURITY DEFINER ✅ |
+| `add_team_member(p_team_id, p_student_id)` | Takıma üye ekle | SECURITY DEFINER ✅ |
+| `remove_team_member(p_team_id, p_student_id)` | Takımdan üye çıkar (soft delete) | SECURITY DEFINER ✅ |
+| `get_available_students_for_team(p_course_id, p_exclude_team_id)` | Takımsız öğrencileri getir | SECURITY DEFINER ✅ |
+| `create_random_teams(p_course_id, p_team_size)` | Rastgele takımlar oluştur | SECURITY DEFINER ✅ |
 
 ### 1.3 GÜVENLİK AÇIKLARI — KRİTİK
 
@@ -77,6 +96,7 @@ CREATE POLICY "calendar_select_all"      ON calendar_events  FOR SELECT USING (t
 | admin | `/dashboard/admin/settings` | ✅ Tam |
 | instructor | `/dashboard/instructor` | ✅ Tam |
 | instructor | `/dashboard/instructor/courses` | ✅ Tam |
+| instructor | `/dashboard/instructor/courses/[id]/teams` | ✅ Tam (MOD A/B tamamlandı) |
 | student | `/dashboard/student` | ✅ Tam |
 | student | `/dashboard/student/courses` | ✅ Tam |
 | student | `/dashboard/student/courses/[courseId]` | ✅ Tam |
@@ -196,7 +216,7 @@ CREATE POLICY "task_members_delete_team" ON task_members FOR DELETE USING (
 | Takım sil | Takım + üyelikler silinir (CASCADE) |
 | Üye ekle/çıkar | Derse kayıtlı öğrencilerden seç; çıkarma: `left_at` timestamp |
 
-**Actions (`instructor/actions.ts`):**
+**Actions (`instructor/actions.ts`):** ✅ Tamamlandı
 - `getCourseTeamSettings(courseId)` → mod + min/max
 - `updateCourseTeamSettings(courseId, mode, min, max)`
 - `getTeamsByCourse(courseId)` → RPC (üye listesiyle)
@@ -204,8 +224,17 @@ CREATE POLICY "task_members_delete_team" ON task_members FOR DELETE USING (
 - `createRandomTeams(courseId, teamSize)` → server-side random atama
 - `updateTeam(teamId, data)` → isim, repo_url
 - `deleteTeam(teamId)` → delete
-- `addTeamMember(teamId, studentId)` → insert
-- `removeTeamMember(teamId, studentId)` → update left_at
+- `addTeamMember(teamId, studentId)` → RPC (başka takım kontrolü ile)
+- `removeTeamMember(teamId, studentId)` → RPC (soft delete)
+
+**Components:**
+- `CreateTeamButton` → Modal ile takım oluştur
+- `EditTeamModal` → Takım düzenle
+- `AddMemberModal` → Çoklu seçim (3 kolon grid), takımsız öğrenciler
+- `RemoveMemberDialog` → Modal onaylı üye çıkarma
+- `DeleteTeamDialog` → Takım silme onayı
+- `RandomTeamsButton` → Rastgele takım oluşturma
+- `TeamModeSettings` → Mod ayarları (instructor/random/student)
 
 #### 3.4 Student Sayfaları
 

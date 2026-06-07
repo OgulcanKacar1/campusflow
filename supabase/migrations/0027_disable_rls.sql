@@ -1,0 +1,5 @@
+-- 0027_disable_rls.sql
+-- Test için RLS'yi tamamen kapat (SONRA ORG-IZOLE EDILECEK!)
+
+ALTER TABLE team_members DISABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles DISABLE ROW LEVEL SECURITY;

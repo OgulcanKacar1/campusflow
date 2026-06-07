@@ -51,6 +51,61 @@ export async function getStudentCourses() {
   return { data: courses };
 }
 
+export async function getMyTeamInCourse(courseId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Oturum bulunamadı' };
+
+  const { data, error } = await supabase
+    .rpc('get_my_team_in_course', { p_course_id: courseId });
+
+  if (error) return { error: error.message };
+
+  return { data };
+}
+
+export async function studentCreateTeam(courseId: string, name?: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Oturum bulunamadı' };
+
+  const { data, error } = await supabase
+    .rpc('student_create_team', {
+      p_course_id: courseId,
+      p_team_name: name ?? null,
+    });
+
+  if (error) return { error: error.message };
+
+  return { data: data?.[0] };
+}
+
+export async function studentJoinTeamByInvite(inviteCode: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Oturum bulunamadı' };
+
+  const { data, error } = await supabase
+    .rpc('student_join_team_by_invite', { p_invite_code: inviteCode.trim().toUpperCase() });
+
+  if (error) return { error: error.message };
+
+  return { data: data?.[0] };
+}
+
+export async function studentLeaveTeam(teamId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Oturum bulunamadı' };
+
+  const { error } = await supabase
+    .rpc('student_leave_team', { p_team_id: teamId });
+
+  if (error) return { error: error.message };
+
+  return { success: true };
+}
+
 export async function joinCourseByCode(joinCode: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
