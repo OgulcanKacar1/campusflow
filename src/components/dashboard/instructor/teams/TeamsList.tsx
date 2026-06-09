@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +12,7 @@ import type { Team, TeamMember } from '@/types/team';
 interface TeamsListProps {
   teams: Team[];
   teamMode: string;
+  courseId: string;
   onEdit: (team: Team) => void;
   onDelete: (team: Team) => void;
   onAddMember: (team: Team) => void;
@@ -23,6 +25,7 @@ interface TeamsListProps {
 export function TeamsList({
   teams,
   teamMode,
+  courseId,
   onEdit,
   onDelete,
   onAddMember,
@@ -113,6 +116,12 @@ export function TeamsList({
               </div>
 
               <div className="flex items-center gap-2">
+                <Link
+                  href={`/dashboard/instructor/courses/${courseId}/teams/${team.id}`}
+                  className="inline-flex items-center rounded-md border border-indigo-500/40 bg-indigo-500/10 px-3 py-1.5 text-sm text-indigo-200 transition hover:border-indigo-400 hover:bg-indigo-500/20"
+                >
+                  Pano
+                </Link>
                 <Button
                   variant="ghost"
                   size="sm"

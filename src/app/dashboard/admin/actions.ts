@@ -1,6 +1,42 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import type { AdminCourse } from '@/types/course';
+import type { OrgUser } from '@/types/user';
+
+type OrgUserRow = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  role: string;
+  created_at: string;
+};
+
+type OrganizationInfo = {
+  id: string;
+  name: string;
+  status: string;
+  plan: string | null;
+  max_students: number | null;
+};
+
+type OrganizationDomain = {
+  id: string;
+  domain: string;
+  role_hint: string | null;
+};
+
+type CourseWithRelations = {
+  id: string;
+  code: string;
+  name: string;
+  term: string;
+  year: number;
+  status: string;
+  section: string | null;
+  profiles: { full_name: string | null } | { full_name: string | null }[] | null;
+  course_enrollments: { count: number }[] | null;
+};
 
 export async function getAdminDashboardStats() {
   const supabase = await createClient();
@@ -56,7 +92,7 @@ export async function getAdminDashboardStats() {
   };
 }
 
-export async function getOrgUsers() {
+export async function getOrgUsers(): Promise<{ data: OrgUser[]; error?: string }> {
   const supabase = await createClient();
 
   // 1. Adminin kendi organizasyonunu bul
@@ -85,7 +121,15 @@ export async function getOrgUsers() {
     return { error: error.message, data: [] };
   }
 
-  return { data: data ?? [] };
+  const users: OrgUser[] = (data ?? []).map((user: OrgUserRow) => ({
+    id: user.id,
+    full_name: user.full_name ?? 'Bilinmiyor',
+    email: user.email ?? '',
+    role: user.role,
+    created_at: user.created_at,
+  }));
+
+  return { data: users };
 }
 
 export async function updateOrgUserRole(userId: string, newRole: 'student' | 'instructor') {
@@ -137,7 +181,10 @@ export async function updateOrgUserRole(userId: string, newRole: 'student' | 'in
   return { success: true };
 }
 
-export async function getOrgSettings() {
+export async function getOrgSettings(): Promise<
+  | { organization: OrganizationInfo; domains: OrganizationDomain[] }
+  | { error: string }
+> {
   const supabase = await createClient();
 
   // 1. Adminin organizasyonunu bul
@@ -156,24 +203,24 @@ export async function getOrgSettings() {
   // 2. Organizasyon bilgilerini getir
   const { data: organization, error: orgError } = await supabase
     .from('organizations')
-    .select('*')
+    .select('id, name, status, plan, max_students')
     .eq('id', orgId)
-    .single();
+    .single<OrganizationInfo>();
 
-  if (orgError) return { error: orgError.message };
+  if (orgError || !organization) return { error: orgError?.message ?? 'Organizasyon bilgileri alınamadı' };
 
   // 3. Organizasyona ait domainleri getir
   const { data: domains, error: domainsError } = await supabase
     .from('organization_domains')
-    .select('*')
+    .select('id, domain, role_hint')
     .eq('organization_id', orgId);
 
   if (domainsError) return { error: domainsError.message };
 
-  return { organization, domains };
+  return { organization, domains: (domains ?? []) as OrganizationDomain[] };
 }
 
-export async function getOrgCourses() {
+export async function getOrgCourses(): Promise<{ data: AdminCourse[]; error?: string }> {
   const supabase = await createClient();
 
   // 1. Adminin organizasyonunu bul
@@ -200,6 +247,7 @@ export async function getOrgCourses() {
       name,
       term,
       year,
+      section,
       status,
       profiles!instructor_id ( full_name ),
       course_enrollments ( count )
@@ -213,17 +261,22 @@ export async function getOrgCourses() {
     return { error: error.message, data: [] };
   }
 
-  // Veriyi arayüzün beklediği formata maple
-  const formattedCourses = courses?.map(c => ({
-    id: c.id,
-    code: c.code,
-    name: c.name,
-    term: c.term,
-    year: c.year,
-    status: c.status,
-    instructorName: (c.profiles as any)?.full_name || 'Bilinmiyor',
-    studentCount: (c.course_enrollments as any)?.[0]?.count || 0
-  })) || [];
+  const typedCourses = (courses ?? []) as CourseWithRelations[];
+
+  const formattedCourses: AdminCourse[] = typedCourses.map((course) => {
+    const instructorProfile = Array.isArray(course.profiles) ? course.profiles[0] : course.profiles;
+    return {
+      id: course.id,
+      code: course.code,
+      name: course.name,
+      term: course.term,
+      year: course.year,
+      section: course.section,
+      status: course.status,
+      instructorName: instructorProfile?.full_name ?? 'Bilinmiyor',
+      studentCount: course.course_enrollments?.[0]?.count ?? 0,
+    } satisfies AdminCourse;
+  });
 
   return { data: formattedCourses };
 }

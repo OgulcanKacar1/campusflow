@@ -218,6 +218,7 @@ export function TeamsPageClient({
             <TeamsList
               teams={teams}
               teamMode={settings.teamMode}
+              courseId={courseId}
               onEdit={handleEdit}
               onDelete={handleDelete}
               onAddMember={handleAddMember}

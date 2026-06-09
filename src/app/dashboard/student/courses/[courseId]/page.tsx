@@ -4,6 +4,9 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft, ClipboardList, Calendar, KeyRound } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { TeamSection } from './TeamSection.client';
+import { StudentKanbanClient } from '@/app/dashboard/_shared/kanban/StudentKanbanClient';
+import { getKanbanBoard } from '@/app/dashboard/shared/kanban-actions';
+import { createEmptyBoardSnapshot } from '@/app/dashboard/_shared/kanban/utils';
 import type { Team, TeamMember } from '@/types/team';
 
 interface TeamMemberRow {
@@ -141,6 +144,15 @@ export default async function CourseDetailPage({
 
   const { teams, myTeam } = await getTeamsData(courseId);
 
+  let kanbanSnapshot = null;
+  let kanbanError: string | null = null;
+
+  if (myTeam) {
+    const boardResult = await getKanbanBoard(myTeam.id);
+    kanbanSnapshot = boardResult.data ?? createEmptyBoardSnapshot(myTeam.id, courseId);
+    kanbanError = boardResult.error ?? null;
+  }
+
   return (
     <div className="p-8">
       <div className="max-w-6xl">
@@ -206,19 +218,28 @@ export default async function CourseDetailPage({
             allTeams={teams}
           />
 
-          {/* Görevler */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
-            <div className="flex items-center gap-2 mb-5">
-              <div className="p-2 bg-blue-500/10 rounded-lg">
-                <ClipboardList className="w-5 h-5 text-blue-400" />
+          {myTeam && kanbanSnapshot ? (
+            <StudentKanbanClient
+              teamId={myTeam.id}
+              teamName={myTeam.name}
+              courseName={course.name}
+              initialSnapshot={kanbanSnapshot}
+              initialError={kanbanError}
+            />
+          ) : (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+              <div className="flex items-center gap-2 mb-5">
+                <div className="p-2 bg-blue-500/10 rounded-lg">
+                  <ClipboardList className="w-5 h-5 text-blue-400" />
+                </div>
+                <h2 className="text-lg font-semibold text-white">Görevler</h2>
               </div>
-              <h2 className="text-lg font-semibold text-white">Görevler</h2>
+              <div className="flex flex-col items-center justify-center h-32 text-center">
+                <p className="text-white/30 text-sm">Henüz görev eklenmedi</p>
+                <p className="text-white/20 text-xs mt-1">Hocan görev oluşturduğunda burada görünecek.</p>
+              </div>
             </div>
-            <div className="flex flex-col items-center justify-center h-32 text-center">
-              <p className="text-white/30 text-sm">Henüz görev eklenmedi</p>
-              <p className="text-white/20 text-xs mt-1">Hocan görev oluşturduğunda burada görünecek.</p>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

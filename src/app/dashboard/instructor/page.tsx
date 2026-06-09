@@ -1,6 +1,6 @@
 import { getInstructorStats } from './actions';
 import Link from 'next/link';
-import { BookOpen, Users, ClipboardList } from 'lucide-react';
+import { BookOpen, Users } from 'lucide-react';
 
 export default async function InstructorDashboard() {
   const data = await getInstructorStats();
@@ -43,7 +43,7 @@ export default async function InstructorDashboard() {
                 <h3 className="text-lg font-semibold text-white">Derslerim</h3>
               </div>
               <p className="text-sm text-gray-400 pl-[44px]">
-                Yeni ders açın, "Katılım Kodu" oluşturun ve öğrenci listelerini CSV ile yönetin.
+                Yeni ders açın, &quot;Katılım Kodu&quot; oluşturun ve öğrenci listelerini CSV ile yönetin.
               </p>
             </div>
           </Link>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +19,7 @@ import { CreateTeamButton } from '@/components/dashboard/instructor/teams/Create
 import { RandomTeamsButton } from '@/components/dashboard/instructor/teams/RandomTeamsButton';
 import type { InstructorCourse } from '@/types/course';
 import type { Team, TeamMember } from '@/types/team';
+import type { CourseStudentSummary } from '@/types/instructor';
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -26,7 +27,7 @@ export default function CourseDetailPage() {
   
   const [course, setCourse] = useState<InstructorCourse | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
-  const [students, setStudents] = useState<any[]>([]);
+  const [students, setStudents] = useState<CourseStudentSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [teamsLoading, setTeamsLoading] = useState(false);
   const [studentsLoading, setStudentsLoading] = useState(false);
@@ -58,13 +59,7 @@ export default function CourseDetailPage() {
   const [removeMember, setRemoveMember] = useState<TeamMember | null>(null);
   const [isRemoveMemberOpen, setIsRemoveMemberOpen] = useState(false);
 
-  useEffect(() => {
-    loadCourse();
-    loadTeams();
-    loadStudents();
-  }, [courseId]);
-
-  const loadCourse = async () => {
+  const loadCourse = useCallback(async () => {
     setLoading(true);
     const result = await getCourseById(courseId);
     if (result.data) {
@@ -82,21 +77,31 @@ export default function CourseDetailPage() {
       });
     }
     setLoading(false);
-  };
+  }, [courseId]);
 
-  const loadTeams = async () => {
+  const loadTeams = useCallback(async () => {
     setTeamsLoading(true);
     const result = await getTeamsByCourse(courseId);
     if (result.data) setTeams(result.data);
     setTeamsLoading(false);
-  };
+  }, [courseId]);
 
-  const loadStudents = async () => {
+  const loadStudents = useCallback(async () => {
     setStudentsLoading(true);
     const result = await getCourseStudents(courseId);
     if (result.data) setStudents(result.data);
     setStudentsLoading(false);
-  };
+  }, [courseId]);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      void loadCourse();
+      void loadTeams();
+      void loadStudents();
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [loadCourse, loadTeams, loadStudents]);
 
   // Handlers
   const handleEdit = (team: Team) => {
@@ -138,14 +143,22 @@ export default function CourseDetailPage() {
       setIsRemoveMemberOpen(false);
       setRemoveMemberTeam(null);
       setRemoveMember(null);
-      loadTeams();
+      void loadTeams();
     }
   };
 
-  const handleTeamsRefresh = async () => {
+  const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+
+  const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    const timeout = window.setTimeout(() => setToast(null), 3000);
+    return () => window.clearTimeout(timeout);
+  }, []);
+
+  const handleTeamsRefresh = useCallback(async () => {
     await Promise.all([loadTeams(), loadStudents()]);
     showToast('Takımlar güncellendi', 'success');
-  };
+  }, [loadTeams, loadStudents, showToast]);
 
   const handleRegenerateInvite = async (team: Team) => {
     const result = await regenerateTeamInviteCode(team.id);
@@ -163,15 +176,8 @@ export default function CourseDetailPage() {
       showToast('Hata: ' + result.error, 'error');
     } else {
       showToast('Öğrenci başka takıma taşındı', 'success');
-      loadTeams(); // Listeyi yenile
+      void loadTeams();
     }
-  };
-
-  const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
-
-  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
   };
 
   const handleSaveCourse = async () => {
@@ -379,6 +385,7 @@ export default function CourseDetailPage() {
                 <TeamsList 
                   teams={teams}
                   teamMode={teamMode}
+                  courseId={courseId}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                   onAddMember={handleAddMember}

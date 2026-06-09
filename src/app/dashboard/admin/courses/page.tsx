@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
@@ -19,18 +19,25 @@ export default function AdminCoursesPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  useEffect(() => {
-    loadCourses();
-  }, []);
-
-  async function loadCourses() {
+  const loadCourses = useCallback(async () => {
     setLoading(true);
     const result = await getOrgCourses();
-    if (result.data) {
-      setCourses(result.data as Course[]);
+    if (result.error) {
+      setLoading(false);
+      return;
     }
+
+    setCourses(result.data ?? []);
     setLoading(false);
-  }
+  }, []);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      void loadCourses();
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [loadCourses]);
 
   const filteredCourses = useMemo(() => {
     return courses.filter(c => {

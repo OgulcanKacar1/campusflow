@@ -21,6 +21,37 @@ interface ActionResult<T = void> {
   error?: string;
 }
 
+type CourseTeamRow = {
+  team_id: string;
+  course_id: string;
+  team_name: string;
+  repo_url: string | null;
+  status: Team['status'];
+  created_at: string;
+  member_count: number;
+};
+
+type TeamMemberRow = {
+  id: string;
+  team_id: string;
+  student_id: string;
+  role: TeamMember['role'];
+  joined_at: string;
+  left_at: string | null;
+};
+
+type ProfileRow = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+};
+
+type RandomTeamRow = {
+  team_id: string;
+  team_name: string;
+  member_count: number;
+};
+
 async function assignInviteCode(
   supabase: Awaited<ReturnType<typeof createClient>>,
   teamId: string,
@@ -155,17 +186,19 @@ export async function getTeamsByCourse(courseId: string): Promise<ActionResult<T
     .from('teams')
     .select('id, invite_code')
     .eq('course_id', courseId);
-  
-  (inviteRows || []).forEach((row) => {
+
+  (inviteRows ?? []).forEach((row) => {
     inviteMap.set(row.id, row.invite_code);
   });
-  
+
+  const courseTeamRows = (teamsData ?? []) as unknown as CourseTeamRow[];
+
   // Her takımın üyelerini ayrı çek
   const teams: Team[] = [];
-  
-  for (const row of teamsData) {
+
+  for (const row of courseTeamRows) {
     // 1. Önce team_members'tan student_id'leri al
-    const { data: members, error: membersError } = await supabase
+    const { data: members } = await supabase
       .from('team_members')
       .select('id, team_id, student_id, role, joined_at, left_at')
       .eq('team_id', row.team_id)
@@ -175,32 +208,38 @@ export async function getTeamsByCourse(courseId: string): Promise<ActionResult<T
     // Debug: if (membersError) console.error('Üyeler alınamadı:', membersError);
 
     // 2. Profile bilgilerini ayrı sorguyla al
-    const studentIds = (members || []).map((m: any) => m.student_id);
+    const memberRows = (members ?? []) as unknown as TeamMemberRow[];
+    const studentIds = memberRows.map((member) => member.student_id);
     let profilesMap: Record<string, { full_name: string; email: string }> = {};
     
     if (studentIds.length > 0) {
-      const { data: profiles, error: profilesError } = await supabase
+      const { data: profiles } = await supabase
         .from('profiles')
         .select('id, full_name, email')
         .in('id', studentIds);
       
       // Debug: if (profilesError) console.error(`Team ${row.team_id} profiles error:`, profilesError);
       
-      profilesMap = (profiles || []).reduce((acc, p) => {
-        acc[p.id] = { full_name: p.full_name || '', email: p.email || '' };
+      const profileRows = (profiles ?? []) as unknown as ProfileRow[];
+
+      profilesMap = profileRows.reduce((acc, profile) => {
+        acc[profile.id] = {
+          full_name: profile.full_name ?? '',
+          email: profile.email ?? '',
+        };
         return acc;
       }, {} as Record<string, { full_name: string; email: string }>);
     }
     
-    const formattedMembers: TeamMember[] = (members || []).map((m: any) => ({
-      id: m.id,
-      teamId: m.team_id,
-      studentId: m.student_id,
-      role: m.role,
-      joinedAt: m.joined_at,
-      leftAt: m.left_at,
-      studentName: profilesMap[m.student_id]?.full_name,
-      studentEmail: profilesMap[m.student_id]?.email,
+    const formattedMembers: TeamMember[] = memberRows.map((member) => ({
+      id: member.id,
+      teamId: member.team_id,
+      studentId: member.student_id,
+      role: member.role,
+      joinedAt: member.joined_at,
+      leftAt: member.left_at,
+      studentName: profilesMap[member.student_id]?.full_name,
+      studentEmail: profilesMap[member.student_id]?.email,
     }));
     
     let inviteCode = inviteMap.get(row.team_id) ?? null;
@@ -488,7 +527,9 @@ export async function createRandomTeams(
     return { data: [] };
   }
   
-  const teams: Team[] = data.map((row: any) => ({
+  const randomRows = data as unknown as RandomTeamRow[];
+
+  const teams: Team[] = randomRows.map((row) => ({
     id: row.team_id,
     courseId: input.courseId,
     name: row.team_name,

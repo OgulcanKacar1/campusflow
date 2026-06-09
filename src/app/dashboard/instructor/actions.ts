@@ -3,12 +3,20 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import type { InstructorCourse } from '@/types/course';
+import type { CourseStudentSummary } from '@/types/instructor';
 
 // Types
 interface ActionResult<T = void> {
   data?: T;
   error?: string;
 }
+
+type CourseEnrollmentCount = { count: number | null };
+
+type CourseStatsRow = {
+  status: string;
+  course_enrollments: CourseEnrollmentCount[] | null;
+};
 
 export async function getInstructorStats() {
   const supabase = await createClient();
@@ -36,14 +44,14 @@ export async function getInstructorStats() {
     return { error: error.message };
   }
 
-  const activeCoursesCount = courses?.filter(c => c.status === 'active').length || 0;
-  
-  // Toplam öğrenci sayısını (derslerdeki unique veya toplam enrollement) hesapla
-  // Şimdilik enrollments count'ları topluyoruz.
-  const totalStudents = courses?.reduce((sum, course) => {
-    const enrollmentsCount = (course.course_enrollments as any)?.[0]?.count || 0;
-    return sum + enrollmentsCount;
-  }, 0) || 0;
+  const courseRows = (courses ?? []) as unknown as CourseStatsRow[];
+
+  const activeCoursesCount = courseRows.filter((course) => course.status === 'active').length;
+
+  const totalStudents = courseRows.reduce((sum, course) => {
+    const enrollmentCount = course.course_enrollments?.[0]?.count ?? 0;
+    return sum + enrollmentCount;
+  }, 0);
 
   return {
     stats: {
@@ -101,7 +109,7 @@ export async function getInstructorCourses(): Promise<{ data: InstructorCourse[]
     return { error: error.message, data: [] };
   }
 
-  const rows = (courses ?? []) as InstructorCourseRow[];
+  const rows = (courses ?? []) as unknown as InstructorCourseRow[];
 
   const formattedCourses: InstructorCourse[] = rows.map((c) => ({
     id: c.id,
@@ -330,20 +338,26 @@ export async function getCourseById(courseId: string): Promise<ActionResult<Inst
     return { error: 'Ders bulunamadı' };
   }
 
+  const courseRow = (course ?? null) as unknown as InstructorCourseRow | null;
+
+  if (!courseRow) {
+    return { error: 'Ders bulunamadı' };
+  }
+
   return {
     data: {
-      id: course.id,
-      code: course.code,
-      name: course.name,
-      term: course.term,
-      year: course.year,
-      section: course.section,
-      status: course.status,
-      joinCode: course.join_code,
-      studentCount: (course.course_enrollments as any)?.[0]?.count || 0,
-      teamMode: (course.team_mode as 'instructor' | 'random' | 'student') ?? 'instructor',
-      teamMinSize: course.team_min_size ?? null,
-      teamMaxSize: course.team_max_size ?? null
+      id: courseRow.id,
+      code: courseRow.code,
+      name: courseRow.name,
+      term: courseRow.term,
+      year: courseRow.year,
+      section: courseRow.section,
+      status: courseRow.status,
+      joinCode: courseRow.join_code,
+      studentCount: courseRow.course_enrollments?.[0]?.count ?? 0,
+      teamMode: courseRow.team_mode ?? 'instructor',
+      teamMinSize: courseRow.team_min_size ?? null,
+      teamMaxSize: courseRow.team_max_size ?? null,
     }
   };
 }
@@ -358,7 +372,23 @@ interface UpdateCourseInput {
   maxTeamSize?: number;
 }
 
-export async function getCourseStudents(courseId: string): Promise<ActionResult<any[]>> {
+type CourseEnrollmentRow = {
+  student_id: string;
+  created_at: string;
+  profiles: {
+    id: string;
+    full_name: string | null;
+    email: string | null;
+  } | null;
+};
+
+type TeamMemberRow = {
+  student_id: string;
+  team_id: string | null;
+  teams: { name: string | null } | null;
+};
+
+export async function getCourseStudents(courseId: string): Promise<ActionResult<CourseStudentSummary[]>> {
   const supabase = await createClient();
   
   const { data: { user } } = await supabase.auth.getUser();
@@ -380,28 +410,29 @@ export async function getCourseStudents(courseId: string): Promise<ActionResult<
   }
 
   // 2. Her öğrencinin takım bilgisini ayrı çek
-  const studentIds = enrollments?.map((e: any) => e.student_id) || [];
-  
-  let teamMembers: any[] = [];
+  const enrollmentRows = (enrollments ?? []) as unknown as CourseEnrollmentRow[];
+  const studentIds = enrollmentRows.map((e) => e.student_id);
+
+  let teamMembers: TeamMemberRow[] = [];
   if (studentIds.length > 0) {
     const { data: tmData } = await supabase
       .from('team_members')
       .select('student_id, team_id, teams(name)')
       .in('student_id', studentIds);
-    teamMembers = tmData || [];
+    teamMembers = (tmData ?? []) as unknown as TeamMemberRow[];
   }
 
   // 3. Takım bilgisini eşleştir
-  const students = enrollments?.map((e: any) => {
-    const teamMember = teamMembers.find((tm: any) => tm.student_id === e.student_id);
+  const students: CourseStudentSummary[] = enrollmentRows.map((enrollment) => {
+    const teamMember = teamMembers.find((tm) => tm.student_id === enrollment.student_id);
     return {
-      id: e.student_id,
-      name: e.profiles?.full_name || 'İsimsiz',
-      email: e.profiles?.email || '',
-      team: teamMember?.teams?.name || '-',
-      date: new Date(e.created_at).toLocaleDateString('tr-TR')
-    };
-  }) || [];
+      id: enrollment.student_id,
+      name: enrollment.profiles?.full_name ?? 'İsimsiz',
+      email: enrollment.profiles?.email ?? '',
+      team: teamMember?.teams?.name ?? '-',
+      date: new Date(enrollment.created_at).toLocaleDateString('tr-TR'),
+    } satisfies CourseStudentSummary;
+  });
 
   return { data: students };
 }
@@ -412,10 +443,10 @@ export async function updateCourse(input: UpdateCourseInput): Promise<ActionResu
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Oturum bulunamadı' };
 
-  const updateData: any = {
-    updated_at: new Date().toISOString()
+  const updateData: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
   };
-  
+
   if (input.name !== undefined) updateData.name = input.name;
   if (input.code !== undefined) updateData.code = input.code;
   if (input.section !== undefined) updateData.section = input.section;

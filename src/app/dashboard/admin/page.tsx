@@ -1,6 +1,6 @@
 import { getAdminDashboardStats } from './actions';
 import Link from 'next/link';
-import { Users, BookOpen, Settings } from 'lucide-react';
+import { Users, Settings } from 'lucide-react';
 
 export default async function AdminDashboard() {
   const data = await getAdminDashboardStats();

@@ -5,13 +5,13 @@ import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, ShieldAlert, Loader2 } from 'lucide-react';
 
 export default async function AdminSettingsPage() {
-  const data = await getOrgSettings();
+  const result = await getOrgSettings();
 
-  if (data?.error) {
-    return <div className="p-8 text-red-500">Hata: {data.error}</div>;
+  if ('error' in result) {
+    return <div className="p-8 text-red-500">Hata: {result.error}</div>;
   }
 
-  const { organization, domains } = data as any;
+  const { organization, domains } = result;
 
   return (
     <div className="p-8">
@@ -94,11 +94,11 @@ export default async function AdminSettingsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {domains && domains.map((domain: any) => (
+                {domains.map((domain) => (
                   <div key={domain.id} className="flex items-center justify-between bg-background px-4 py-3 rounded-md border border-border">
                     <span className="text-foreground font-medium">@{domain.domain}</span>
                     <Badge variant="outline" className="text-muted-foreground bg-muted/50 border-border font-normal">
-                      Varsayılan Rol: {domain.role_hint === 'any' ? 'Sisteme Bırak' : domain.role_hint}
+                      Varsayılan Rol: {domain.role_hint === 'any' ? 'Sisteme Bırak' : domain.role_hint ?? 'Belirtilmemiş'}
                     </Badge>
                   </div>
                 ))}
