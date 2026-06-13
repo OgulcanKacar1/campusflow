@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -21,18 +21,25 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
-
-  async function loadUsers() {
+  const loadUsers = useCallback(async () => {
     setLoading(true);
     const result = await getOrgUsers();
-    if (result.data) {
-      setUsers(result.data as OrgUser[]);
+    if (result.error) {
+      setLoading(false);
+      return;
     }
+
+    setUsers(result.data ?? []);
     setLoading(false);
-  }
+  }, []);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      void loadUsers();
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [loadUsers]);
 
   const handleRoleUpdate = async (userId: string, newRole: 'student' | 'instructor') => {
     setRoleUpdateLoading(userId);
@@ -127,8 +134,8 @@ export default function AdminUsersPage() {
                   ) : (
                     filteredUsers.map(user => (
                       <TableRow key={user.id}>
-                        <TableCell className="font-medium text-foreground">{user.full_name}</TableCell>
-                        <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                        <TableCell className="font-medium text-foreground">{user.full_name ?? 'Bilinmiyor'}</TableCell>
+                        <TableCell className="text-muted-foreground">{user.email ?? '—'}</TableCell>
                         <TableCell>
                           <Badge
                             className={

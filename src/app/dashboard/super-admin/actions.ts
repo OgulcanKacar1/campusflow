@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import type { Organization, OrganizationDomain } from '@/types/organization';
 
 export async function getSuperAdminStats() {
   const supabase = await createClient();
@@ -30,7 +31,7 @@ export async function getRegistrationTrend(daysBack = 30) {
   return data;
 }
 
-export async function getOrganizationsWithDomains() {
+export async function getOrganizationsWithDomains(): Promise<Organization[]> {
   const supabase = await createClient();
   
   // Önce organizasyonları al
@@ -40,8 +41,7 @@ export async function getOrganizationsWithDomains() {
     .order('created_at', { ascending: false });
 
   if (orgsError) {
-    console.error('getOrganizations error:', orgsError);
-    return [];
+    throw new Error(`getOrganizations error: ${orgsError.message}`);
   }
 
   // Sonra domainleri al
@@ -50,14 +50,16 @@ export async function getOrganizationsWithDomains() {
     .select('*');
 
   if (domainsError) {
-    console.error('getDomains error:', domainsError);
-    return orgs;
+    throw new Error(`getDomains error: ${domainsError.message}`);
   }
 
   // Domainleri organizasyonlara ata
-  return orgs.map(org => ({
+  const typedOrgs = (orgs ?? []) as Organization[];
+  const typedDomains = (domains ?? []) as (OrganizationDomain & { organization_id: string })[];
+
+  return typedOrgs.map((org) => ({
     ...org,
-    domains: domains.filter(d => d.organization_id === org.id)
+    domains: typedDomains.filter((d) => d.organization_id === org.id).map(({ domain, role_hint }) => ({ domain, role_hint })),
   }));
 }
 
@@ -73,8 +75,8 @@ export async function createOrganization(formData: FormData) {
   let extraDomains: Array<{domain: string, role_hint: string}> = [];
   try {
     if (domainsJson) extraDomains = JSON.parse(domainsJson);
-  } catch (e) {
-    // parse error
+  } catch {
+    return { error: 'Ek domain listesi çözümlenemedi. JSON formatını kontrol edin.' };
   }
 
   const supabase = await createClient();

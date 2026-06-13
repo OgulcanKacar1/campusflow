@@ -1,8 +1,17 @@
 import { getSuperAdminStats, getOrganizationsWithDomains, getRegistrationTrend } from './actions';
 import OverviewCharts from './OverviewCharts';
 
+interface SuperAdminStatRow {
+  organization_name: string;
+  student_count: number | null;
+  instructor_count: number | null;
+  admin_count: number | null;
+  domain: string;
+  status: string;
+}
+
 export default async function SuperAdminDashboard() {
-  const statsList = await getSuperAdminStats();
+  const statsList = (await getSuperAdminStats()) as SuperAdminStatRow[];
   const organizations = await getOrganizationsWithDomains();
   const trendData = await getRegistrationTrend(30);
 
@@ -12,14 +21,20 @@ export default async function SuperAdminDashboard() {
   
   // Stats listesinden toplam kullanıcıyı hesapla
   let totalUsers = 0;
-  statsList.forEach(s => {
-    totalUsers += (s.student_count || 0) + (s.instructor_count || 0) + (s.admin_count || 0);
+  statsList.forEach((s) => {
+    totalUsers += (s.student_count ?? 0) + (s.instructor_count ?? 0) + (s.admin_count ?? 0);
   });
 
   // Top 5 Üniversite (Öğrenci sayısına göre)
   const topOrgs = [...statsList]
-    .sort((a, b) => (b.student_count || 0) - (a.student_count || 0))
-    .slice(0, 5);
+    .sort((a, b) => (b.student_count ?? 0) - (a.student_count ?? 0))
+    .slice(0, 5)
+    .map((org) => ({
+      organization_name: org.organization_name,
+      domain: org.domain,
+      student_count: org.student_count ?? 0,
+      status: org.status,
+    }));
 
   return (
     <div className="p-8">
@@ -49,7 +64,7 @@ export default async function SuperAdminDashboard() {
         </div>
 
         {/* Grafikler ve Top Tablo */}
-        <OverviewCharts trendData={trendData as any} topOrgs={topOrgs as any} />
+        <OverviewCharts trendData={trendData} topOrgs={topOrgs} />
       </div>
     </div>
   );

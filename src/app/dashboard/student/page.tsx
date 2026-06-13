@@ -13,7 +13,7 @@ async function getStudentName() {
 
 export default async function StudentDashboard() {
   const [statsData, fullName] = await Promise.all([getStudentStats(), getStudentName()]);
-  const stats = (statsData as any)?.stats || { enrolledCourses: 0, activeCourses: 0, teams: 0 };
+  const stats = statsData.stats ?? { enrolledCourses: 0, activeCourses: 0, teams: 0 };
   const firstName = fullName.split(' ')[0];
 
   const hour = new Date().getHours();

@@ -3,12 +3,21 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import type { InstructorCourse } from '@/types/course';
+import type { CourseStudentSummary } from '@/types/instructor';
+import { ACADEMIC_SPRINT_TEMPLATES } from '@/lib/constants/sprint-templates';
 
 // Types
 interface ActionResult<T = void> {
   data?: T;
   error?: string;
 }
+
+type CourseEnrollmentCount = { count: number | null };
+
+type CourseStatsRow = {
+  status: string;
+  course_enrollments: CourseEnrollmentCount[] | null;
+};
 
 export async function getInstructorStats() {
   const supabase = await createClient();
@@ -36,14 +45,14 @@ export async function getInstructorStats() {
     return { error: error.message };
   }
 
-  const activeCoursesCount = courses?.filter(c => c.status === 'active').length || 0;
-  
-  // Toplam öğrenci sayısını (derslerdeki unique veya toplam enrollement) hesapla
-  // Şimdilik enrollments count'ları topluyoruz.
-  const totalStudents = courses?.reduce((sum, course) => {
-    const enrollmentsCount = (course.course_enrollments as any)?.[0]?.count || 0;
-    return sum + enrollmentsCount;
-  }, 0) || 0;
+  const courseRows = (courses ?? []) as unknown as CourseStatsRow[];
+
+  const activeCoursesCount = courseRows.filter((course) => course.status === 'active').length;
+
+  const totalStudents = courseRows.reduce((sum, course) => {
+    const enrollmentCount = course.course_enrollments?.[0]?.count ?? 0;
+    return sum + enrollmentCount;
+  }, 0);
 
   return {
     stats: {
@@ -54,7 +63,22 @@ export async function getInstructorStats() {
   };
 }
 
-export async function getInstructorCourses() {
+interface InstructorCourseRow {
+  id: string;
+  code: string;
+  name: string;
+  term: string;
+  year: number;
+  section: string | null;
+  status: string;
+  join_code: string | null;
+  team_mode: 'instructor' | 'random' | 'student';
+  team_min_size: number | null;
+  team_max_size: number | null;
+  course_enrollments: { count: number | null }[] | null;
+}
+
+export async function getInstructorCourses(): Promise<{ data: InstructorCourse[]; error?: string }> {
   const supabase = await createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
@@ -71,6 +95,9 @@ export async function getInstructorCourses() {
       section,
       status,
       join_code,
+      team_mode,
+      team_min_size,
+      team_max_size,
       course_enrollments ( count )
     `)
     .eq('instructor_id', user.id)
@@ -83,7 +110,9 @@ export async function getInstructorCourses() {
     return { error: error.message, data: [] };
   }
 
-  const formattedCourses = courses?.map(c => ({
+  const rows = (courses ?? []) as unknown as InstructorCourseRow[];
+
+  const formattedCourses: InstructorCourse[] = rows.map((c) => ({
     id: c.id,
     code: c.code,
     name: c.name,
@@ -92,8 +121,11 @@ export async function getInstructorCourses() {
     section: c.section,
     status: c.status,
     joinCode: c.join_code,
-    studentCount: (c.course_enrollments as any)?.[0]?.count || 0
-  })) || [];
+    studentCount: c.course_enrollments?.[0]?.count ?? 0,
+    teamMode: c.team_mode,
+    teamMinSize: c.team_min_size,
+    teamMaxSize: c.team_max_size,
+  }));
 
   return { data: formattedCourses };
 }
@@ -297,6 +329,7 @@ export async function getCourseById(courseId: string): Promise<ActionResult<Inst
       team_mode,
       team_min_size,
       team_max_size,
+      sprint_mode,
       course_enrollments ( count )
     `)
     .eq('id', courseId)
@@ -307,20 +340,27 @@ export async function getCourseById(courseId: string): Promise<ActionResult<Inst
     return { error: 'Ders bulunamadı' };
   }
 
+  const courseRow = (course ?? null) as unknown as InstructorCourseRow | null;
+
+  if (!courseRow) {
+    return { error: 'Ders bulunamadı' };
+  }
+
   return {
     data: {
-      id: course.id,
-      code: course.code,
-      name: course.name,
-      term: course.term,
-      year: course.year,
-      section: course.section,
-      status: course.status,
-      joinCode: course.join_code,
-      studentCount: (course.course_enrollments as any)?.[0]?.count || 0,
-      teamMode: (course.team_mode as 'instructor' | 'random' | 'student') ?? 'instructor',
-      teamMinSize: course.team_min_size ?? null,
-      teamMaxSize: course.team_max_size ?? null
+      id: courseRow.id,
+      code: courseRow.code,
+      name: courseRow.name,
+      term: courseRow.term,
+      year: courseRow.year,
+      section: courseRow.section,
+      status: courseRow.status,
+      joinCode: courseRow.join_code,
+      studentCount: courseRow.course_enrollments?.[0]?.count ?? 0,
+      teamMode: courseRow.team_mode ?? 'instructor',
+      teamMinSize: courseRow.team_min_size ?? null,
+      teamMaxSize: courseRow.team_max_size ?? null,
+      sprintMode: courseRow.sprint_mode ?? 'team',
     }
   };
 }
@@ -333,9 +373,26 @@ interface UpdateCourseInput {
   teamMode?: 'instructor' | 'random' | 'student';
   minTeamSize?: number;
   maxTeamSize?: number;
+  sprintMode?: 'instructor' | 'team';
 }
 
-export async function getCourseStudents(courseId: string): Promise<ActionResult<any[]>> {
+type CourseEnrollmentRow = {
+  student_id: string;
+  created_at: string;
+  profiles: {
+    id: string;
+    full_name: string | null;
+    email: string | null;
+  } | null;
+};
+
+type TeamMemberRow = {
+  student_id: string;
+  team_id: string | null;
+  teams: { name: string | null } | null;
+};
+
+export async function getCourseStudents(courseId: string): Promise<ActionResult<CourseStudentSummary[]>> {
   const supabase = await createClient();
   
   const { data: { user } } = await supabase.auth.getUser();
@@ -357,28 +414,29 @@ export async function getCourseStudents(courseId: string): Promise<ActionResult<
   }
 
   // 2. Her öğrencinin takım bilgisini ayrı çek
-  const studentIds = enrollments?.map((e: any) => e.student_id) || [];
-  
-  let teamMembers: any[] = [];
+  const enrollmentRows = (enrollments ?? []) as unknown as CourseEnrollmentRow[];
+  const studentIds = enrollmentRows.map((e) => e.student_id);
+
+  let teamMembers: TeamMemberRow[] = [];
   if (studentIds.length > 0) {
     const { data: tmData } = await supabase
       .from('team_members')
       .select('student_id, team_id, teams(name)')
       .in('student_id', studentIds);
-    teamMembers = tmData || [];
+    teamMembers = (tmData ?? []) as unknown as TeamMemberRow[];
   }
 
   // 3. Takım bilgisini eşleştir
-  const students = enrollments?.map((e: any) => {
-    const teamMember = teamMembers.find((tm: any) => tm.student_id === e.student_id);
+  const students: CourseStudentSummary[] = enrollmentRows.map((enrollment) => {
+    const teamMember = teamMembers.find((tm) => tm.student_id === enrollment.student_id);
     return {
-      id: e.student_id,
-      name: e.profiles?.full_name || 'İsimsiz',
-      email: e.profiles?.email || '',
-      team: teamMember?.teams?.name || '-',
-      date: new Date(e.created_at).toLocaleDateString('tr-TR')
-    };
-  }) || [];
+      id: enrollment.student_id,
+      name: enrollment.profiles?.full_name ?? 'İsimsiz',
+      email: enrollment.profiles?.email ?? '',
+      team: teamMember?.teams?.name ?? '-',
+      date: new Date(enrollment.created_at).toLocaleDateString('tr-TR'),
+    } satisfies CourseStudentSummary;
+  });
 
   return { data: students };
 }
@@ -389,16 +447,17 @@ export async function updateCourse(input: UpdateCourseInput): Promise<ActionResu
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Oturum bulunamadı' };
 
-  const updateData: any = {
-    updated_at: new Date().toISOString()
+  const updateData: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
   };
-  
+
   if (input.name !== undefined) updateData.name = input.name;
   if (input.code !== undefined) updateData.code = input.code;
   if (input.section !== undefined) updateData.section = input.section;
   if (input.teamMode !== undefined) updateData.team_mode = input.teamMode;
   if (input.minTeamSize !== undefined) updateData.team_min_size = input.minTeamSize;
   if (input.maxTeamSize !== undefined) updateData.team_max_size = input.maxTeamSize;
+  if (input.sprintMode !== undefined) updateData.sprint_mode = input.sprintMode;
 
   const { error } = await supabase
     .from('courses')
@@ -412,4 +471,89 @@ export async function updateCourse(input: UpdateCourseInput): Promise<ActionResu
 
   revalidatePath(`/dashboard/instructor/courses/${input.courseId}`);
   return {};
+}
+
+export async function applyCustomSprintsToCourse(
+  courseId: string,
+  sprints: { name: string; start_at: string; end_at: string }[]
+): Promise<ActionResult> {
+  const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Oturum bulunamadı' };
+
+  // 1. Eğitmen yetkisini doğrula
+  const { data: course, error: courseError } = await supabase
+    .from('courses')
+    .select('id')
+    .eq('id', courseId)
+    .eq('instructor_id', user.id)
+    .single();
+
+  if (courseError || !course) {
+    return { error: 'Ders bulunamadı veya yetkiniz yok.' };
+  }
+
+  if (!sprints || sprints.length === 0) {
+    return { error: 'Eklenecek sprint bulunamadı.' };
+  }
+
+  // 2. Takımları çek
+  const { data: teams, error: teamsError } = await supabase
+    .from('teams')
+    .select('id')
+    .eq('course_id', courseId);
+
+  if (teamsError || !teams || teams.length === 0) {
+    return { error: 'Kursta henüz takım bulunmuyor.' };
+  }
+
+  // 3. Mevcut sprint pozisyonlarını bulmak için tüm takımların sprintlerini çek
+  const { data: existingSprints } = await supabase
+    .from('sprints')
+    .select('team_id, position')
+    .in('team_id', teams.map(t => t.id));
+
+  const maxPositions = new Map<string, number>();
+  (existingSprints || []).forEach(s => {
+    const currentMax = maxPositions.get(s.team_id) ?? -1;
+    if (s.position > currentMax) {
+      maxPositions.set(s.team_id, s.position);
+    }
+  });
+
+  // 4. Her takım için eklenecek sprintleri hazırla
+  const inserts: any[] = [];
+  
+  teams.forEach(team => {
+    let currentPosition = (maxPositions.get(team.id) ?? -1) + 1;
+
+    sprints.forEach((sprintTpl) => {
+      inserts.push({
+        team_id: team.id,
+        created_by: user.id,
+        name: sprintTpl.name,
+        start_at: sprintTpl.start_at,
+        end_at: sprintTpl.end_at,
+        status: 'planning',
+        position: currentPosition,
+      });
+
+      currentPosition++;
+    });
+  });
+
+  if (inserts.length === 0) return { success: true };
+
+  // 5. Toplu olarak kaydet
+  const { error: insertError } = await supabase
+    .from('sprints')
+    .insert(inserts);
+
+  if (insertError) {
+    return { error: insertError.message };
+  }
+
+  revalidatePath(`/dashboard/instructor/courses/${courseId}`);
+  return { success: true };
 }

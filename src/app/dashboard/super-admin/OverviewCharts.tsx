@@ -5,14 +5,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-type TrendData = {
+export type TrendData = {
   date: string;
   student_count: number;
   instructor_count: number;
   admin_count: number;
 };
 
-type TopOrg = {
+export type TopOrg = {
   organization_name: string;
   domain: string;
   student_count: number;

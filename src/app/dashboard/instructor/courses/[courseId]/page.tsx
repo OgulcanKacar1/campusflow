@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, BookOpen, Users, Settings, Loader2, CheckCircle } from 'lucide-react';
 import { getCourseById, updateCourse, getCourseStudents } from '../../actions';
-import { getTeamsByCourse, removeTeamMember, moveTeamMember, regenerateTeamInviteCode } from '@/app/dashboard/instructor/teams/actions';
+import { getTeamsByCourse, removeTeamMember, moveTeamMember, regenerateTeamInviteCode, setTeamLeader } from '@/app/dashboard/instructor/teams/actions';
 import { TeamsList } from '@/components/dashboard/instructor/teams/TeamsList';
 import { EditTeamModal } from '@/components/dashboard/instructor/teams/EditTeamModal';
 import { DeleteTeamDialog } from '@/components/dashboard/instructor/teams/DeleteTeamDialog';
@@ -17,8 +17,10 @@ import { AddMemberModal } from '@/components/dashboard/instructor/teams/AddMembe
 import { RemoveMemberDialog } from '@/components/dashboard/instructor/teams/RemoveMemberDialog';
 import { CreateTeamButton } from '@/components/dashboard/instructor/teams/CreateTeamButton';
 import { RandomTeamsButton } from '@/components/dashboard/instructor/teams/RandomTeamsButton';
+import { SprintTemplateModal } from '@/components/dashboard/instructor/courses/SprintTemplateModal';
 import type { InstructorCourse } from '@/types/course';
 import type { Team, TeamMember } from '@/types/team';
+import type { CourseStudentSummary } from '@/types/instructor';
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -26,13 +28,15 @@ export default function CourseDetailPage() {
   
   const [course, setCourse] = useState<InstructorCourse | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
-  const [students, setStudents] = useState<any[]>([]);
+  const [students, setStudents] = useState<CourseStudentSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [teamsLoading, setTeamsLoading] = useState(false);
   const [studentsLoading, setStudentsLoading] = useState(false);
   
   // Team mode from settings (instructor | random | student)
   const [teamMode, setTeamMode] = useState<'instructor' | 'random' | 'student'>('instructor');
+  // Sprint mode from settings (instructor | team)
+  const [sprintMode, setSprintMode] = useState<'instructor' | 'team'>('team');
   
   // Team size settings
   const [teamSettings, setTeamSettings] = useState({
@@ -57,14 +61,9 @@ export default function CourseDetailPage() {
   const [removeMemberTeam, setRemoveMemberTeam] = useState<Team | null>(null);
   const [removeMember, setRemoveMember] = useState<TeamMember | null>(null);
   const [isRemoveMemberOpen, setIsRemoveMemberOpen] = useState(false);
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
 
-  useEffect(() => {
-    loadCourse();
-    loadTeams();
-    loadStudents();
-  }, [courseId]);
-
-  const loadCourse = async () => {
+  const loadCourse = useCallback(async () => {
     setLoading(true);
     const result = await getCourseById(courseId);
     if (result.data) {
@@ -76,27 +75,38 @@ export default function CourseDetailPage() {
         section: result.data.section || ''
       });
       setTeamMode(result.data.teamMode ?? 'instructor');
+      setSprintMode(result.data.sprintMode ?? 'team');
       setTeamSettings({
         minSize: result.data.teamMinSize ?? 3,
         maxSize: result.data.teamMaxSize ?? 5
       });
     }
     setLoading(false);
-  };
+  }, [courseId]);
 
-  const loadTeams = async () => {
+  const loadTeams = useCallback(async () => {
     setTeamsLoading(true);
     const result = await getTeamsByCourse(courseId);
     if (result.data) setTeams(result.data);
     setTeamsLoading(false);
-  };
+  }, [courseId]);
 
-  const loadStudents = async () => {
+  const loadStudents = useCallback(async () => {
     setStudentsLoading(true);
     const result = await getCourseStudents(courseId);
     if (result.data) setStudents(result.data);
     setStudentsLoading(false);
-  };
+  }, [courseId]);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      void loadCourse();
+      void loadTeams();
+      void loadStudents();
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [loadCourse, loadTeams, loadStudents]);
 
   // Handlers
   const handleEdit = (team: Team) => {
@@ -138,14 +148,22 @@ export default function CourseDetailPage() {
       setIsRemoveMemberOpen(false);
       setRemoveMemberTeam(null);
       setRemoveMember(null);
-      loadTeams();
+      void loadTeams();
     }
   };
 
-  const handleTeamsRefresh = async () => {
+  const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+
+  const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    const timeout = window.setTimeout(() => setToast(null), 3000);
+    return () => window.clearTimeout(timeout);
+  }, []);
+
+  const handleTeamsRefresh = useCallback(async () => {
     await Promise.all([loadTeams(), loadStudents()]);
     showToast('Takımlar güncellendi', 'success');
-  };
+  }, [loadTeams, loadStudents, showToast]);
 
   const handleRegenerateInvite = async (team: Team) => {
     const result = await regenerateTeamInviteCode(team.id);
@@ -163,15 +181,18 @@ export default function CourseDetailPage() {
       showToast('Hata: ' + result.error, 'error');
     } else {
       showToast('Öğrenci başka takıma taşındı', 'success');
-      loadTeams(); // Listeyi yenile
+      void loadTeams();
     }
   };
 
-  const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
-
-  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
+  const handleSetLeader = async (team: Team, member: TeamMember) => {
+    const result = await setTeamLeader(courseId, team.id, member.studentId);
+    if (result.error) {
+      showToast('Hata: ' + result.error, 'error');
+    } else {
+      showToast(`${member.studentName || 'Öğrenci'} takım lideri yapıldı`, 'success');
+      void loadTeams();
+    }
   };
 
   const handleSaveCourse = async () => {
@@ -202,6 +223,19 @@ export default function CourseDetailPage() {
       showToast('Hata: ' + result.error, 'error');
     } else {
       showToast('Takım ayarları kaydedildi', 'success');
+    }
+  };
+
+  const handleSaveSprintSettings = async () => {
+    const result = await updateCourse({
+      courseId,
+      sprintMode: sprintMode
+    });
+    
+    if (result.error) {
+      showToast('Hata: ' + result.error, 'error');
+    } else {
+      showToast('Kanban ve Sprint ayarları kaydedildi', 'success');
     }
   };
 
@@ -379,6 +413,7 @@ export default function CourseDetailPage() {
                 <TeamsList 
                   teams={teams}
                   teamMode={teamMode}
+                  courseId={courseId}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                   onAddMember={handleAddMember}
@@ -386,6 +421,7 @@ export default function CourseDetailPage() {
                   onRegenerateInviteCode={handleRegenerateInvite}
                   onRemoveMember={handleRemoveMemberClick}
                   onMoveMember={handleMoveMember}
+                  onSetLeader={handleSetLeader}
                 />
               </>
             )}
@@ -539,6 +575,8 @@ export default function CourseDetailPage() {
                 </CardContent>
               </Card>
 
+
+
               {/* Tehlikeli Bölge */}
               <Card className="bg-[#0f1523] border-red-900/50">
                 <CardHeader>
@@ -601,6 +639,13 @@ export default function CourseDetailPage() {
         open={isRemoveMemberOpen}
         onOpenChange={setIsRemoveMemberOpen}
         onConfirm={handleRemoveMemberConfirm}
+      />
+
+      <SprintTemplateModal
+        courseId={courseId}
+        open={isTemplateModalOpen}
+        onOpenChange={setIsTemplateModalOpen}
+        onSuccess={() => showToast('Şablon tüm takımlara başarıyla uygulandı', 'success')}
       />
     </div>
   );

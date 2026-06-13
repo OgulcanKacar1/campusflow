@@ -15,12 +15,12 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({
             request,
           })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+          cookiesToSet.forEach(({ name, value, options: cookieOptions }) =>
+            supabaseResponse.cookies.set(name, value, cookieOptions)
           )
         },
       },
@@ -36,7 +36,7 @@ export async function updateSession(request: NextRequest) {
 
   // Eğer kullanıcı giriş yapmamışsa ve korumalı bir sayfaya girmeye çalışıyorsa login'e at
   // Not: '/' (ana sayfa), '/login' ve '/auth' sayfaları halka açıktır.
-  if (!user && pathname !== '/' && !pathname.startsWith('/login') && !pathname.startsWith('/auth')) {
+  if (!user && pathname !== '/' && !pathname.startsWith('/login') && !pathname.startsWith('/auth') && !pathname.startsWith('/api/webhooks')) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

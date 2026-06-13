@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { loginWithPasswordAndOTP, registerWithPassword, verifyOTP } from '@/app/auth/actions';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -19,15 +18,18 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState('');
+  const [, startTransition] = useTransition();
 
   useEffect(() => {
     const urlMode = searchParams.get('mode');
     const urlEmail = searchParams.get('email');
     if (urlMode === 'otp' && urlEmail) {
-      setMode('otp');
-      setEmail(decodeURIComponent(urlEmail));
+      startTransition(() => {
+        setMode('otp');
+        setEmail(decodeURIComponent(urlEmail));
+      });
     }
-  }, [searchParams]);
+  }, [searchParams, startTransition]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -62,11 +64,22 @@ export default function LoginPage() {
         const result = await verifyOTP(formData);
         if (result?.error) throw new Error(result.error);
       }
-    } catch (err: any) {
-      if (err?.digest?.startsWith('NEXT_REDIRECT')) {
+    } catch (err: unknown) {
+      if (
+        err &&
+        typeof err === 'object' &&
+        'digest' in err &&
+        typeof (err as { digest?: string }).digest === 'string' &&
+        (err as { digest: string }).digest.startsWith('NEXT_REDIRECT')
+      ) {
         throw err;
       }
-      setError(err.message);
+
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Beklenmeyen bir hata oluştu.');
+      }
     } finally {
       setLoading(false);
     }

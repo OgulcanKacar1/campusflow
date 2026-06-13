@@ -2,7 +2,7 @@
 
 import { motion, Variants } from 'framer-motion';
 import Link from 'next/link';
-import { ArrowRight, Bot, Shield, BarChart3, Users, Zap, CheckCircle2, Layout, Sparkles } from 'lucide-react';
+import { ArrowRight, Bot, Shield, Users, CheckCircle2, Layout, Sparkles } from 'lucide-react';
 
 const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 20 },

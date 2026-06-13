@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -23,6 +23,12 @@ interface EnrolledStudent {
   };
 }
 
+interface AvailableStudentRow {
+  student_id: string;
+  full_name?: string | null;
+  email?: string | null;
+}
+
 interface AddMemberModalProps {
   team: Team | null;
   courseId: string;
@@ -39,6 +45,7 @@ export function AddMemberModal({ team, courseId, open, onOpenChange, onSuccess }
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
+  const [, startTransition] = useTransition();
 
   const supabase = createClient();
 
@@ -59,13 +66,12 @@ export function AddMemberModal({ team, courseId, open, onOpenChange, onSuccess }
         });
 
       if (rpcError) {
-        console.error('RPC hatası:', rpcError);
         setError('Öğrenci listesi alınamadı');
         setIsLoading(false);
         return;
       }
 
-      const formattedStudents: EnrolledStudent[] = (availableStudents || []).map((s: any) => ({
+      const formattedStudents: EnrolledStudent[] = (availableStudents || []).map((s: AvailableStudentRow) => ({
         student_id: s.student_id,
         profiles: {
           id: s.student_id,
@@ -74,22 +80,26 @@ export function AddMemberModal({ team, courseId, open, onOpenChange, onSuccess }
         },
       }));
 
-      setStudents(formattedStudents);
-      setFilteredStudents(formattedStudents);
+      startTransition(() => {
+        setStudents(formattedStudents);
+        setFilteredStudents(formattedStudents);
+      });
       setIsLoading(false);
     }
 
     fetchStudents();
 
     // Reset state when modal opens
-    setSelectedStudentIds(new Set());
-    setSearchQuery('');
-  }, [open, team, courseId, supabase]);
+    startTransition(() => {
+      setSelectedStudentIds(new Set());
+      setSearchQuery('');
+    });
+  }, [open, team, courseId, supabase, startTransition]);
 
   // Arama filtreleme
   useEffect(() => {
     if (!searchQuery.trim()) {
-      setFilteredStudents(students);
+      startTransition(() => setFilteredStudents(students));
       return;
     }
 
@@ -99,8 +109,8 @@ export function AddMemberModal({ team, courseId, open, onOpenChange, onSuccess }
         s.profiles.full_name.toLowerCase().includes(query) ||
         s.profiles.email.toLowerCase().includes(query)
     );
-    setFilteredStudents(filtered);
-  }, [searchQuery, students]);
+    startTransition(() => setFilteredStudents(filtered));
+  }, [searchQuery, students, startTransition]);
 
   const toggleStudent = (studentId: string) => {
     const newSet = new Set(selectedStudentIds);
@@ -126,14 +136,12 @@ export function AddMemberModal({ team, courseId, open, onOpenChange, onSuccess }
 
     const results = await Promise.all(promises);
     const errors = results.filter((r) => r.error);
-    
-    console.log('AddMember results:', results);
 
     if (errors.length > 0) {
-      console.log('Errors:', errors);
       const addedCount = selectedStudentIds.size - errors.length;
       if (addedCount > 0) {
         setError(`${addedCount} öğrenci eklendi. ${errors.length} öğrenci zaten başka takımda olduğu için eklenemedi.`);
+        onSuccess?.();
       } else {
         setError('Seçtiğiniz öğrencilerin tümü zaten başka takımlarda aktif üye.');
       }

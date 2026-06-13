@@ -1,42 +1,49 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useTransition } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Search, Users, BookOpen, MoreVertical, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Loader2, Search, BookOpen, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { getInstructorCourses } from '../actions';
 import type { InstructorCourse as Course } from '@/types/course';
 import { CreateCourseModal } from '@/components/dashboard/instructor/CreateCourseModal';
-import { EnrollModal } from '@/components/dashboard/instructor/EnrollModal';
-import { EditCourseModal } from '@/components/dashboard/instructor/EditCourseModal';
-import { DeleteCourseDialog } from '@/components/dashboard/instructor/DeleteCourseDialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
 
 export default function InstructorCoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    loadCourses();
+  const [, startTransition] = useTransition();
+
+  const fetchCourses = useCallback(async () => {
+    const result = await getInstructorCourses();
+    return result.data ?? [];
   }, []);
 
-  async function loadCourses() {
-    setLoading(true);
-    const result = await getInstructorCourses();
-    if (result.data) {
-      setCourses(result.data as Course[]);
-    }
-    setLoading(false);
-  }
+  const refreshCourses = useCallback(() => {
+    fetchCourses().then((list) => {
+      startTransition(() => setCourses(list));
+    });
+  }, [fetchCourses, startTransition]);
+
+  useEffect(() => {
+    let cancelled = false;
+    startTransition(() => setLoading(true));
+
+    fetchCourses().then((list) => {
+      if (cancelled) return;
+      startTransition(() => {
+        setCourses(list);
+        setLoading(false);
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchCourses, startTransition]);
 
   const filteredCourses = useMemo(() => {
     return courses.filter(c => {
@@ -73,7 +80,7 @@ export default function InstructorCoursesPage() {
               </p>
             </div>
             
-            <CreateCourseModal onComplete={loadCourses} />
+            <CreateCourseModal onComplete={refreshCourses} />
           </div>
         </div>
 

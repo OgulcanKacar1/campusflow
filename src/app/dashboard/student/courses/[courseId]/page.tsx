@@ -4,6 +4,31 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft, ClipboardList, Calendar, KeyRound } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { TeamSection } from './TeamSection.client';
+import { StudentKanbanClient } from '@/app/dashboard/_shared/kanban/StudentKanbanClient';
+import { getKanbanBoard } from '@/app/dashboard/shared/kanban-actions';
+import { createEmptyBoardSnapshot } from '@/app/dashboard/_shared/kanban/utils';
+import type { Team, TeamMember } from '@/types/team';
+
+interface TeamMemberRow {
+  id: string;
+  student_id: string;
+  role: 'member' | 'leader';
+  joined_at: string;
+  left_at: string | null;
+  profiles: {
+    full_name: string | null;
+    email: string | null;
+  } | null;
+}
+
+interface TeamRow {
+  id: string;
+  name: string;
+  invite_code: string | null;
+  created_at: string;
+  course_id: string;
+  team_members: TeamMemberRow[] | null;
+}
 
 async function getCourseDetail(courseId: string) {
   const supabase = await createClient();
@@ -66,18 +91,22 @@ async function getTeamsData(courseId: string) {
     `)
     .eq('course_id', courseId);
 
-  const teams = (teamsData || []).map((team: any) => {
-    const members = (team.team_members || [])
-      .filter((member: any) => member.left_at === null)
-      .map((member: any) => ({
+  const rawTeams = (teamsData ?? []) as unknown[];
+
+  const teams: Team[] = rawTeams.map((raw) => {
+    const team = raw as TeamRow;
+    const memberSource = Array.isArray(team.team_members) ? team.team_members : [];
+    const members: TeamMember[] = memberSource
+      .filter((member) => member.left_at === null)
+      .map((member) => ({
         id: member.id,
         teamId: team.id,
         studentId: member.student_id,
         role: member.role,
         joinedAt: member.joined_at,
         leftAt: member.left_at,
-        studentName: member.profiles?.full_name || 'Bilinmiyor',
-        studentEmail: member.profiles?.email || '—',
+        studentName: member.profiles?.full_name ?? 'Bilinmiyor',
+        studentEmail: member.profiles?.email ?? '—',
       }));
 
     return {
@@ -85,7 +114,7 @@ async function getTeamsData(courseId: string) {
       courseId,
       name: team.name,
       inviteCode: team.invite_code,
-      status: 'active' as const,
+      status: 'active',
       createdAt: team.created_at,
       updatedAt: team.created_at,
       members,
@@ -94,7 +123,7 @@ async function getTeamsData(courseId: string) {
   });
 
   const myTeam =
-    teams.find((team) => team.members?.some((member: { studentId: string }) => member.studentId === user.id)) || null;
+    teams.find((team) => team.members?.some((member) => member.studentId === user.id)) || null;
 
   return { teams, myTeam };
 }
@@ -115,9 +144,21 @@ export default async function CourseDetailPage({
 
   const { teams, myTeam } = await getTeamsData(courseId);
 
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  let kanbanSnapshot = null;
+  let kanbanError: string | null = null;
+
+  if (myTeam) {
+    const boardResult = await getKanbanBoard(myTeam.id);
+    kanbanSnapshot = boardResult.data ?? createEmptyBoardSnapshot(myTeam.id, courseId);
+    kanbanError = boardResult.error ?? null;
+  }
+
   return (
-    <div className="p-8">
-      <div className="max-w-6xl">
+    <div className="p-4 md:p-8">
+      <div className="max-w-[1400px] mx-auto w-full">
         {/* Breadcrumb */}
         <Link href="/dashboard/student/courses" className="text-gray-400 hover:text-white flex items-center text-sm w-fit mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4 mr-1" /> Derslerime Dön
@@ -170,7 +211,7 @@ export default async function CourseDetailPage({
         </div>
 
         {/* Content Grid */}
-        <div className="grid gap-6 lg:[grid-template-columns:minmax(0,1.65fr)_minmax(0,1fr)] items-start">
+        <div className="grid gap-6 lg:[grid-template-columns:minmax(320px,1fr)_minmax(0,2.2fr)] items-start">
           <TeamSection
             courseId={courseId}
             teamMode={course.team_mode as 'instructor' | 'random' | 'student'}
@@ -178,21 +219,32 @@ export default async function CourseDetailPage({
             maxSize={course.team_max_size ?? 5}
             myTeam={myTeam}
             allTeams={teams}
+            currentUserId={user?.id ?? ''}
           />
 
-          {/* Görevler */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
-            <div className="flex items-center gap-2 mb-5">
-              <div className="p-2 bg-blue-500/10 rounded-lg">
-                <ClipboardList className="w-5 h-5 text-blue-400" />
+          {myTeam && kanbanSnapshot ? (
+            <StudentKanbanClient
+              teamId={myTeam.id}
+              teamName={myTeam.name}
+              courseName={course.name}
+              courseId={courseId}
+              initialSnapshot={kanbanSnapshot}
+              initialError={kanbanError}
+            />
+          ) : (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+              <div className="flex items-center gap-2 mb-5">
+                <div className="p-2 bg-blue-500/10 rounded-lg">
+                  <ClipboardList className="w-5 h-5 text-blue-400" />
+                </div>
+                <h2 className="text-lg font-semibold text-white">Görevler</h2>
               </div>
-              <h2 className="text-lg font-semibold text-white">Görevler</h2>
+              <div className="flex flex-col items-center justify-center h-32 text-center">
+                <p className="text-white/30 text-sm">Henüz görev eklenmedi</p>
+                <p className="text-white/20 text-xs mt-1">Hocan görev oluşturduğunda burada görünecek.</p>
+              </div>
             </div>
-            <div className="flex flex-col items-center justify-center h-32 text-center">
-              <p className="text-white/30 text-sm">Henüz görev eklenmedi</p>
-              <p className="text-white/20 text-xs mt-1">Hocan görev oluşturduğunda burada görünecek.</p>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

@@ -21,6 +21,37 @@ interface ActionResult<T = void> {
   error?: string;
 }
 
+type CourseTeamRow = {
+  team_id: string;
+  course_id: string;
+  team_name: string;
+  repo_url: string | null;
+  status: Team['status'];
+  created_at: string;
+  member_count: number;
+};
+
+type TeamMemberRow = {
+  id: string;
+  team_id: string;
+  student_id: string;
+  role: TeamMember['role'];
+  joined_at: string;
+  left_at: string | null;
+};
+
+type ProfileRow = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+};
+
+type RandomTeamRow = {
+  team_id: string;
+  team_name: string;
+  member_count: number;
+};
+
 async function assignInviteCode(
   supabase: Awaited<ReturnType<typeof createClient>>,
   teamId: string,
@@ -155,17 +186,19 @@ export async function getTeamsByCourse(courseId: string): Promise<ActionResult<T
     .from('teams')
     .select('id, invite_code')
     .eq('course_id', courseId);
-  
-  (inviteRows || []).forEach((row) => {
+
+  (inviteRows ?? []).forEach((row) => {
     inviteMap.set(row.id, row.invite_code);
   });
-  
+
+  const courseTeamRows = (teamsData ?? []) as unknown as CourseTeamRow[];
+
   // Her takımın üyelerini ayrı çek
   const teams: Team[] = [];
-  
-  for (const row of teamsData) {
+
+  for (const row of courseTeamRows) {
     // 1. Önce team_members'tan student_id'leri al
-    const { data: members, error: membersError } = await supabase
+    const { data: members } = await supabase
       .from('team_members')
       .select('id, team_id, student_id, role, joined_at, left_at')
       .eq('team_id', row.team_id)
@@ -175,32 +208,38 @@ export async function getTeamsByCourse(courseId: string): Promise<ActionResult<T
     // Debug: if (membersError) console.error('Üyeler alınamadı:', membersError);
 
     // 2. Profile bilgilerini ayrı sorguyla al
-    const studentIds = (members || []).map((m: any) => m.student_id);
+    const memberRows = (members ?? []) as unknown as TeamMemberRow[];
+    const studentIds = memberRows.map((member) => member.student_id);
     let profilesMap: Record<string, { full_name: string; email: string }> = {};
     
     if (studentIds.length > 0) {
-      const { data: profiles, error: profilesError } = await supabase
+      const { data: profiles } = await supabase
         .from('profiles')
         .select('id, full_name, email')
         .in('id', studentIds);
       
       // Debug: if (profilesError) console.error(`Team ${row.team_id} profiles error:`, profilesError);
       
-      profilesMap = (profiles || []).reduce((acc, p) => {
-        acc[p.id] = { full_name: p.full_name || '', email: p.email || '' };
+      const profileRows = (profiles ?? []) as unknown as ProfileRow[];
+
+      profilesMap = profileRows.reduce((acc, profile) => {
+        acc[profile.id] = {
+          full_name: profile.full_name ?? '',
+          email: profile.email ?? '',
+        };
         return acc;
       }, {} as Record<string, { full_name: string; email: string }>);
     }
     
-    const formattedMembers: TeamMember[] = (members || []).map((m: any) => ({
-      id: m.id,
-      teamId: m.team_id,
-      studentId: m.student_id,
-      role: m.role,
-      joinedAt: m.joined_at,
-      leftAt: m.left_at,
-      studentName: profilesMap[m.student_id]?.full_name,
-      studentEmail: profilesMap[m.student_id]?.email,
+    const formattedMembers: TeamMember[] = memberRows.map((member) => ({
+      id: member.id,
+      teamId: member.team_id,
+      studentId: member.student_id,
+      role: member.role,
+      joinedAt: member.joined_at,
+      leftAt: member.left_at,
+      studentName: profilesMap[member.student_id]?.full_name,
+      studentEmail: profilesMap[member.student_id]?.email,
     }));
     
     let inviteCode = inviteMap.get(row.team_id) ?? null;
@@ -316,17 +355,72 @@ export async function moveTeamMember(
 ): Promise<ActionResult> {
   const supabase = await createClient();
   
-  // Önce hedef takımın dersini bul (revalidate için)
+  // Hedef ve kaynak takım bilgilerini çek
   const { data: toTeam, error: toTeamError } = await supabase
     .from('teams')
-    .select('course_id')
+    .select('id, course_id')
     .eq('id', toTeamId)
     .single();
-  
-  if (toTeamError || !toTeam) {
-    return { error: 'Hedef takım bulunamadı' };
+
+  const { data: fromTeam, error: fromTeamError } = await supabase
+    .from('teams')
+    .select('id, course_id')
+    .eq('id', fromTeamId)
+    .single();
+
+  if (toTeamError || !toTeam || fromTeamError || !fromTeam) {
+    return { error: 'Takım bilgileri alınamadı' };
   }
-  
+
+  // Ders ayarlarını çek (min/max)
+  const { data: courseSettings, error: courseError } = await supabase
+    .from('courses')
+    .select('team_min_size, team_max_size')
+    .eq('id', toTeam.course_id)
+    .single();
+
+  if (courseError || !courseSettings) {
+    return { error: 'Ders ayarları alınamadı' };
+  }
+
+  const { count: toTeamCount, error: toCountError } = await supabase
+    .from('team_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('team_id', toTeamId)
+    .is('left_at', null);
+
+  if (toCountError) {
+    return { error: toCountError.message };
+  }
+
+  if (
+    courseSettings.team_max_size !== null &&
+    courseSettings.team_max_size !== undefined &&
+    toTeamCount !== null &&
+    toTeamCount + 1 > courseSettings.team_max_size
+  ) {
+    return { error: 'Hedef takım üye limitine ulaştı' };
+  }
+
+  const { count: fromTeamCount, error: fromCountError } = await supabase
+    .from('team_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('team_id', fromTeamId)
+    .is('left_at', null);
+
+  if (fromCountError) {
+    return { error: fromCountError.message };
+  }
+
+  if (
+    courseSettings.team_min_size !== null &&
+    courseSettings.team_min_size !== undefined &&
+    fromTeamCount !== null &&
+    fromTeamCount - 1 < courseSettings.team_min_size
+  ) {
+    return { error: 'Kaynak takım minimum üye sayısının altına düşemez' };
+  }
+
   // 1. Eski takımdan sil (student_id ile)
   const { error: deleteError } = await supabase
     .from('team_members')
@@ -433,7 +527,9 @@ export async function createRandomTeams(
     return { data: [] };
   }
   
-  const teams: Team[] = data.map((row: any) => ({
+  const randomRows = data as unknown as RandomTeamRow[];
+
+  const teams: Team[] = randomRows.map((row) => ({
     id: row.team_id,
     courseId: input.courseId,
     name: row.team_name,
@@ -486,4 +582,47 @@ export async function regenerateTeamInviteCode(teamId: string): Promise<ActionRe
 
   revalidatePath(`/dashboard/instructor/courses/${team.course_id}/teams`);
   return { data: { inviteCode } };
+}
+
+export async function setTeamLeader(
+  courseId: string,
+  teamId: string,
+  studentId: string
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Oturum bulunamadı' };
+
+  // Eğitmen yetki kontrolü
+  const { data: course, error: courseError } = await supabase
+    .from('courses')
+    .select('id')
+    .eq('id', courseId)
+    .eq('instructor_id', user.id)
+    .single();
+
+  if (courseError || !course) {
+    return { error: 'Bu işlem için yetkiniz yok' };
+  }
+
+  // 1. Mevcut liderleri normal üyeye çevir
+  await supabase
+    .from('team_members')
+    .update({ role: 'member' })
+    .eq('team_id', teamId)
+    .eq('role', 'leader');
+
+  // 2. Hedef öğrenciyi lider yap
+  const { error } = await supabase
+    .from('team_members')
+    .update({ role: 'leader' })
+    .eq('team_id', teamId)
+    .eq('student_id', studentId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath(`/dashboard/instructor/courses/${courseId}/teams`);
+  return {};
 }

@@ -29,7 +29,7 @@ export interface TeamMember {
   id: string;
   teamId: string;
   studentId: string;
-  role: 'member' | 'leader';
+  role: 'member' | 'leader' | 'owner';
   joinedAt: string;
   leftAt?: string | null;
   // Join'lerle gelen alanlar

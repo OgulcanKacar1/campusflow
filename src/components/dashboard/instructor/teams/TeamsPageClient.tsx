@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { TeamModeSettings } from './TeamModeSettings';
 import { TeamsList } from './TeamsList';
 import { CreateTeamButton } from './CreateTeamButton';
@@ -9,8 +9,16 @@ import { EditTeamModal } from './EditTeamModal';
 import { DeleteTeamDialog } from './DeleteTeamDialog';
 import { AddMemberModal } from './AddMemberModal';
 import { RemoveMemberDialog } from './RemoveMemberDialog';
-import { updateCourseTeamSettings, removeTeamMember } from '@/app/dashboard/instructor/teams/actions';
+import {
+  updateCourseTeamSettings,
+  removeTeamMember,
+  moveTeamMember,
+  getTeamsByCourse,
+  regenerateTeamInviteCode,
+  setTeamLeader,
+} from '@/app/dashboard/instructor/teams/actions';
 import type { Team, TeamSettings, TeamMember } from '@/types/team';
+import { Loader2 } from 'lucide-react';
 
 interface TeamsPageClientProps {
   courseId: string;
@@ -27,6 +35,8 @@ export function TeamsPageClient({
 }: TeamsPageClientProps) {
   const [settings, setSettings] = useState<TeamSettings>(initialSettings);
   const [teams, setTeams] = useState<Team[]>(initialTeams);
+  const [banner, setBanner] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [isRefreshing, startTransition] = useTransition();
 
   // Modal states
   const [editTeam, setEditTeam] = useState<Team | null>(null);
@@ -39,10 +49,46 @@ export function TeamsPageClient({
   const [removeMember, setRemoveMember] = useState<TeamMember | null>(null);
   const [isRemoveMemberOpen, setIsRemoveMemberOpen] = useState(false);
 
+  useEffect(() => {
+    if (!banner) return;
+    const timeout = setTimeout(() => setBanner(null), 4000);
+    return () => clearTimeout(timeout);
+  }, [banner]);
+
+  const pushBanner = (type: 'success' | 'error', message: string) => {
+    setBanner({ type, message });
+  };
+
+  const refreshTeams = () => {
+    startTransition(() => {
+      getTeamsByCourse(courseId).then((result) => {
+        if (result.error) {
+          pushBanner('error', result.error);
+        } else if (result.data) {
+          setTeams(result.data);
+        }
+      });
+    });
+  };
+
+  const handleMutationSuccess = (message: string) => {
+    pushBanner('success', message);
+    refreshTeams();
+  };
+
+  const handleMutationError = (message: string) => {
+    pushBanner('error', message);
+  };
+
   const handleSaveSettings = async (newSettings: TeamSettings) => {
     const result = await updateCourseTeamSettings(courseId, newSettings);
     if (!result.error) {
       setSettings(newSettings);
+      pushBanner('success', 'Takım ayarları güncellendi');
+      refreshTeams();
+    }
+    if (result.error) {
+      handleMutationError(result.error);
     }
     return result;
   };
@@ -77,31 +123,53 @@ export function TeamsPageClient({
     });
     
     if (result.error) {
-      alert('Üye çıkarılırken hata: ' + result.error);
-    } else {
-      setIsRemoveMemberOpen(false);
-      setRemoveMemberTeam(null);
-      setRemoveMember(null);
-      // Listeyi yenile
-      window.location.reload();
+      handleMutationError('Üye çıkarılırken hata: ' + result.error);
+      return;
     }
-  };
 
-  const handleSuccess = () => {
-    // Sayfayı yenile — server component yeniden render edilir
-    window.location.reload();
+    setIsRemoveMemberOpen(false);
+    setRemoveMemberTeam(null);
+    setRemoveMember(null);
+    handleMutationSuccess('Üye çıkarıldı');
   };
 
   const handleRegenerateInviteCode = async (team: Team) => {
-    // Instructor server component tarafında revalidate ettiği için burada da yenileyelim
-    const query = new URLSearchParams(window.location.search);
-    query.set('refresh', Date.now().toString());
-    window.location.href = `${window.location.pathname}?${query.toString()}`;
+    const result = await regenerateTeamInviteCode(team.id);
+    if (result.error || !result.data) {
+      handleMutationError(result.error ?? 'Davet kodu yenilenemedi');
+      return;
+    }
+
+    setTeams((prev) =>
+      prev.map((item) =>
+        item.id === team.id ? { ...item, inviteCode: result.data!.inviteCode } : item
+      )
+    );
+    pushBanner('success', 'Davet kodu yenilendi');
   };
 
   const handleCopyInviteCode = (code: string) => {
-    // Code copied to clipboard
-    console.log('Davet kodu kopyalandı:', code);
+    navigator.clipboard.writeText(code).then(() => {
+      pushBanner('success', 'Davet kodu kopyalandı');
+    });
+  };
+
+  const handleMoveMember = async (studentId: string, fromTeamId: string, toTeamId: string) => {
+    const result = await moveTeamMember(studentId, fromTeamId, toTeamId);
+    if (result.error) {
+      handleMutationError('Üye taşınamadı: ' + result.error);
+      return;
+    }
+    handleMutationSuccess('Üye taşındı');
+  };
+
+  const handleSetLeader = async (team: Team, member: TeamMember) => {
+    const result = await setTeamLeader(courseId, team.id, member.studentId);
+    if (result.error) {
+      handleMutationError('Lider atanamadı: ' + result.error);
+      return;
+    }
+    handleMutationSuccess(`${member.studentName || 'Öğrenci'} takım lideri yapıldı`);
   };
 
   return (
@@ -116,7 +184,10 @@ export function TeamsPageClient({
             </div>
             <div className="flex items-center gap-3">
               {settings.teamMode === 'instructor' && (
-                <CreateTeamButton courseId={courseId} />
+                <CreateTeamButton
+                  courseId={courseId}
+                  onSuccess={() => handleMutationSuccess('Takım oluşturuldu')}
+                />
               )}
               {settings.teamMode === 'random' && (
                 <RandomTeamsButton
@@ -124,7 +195,7 @@ export function TeamsPageClient({
                   defaultTeamSize={settings.teamMaxSize}
                   minTeamSize={settings.teamMinSize}
                   maxTeamSize={settings.teamMaxSize}
-                  onSuccess={handleSuccess}
+                  onSuccess={() => handleMutationSuccess('Rastgele takımlar oluşturuldu')}
                 />
               )}
             </div>
@@ -151,17 +222,21 @@ export function TeamsPageClient({
               <h2 className="text-xl font-semibold text-white">
                 Takımlar ({teams.length})
               </h2>
+              {isRefreshing && <Loader2 className="h-4 w-4 animate-spin text-white/60" />}
             </div>
 
             <TeamsList
               teams={teams}
               teamMode={settings.teamMode}
+              courseId={courseId}
               onEdit={handleEdit}
               onDelete={handleDelete}
               onAddMember={handleAddMember}
               onRemoveMember={handleRemoveMemberClick}
               onCopyInviteCode={handleCopyInviteCode}
               onRegenerateInviteCode={handleRegenerateInviteCode}
+              onMoveMember={handleMoveMember}
+              onSetLeader={handleSetLeader}
             />
           </div>
         </div>
@@ -172,14 +247,14 @@ export function TeamsPageClient({
         team={editTeam}
         open={isEditOpen}
         onOpenChange={setIsEditOpen}
-        onSuccess={handleSuccess}
+        onSuccess={() => handleMutationSuccess('Takım güncellendi')}
       />
 
       <DeleteTeamDialog
         team={deleteTeam}
         open={isDeleteOpen}
         onOpenChange={setIsDeleteOpen}
-        onSuccess={handleSuccess}
+        onSuccess={() => handleMutationSuccess('Takım silindi')}
       />
 
       <AddMemberModal
@@ -187,7 +262,7 @@ export function TeamsPageClient({
         courseId={courseId}
         open={isAddMemberOpen}
         onOpenChange={setIsAddMemberOpen}
-        onSuccess={handleSuccess}
+        onSuccess={() => handleMutationSuccess('Üye listesi güncellendi')}
       />
 
       <RemoveMemberDialog
@@ -197,6 +272,19 @@ export function TeamsPageClient({
         onOpenChange={setIsRemoveMemberOpen}
         onConfirm={handleRemoveMemberConfirm}
       />
+      {banner && (
+        <div className="fixed bottom-6 left-1/2 z-50 w-[min(90vw,400px)] -translate-x-1/2">
+          <div
+            className={`rounded-lg border px-4 py-3 text-sm shadow-lg backdrop-blur-md ${
+              banner.type === 'success'
+                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
+                : 'border-red-500/40 bg-red-500/10 text-red-200'
+            }`}
+          >
+            {banner.message}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

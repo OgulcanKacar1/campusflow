@@ -14,6 +14,7 @@ export type InstructorCourse = BaseCourse & {
   teamMode: 'instructor' | 'random' | 'student';
   teamMinSize: number | null;
   teamMaxSize: number | null;
+  sprintMode?: 'instructor' | 'team';
 };
 
 export type AdminCourse = BaseCourse & {
@@ -25,4 +26,6 @@ export type StudentCourse = BaseCourse & {
   enrollmentId: string;
   enrollmentStatus: string;
   instructorName: string;
+  enrolledAt: string;
+  joinCode?: string | null;
 };

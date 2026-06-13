@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -44,7 +44,6 @@ const MODE_OPTIONS: { value: TeamMode; label: string; icon: React.ReactNode; des
 ];
 
 export function TeamModeSettings({
-  courseId,
   initialSettings,
   onSave,
   existingTeamCount = 0,
@@ -54,12 +53,15 @@ export function TeamModeSettings({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [, startTransition] = useTransition();
 
   // Initial settings değişince state'i güncelle
   useEffect(() => {
-    setSettings(initialSettings);
-    setIsDirty(false);
-  }, [initialSettings]);
+    startTransition(() => {
+      setSettings(initialSettings);
+      setIsDirty(false);
+    });
+  }, [initialSettings, startTransition]);
 
   const handleModeChange = (value: TeamMode) => {
     // Mod değişikliği varsa ve mevcut takım varsa onay iste

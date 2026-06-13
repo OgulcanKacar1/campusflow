@@ -19,15 +19,15 @@ export default async function DashboardLayout({
   const { data: profile } = await supabase
     .from('profiles')
     .select(`
-      role, 
-      full_name, 
+      role,
+      full_name,
       email,
       organizations ( name )
     `)
     .eq('id', user.id)
-    .single();
+    .single<{ role: string; full_name: string | null; email: string | null; organizations: { name: string | null } | null }>();
 
-  const orgName = (profile?.organizations as any)?.name || null;
+  const orgName = profile?.organizations?.name ?? null;
 
   if (!profile) {
     await supabase.auth.signOut();

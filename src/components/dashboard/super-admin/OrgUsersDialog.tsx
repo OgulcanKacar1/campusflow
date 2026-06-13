@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -21,17 +21,30 @@ export function OrgUsersDialog({ org, open, onOpenChange }: Props) {
   const [users, setUsers] = useState<OrgUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [roleUpdateLoading, setRoleUpdateLoading] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
 
   useEffect(() => {
-    if (open && org) {
+    if (!open || !org) return;
+
+    let cancelled = false;
+
+    startTransition(() => {
       setLoading(true);
       setUsers([]);
-      getUsersByOrganization(org.id).then(result => {
+    });
+
+    getUsersByOrganization(org.id).then((result) => {
+      if (cancelled) return;
+      startTransition(() => {
         if (result.data) setUsers(result.data as OrgUser[]);
         setLoading(false);
       });
-    }
-  }, [open, org]);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, org, startTransition]);
 
   const handleRoleUpdate = async (userId: string, newRole: 'student' | 'instructor' | 'admin') => {
     setRoleUpdateLoading(userId);

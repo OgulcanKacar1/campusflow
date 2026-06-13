@@ -1,23 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { redirect } from 'next/navigation';
-
-// Cookieleri set etmeyen "dummy" bir client oluşturuyoruz.
-// Amacımız şifrenin doğru olup olmadığını kontrol etmek, ama oturumu hemen açmamak.
-function createDummyClient() {
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      auth: {
-        persistSession: false, // Sunucuda oturumu kalıcı yapma
-        autoRefreshToken: false,
-      }
-    }
-  );
-}
 
 export async function loginWithPasswordAndOTP(formData: FormData) {
   const email = formData.get('email') as string;
@@ -57,13 +41,13 @@ export async function registerWithPassword(formData: FormData) {
     // RLS bypass eden RPC fonksiyonu ile domain ve status kontrolü
     const { data: domainInfo, error } = await supabase
       .rpc('check_domain_status', { p_domain: domain })
-      .single();
+      .single<{ organization_status: string }>();
 
     if (error || !domainInfo) {
       return { error: `Okulunuz (${domain}) henüz CampusFlow sistemine kayıtlı değil.` };
     }
 
-    if ((domainInfo as any).organization_status === 'suspended') {
+    if (domainInfo.organization_status === 'suspended') {
       return { error: `Okulunuz (${domain}) şu anda kayıtlara kapalıdır. Lütfen yönetimle iletişime geçin.` };
     }
   }
@@ -96,7 +80,7 @@ export async function verifyOTP(formData: FormData) {
   const type = formData.get('type') as 'email' | 'signup';
 
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.verifyOtp({
+  const { error } = await supabase.auth.verifyOtp({
     email,
     token,
     type,

@@ -56,8 +56,8 @@ const roleConfig: Record<string, { label: string; color: string; icon: React.Ele
 
 interface SidebarProps {
   role: string;
-  fullName: string;
-  email: string;
+  fullName: string | null;
+  email: string | null;
   orgName?: string | null;
 }
 
