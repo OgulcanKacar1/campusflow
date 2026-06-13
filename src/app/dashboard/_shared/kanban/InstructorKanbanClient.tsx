@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Loader2, Plus, RefreshCw, Trash2, Info, Settings, ChevronDown, LayoutTemplate, GitBranch } from 'lucide-react';
+import { Loader2, Plus, RefreshCw, Trash2, Info, LayoutTemplate, GitBranch, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
@@ -13,8 +13,9 @@ import { KanbanBoard } from './KanbanBoard';
 import { SprintDialog } from './SprintDialog';
 import { TaskDialog } from './TaskDialog';
 import { TaskDetailDialog } from './TaskDetailDialog';
+import { AiReportDialog } from './AiReportDialog';
 import { ConfirmDialog } from './ConfirmDialog';
-import { moveTask as moveTaskAction } from '../../shared/kanban-actions';
+import { moveTask as moveTaskAction, updateCourseSprintMode } from '../../shared/kanban-actions';
 import { checkGithubConnection, disconnectGithub } from '../../shared/github-actions';
 
 interface TeamKanbanClientProps {
@@ -40,6 +41,11 @@ export function TeamKanbanClient({
 }: TeamKanbanClientProps) {
   const router = useRouter();
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  
+  // ── AI Report UI State ───────────────────────────────────────────────
+  const [isAiReportOpen, setAiReportOpen] = useState(false);
+  const [aiReportSprint, setAiReportSprint] = useState<{ id: string, name: string } | null>(null);
+
   // ── Banner ──────────────────────────────────────────────────────────
   const [banner, setBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(
     initialError ? { type: 'error', text: initialError } : null,
@@ -146,6 +152,7 @@ export function TeamKanbanClient({
       sprintId,
       status,
       priority,
+      assignees,
     }: {
       title: string;
       description: string;
@@ -345,6 +352,22 @@ export function TeamKanbanClient({
                 Sprinti Başlat
               </Button>
             )}
+            {courseId && board.isInstructor && (sprint.status === 'completed' || sprint.status === 'active') && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setAiReportSprint({ id: sprint.id, name: sprint.name });
+                  setAiReportOpen(true);
+                }}
+                disabled={isBusy}
+                className="h-7 px-3 text-[11px] uppercase tracking-wider font-semibold border-amber-700/50 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 gap-1.5"
+                title="Yapay Zeka ile Öğrenci Katkı Raporu Al"
+              >
+                <Sparkles className="h-3 w-3" />
+                AI Raporu
+              </Button>
+            )}
             {sprint.status === 'active' && (
               <Button
                 variant="outline"
@@ -369,7 +392,7 @@ export function TeamKanbanClient({
         </div>
       );
     },
-    [board.canManageSprints, isBusy, handleUpdateSprintStatus],
+    [board.canManageSprints, board.isInstructor, courseId, isBusy, handleUpdateSprintStatus],
   );
 
   // ── Delete confirm dialog content ───────────────────────────────────
@@ -409,8 +432,28 @@ export function TeamKanbanClient({
               {board.canManageTasks ? 'Görev yetkisi aktif' : 'Yalnızca görüntüleme'}
             </Badge>
 
-            {courseId && (
+            {courseId && board.isInstructor && (
               <>
+                <div className="flex items-center gap-2 border border-slate-700/50 bg-slate-900/50 rounded-md px-2 py-1">
+                  <span className="text-xs text-slate-400">Sprint Yön:</span>
+                  <select
+                    className="bg-transparent text-xs text-white outline-none cursor-pointer"
+                    value={board.sprintMode}
+                    onChange={async (e) => {
+                      const mode = e.target.value as 'instructor' | 'team';
+                      const res = await updateCourseSprintMode(courseId, teamId, mode);
+                      if (res.error) {
+                        alert(res.error);
+                      } else {
+                        window.location.reload();
+                      }
+                    }}
+                  >
+                    <option value="instructor" className="bg-slate-900">Eğitmen</option>
+                    <option value="team" className="bg-slate-900">Takım</option>
+                  </select>
+                </div>
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -420,34 +463,34 @@ export function TeamKanbanClient({
                   <LayoutTemplate className="h-4 w-4" />
                   Şablon Uygula
                 </Button>
-                
-                {!githubState.loading && (
-                  githubState.connected ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleDisconnectGithub}
-                      disabled={isDisconnectingGithub}
-                      className="gap-2 border-red-500/50 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Bağlantıyı Kes
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        window.location.href = `/api/github/auth?teamId=${teamId}&returnUrl=${encodeURIComponent(window.location.pathname)}`;
-                      }}
-                      className="gap-2 border-slate-700 bg-[#24292e]/80 text-white hover:bg-[#24292e] transition-colors"
-                    >
-                      <GitBranch className="h-4 w-4" />
-                      GitHub Bağla
-                    </Button>
-                  )
-                )}
               </>
+            )}
+            
+            {board.isLeader && !githubState.loading && (
+              githubState.connected ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDisconnectGithub}
+                  disabled={isDisconnectingGithub}
+                  className="gap-2 border-red-500/50 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Bağlantıyı Kes
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    window.location.href = `/api/github/auth?teamId=${teamId}&returnUrl=${encodeURIComponent(window.location.pathname)}`;
+                  }}
+                  className="gap-2 border-slate-700 bg-[#24292e]/80 text-white hover:bg-[#24292e] transition-colors"
+                >
+                  <GitBranch className="h-4 w-4" />
+                  GitHub Bağla
+                </Button>
+              )
             )}
 
             {board.canManageSprints && (
@@ -513,14 +556,14 @@ export function TeamKanbanClient({
         )}
       </header>
 
-
-
         {/* Instructor Managed Banner */}
         {isInstructorManaged && (
           <div className="mt-4 flex items-center gap-3 rounded-xl border border-blue-500/30 bg-blue-500/10 px-5 py-4 text-sm text-blue-200">
             <Info className="h-5 w-5 shrink-0 text-blue-400" />
-            <p>
-              Bu panoda sprint planlaması eğitmen tarafından yönetilmektedir. Takım üyesi olarak kendi görevlerinizi ekleyebilir ve durumlarını güncelleyebilirsiniz.
+            <p className="text-sm text-blue-200/70">
+              {board.sprintMode === 'instructor' 
+                ? 'Bu panoda sprint planlaması eğitmen tarafından yönetilmektedir. Takım üyesi olarak kendi görevlerinizi ekleyebilir ve durumlarını güncelleyebilirsiniz.'
+                : 'Bu panoda sprint planlaması takım lideri tarafından yönetilmektedir. Lütfen sprint planlaması için liderinizle iletişime geçin.'}
             </p>
           </div>
         )}
@@ -615,6 +658,14 @@ export function TeamKanbanClient({
           }}
         />
       )}
+
+      <AiReportDialog
+        isOpen={isAiReportOpen}
+        onOpenChange={setAiReportOpen}
+        teamId={teamId}
+        sprintId={aiReportSprint?.id || null}
+        sprintName={aiReportSprint?.name}
+      />
     </div>
   );
 }

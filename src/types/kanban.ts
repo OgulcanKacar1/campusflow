@@ -36,6 +36,15 @@ export interface KanbanTaskAssignment {
   email?: string | null;
 }
 
+export interface TaskAttachment {
+  id: string;
+  url: string;
+  type: 'drive' | 'figma' | 'github' | 'link';
+  title: string;
+  added_by: string;
+  added_at: string;
+}
+
 export interface KanbanTask {
   id: string;
   short_id?: string | null;
@@ -52,6 +61,7 @@ export interface KanbanTask {
   createdAt: string;
   updatedAt: string;
   assignments: KanbanTaskAssignment[];
+  attachments?: TaskAttachment[];
 }
 
 export interface KanbanColumn {
@@ -80,10 +90,37 @@ export interface KanbanBoardSnapshot {
   canManageTasks: boolean;
   canManageSprints: boolean;
   canMoveTasks: boolean;
+  isInstructor: boolean;
+  isLeader: boolean;
+  sprintMode: 'instructor' | 'team';
   sprints: KanbanSprint[];
   backlogColumns: KanbanColumn[];
   teamMembers: Array<{ studentId: string; fullName: string | null; email: string | null }>;
   lastSyncedAt: string;
+}
+
+export interface AiSprintReportContent {
+  summary: string;
+  overallScore: number;
+  studentContributions: Array<{
+    studentId: string;
+    fullName: string;
+    contributionPercentage: number;
+    completedTasks: number;
+    linesOfCode: number;
+    attachmentsAdded: number;
+    feedback: string;
+  }>;
+  recommendations: string[];
+}
+
+export interface AiSprintReport {
+  id: string;
+  teamId: string;
+  sprintId: string;
+  reportContent: AiSprintReportContent;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type KanbanActionErrorCode =
@@ -196,6 +233,22 @@ export interface RemoveTaskMemberInput {
   studentId: string;
   options?: MutationOptions;
 }
+
+export interface AddTaskAttachmentInput {
+  teamId: string;
+  taskId: string;
+  url: string;
+  title?: string;
+  options?: MutationOptions;
+}
+
+export interface RemoveTaskAttachmentInput {
+  teamId: string;
+  taskId: string;
+  attachmentId: string;
+  options?: MutationOptions;
+}
+
 
 const TASK_STATUS_SET = new Set<string>(KANBAN_STATUS_DEFINITIONS.map(item => item.key));
 const SPRINT_STATUS_SET = new Set<string>(SPRINT_STATUS_OPTIONS);
