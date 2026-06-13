@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import type { InstructorCourse } from '@/types/course';
 import type { CourseStudentSummary } from '@/types/instructor';
+import { ACADEMIC_SPRINT_TEMPLATES } from '@/lib/constants/sprint-templates';
 
 // Types
 interface ActionResult<T = void> {
@@ -328,6 +329,7 @@ export async function getCourseById(courseId: string): Promise<ActionResult<Inst
       team_mode,
       team_min_size,
       team_max_size,
+      sprint_mode,
       course_enrollments ( count )
     `)
     .eq('id', courseId)
@@ -358,6 +360,7 @@ export async function getCourseById(courseId: string): Promise<ActionResult<Inst
       teamMode: courseRow.team_mode ?? 'instructor',
       teamMinSize: courseRow.team_min_size ?? null,
       teamMaxSize: courseRow.team_max_size ?? null,
+      sprintMode: courseRow.sprint_mode ?? 'team',
     }
   };
 }
@@ -370,6 +373,7 @@ interface UpdateCourseInput {
   teamMode?: 'instructor' | 'random' | 'student';
   minTeamSize?: number;
   maxTeamSize?: number;
+  sprintMode?: 'instructor' | 'team';
 }
 
 type CourseEnrollmentRow = {
@@ -453,6 +457,7 @@ export async function updateCourse(input: UpdateCourseInput): Promise<ActionResu
   if (input.teamMode !== undefined) updateData.team_mode = input.teamMode;
   if (input.minTeamSize !== undefined) updateData.team_min_size = input.minTeamSize;
   if (input.maxTeamSize !== undefined) updateData.team_max_size = input.maxTeamSize;
+  if (input.sprintMode !== undefined) updateData.sprint_mode = input.sprintMode;
 
   const { error } = await supabase
     .from('courses')
@@ -466,4 +471,89 @@ export async function updateCourse(input: UpdateCourseInput): Promise<ActionResu
 
   revalidatePath(`/dashboard/instructor/courses/${input.courseId}`);
   return {};
+}
+
+export async function applyCustomSprintsToCourse(
+  courseId: string,
+  sprints: { name: string; start_at: string; end_at: string }[]
+): Promise<ActionResult> {
+  const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Oturum bulunamadı' };
+
+  // 1. Eğitmen yetkisini doğrula
+  const { data: course, error: courseError } = await supabase
+    .from('courses')
+    .select('id')
+    .eq('id', courseId)
+    .eq('instructor_id', user.id)
+    .single();
+
+  if (courseError || !course) {
+    return { error: 'Ders bulunamadı veya yetkiniz yok.' };
+  }
+
+  if (!sprints || sprints.length === 0) {
+    return { error: 'Eklenecek sprint bulunamadı.' };
+  }
+
+  // 2. Takımları çek
+  const { data: teams, error: teamsError } = await supabase
+    .from('teams')
+    .select('id')
+    .eq('course_id', courseId);
+
+  if (teamsError || !teams || teams.length === 0) {
+    return { error: 'Kursta henüz takım bulunmuyor.' };
+  }
+
+  // 3. Mevcut sprint pozisyonlarını bulmak için tüm takımların sprintlerini çek
+  const { data: existingSprints } = await supabase
+    .from('sprints')
+    .select('team_id, position')
+    .in('team_id', teams.map(t => t.id));
+
+  const maxPositions = new Map<string, number>();
+  (existingSprints || []).forEach(s => {
+    const currentMax = maxPositions.get(s.team_id) ?? -1;
+    if (s.position > currentMax) {
+      maxPositions.set(s.team_id, s.position);
+    }
+  });
+
+  // 4. Her takım için eklenecek sprintleri hazırla
+  const inserts: any[] = [];
+  
+  teams.forEach(team => {
+    let currentPosition = (maxPositions.get(team.id) ?? -1) + 1;
+
+    sprints.forEach((sprintTpl) => {
+      inserts.push({
+        team_id: team.id,
+        created_by: user.id,
+        name: sprintTpl.name,
+        start_at: sprintTpl.start_at,
+        end_at: sprintTpl.end_at,
+        status: 'planning',
+        position: currentPosition,
+      });
+
+      currentPosition++;
+    });
+  });
+
+  if (inserts.length === 0) return { success: true };
+
+  // 5. Toplu olarak kaydet
+  const { error: insertError } = await supabase
+    .from('sprints')
+    .insert(inserts);
+
+  if (insertError) {
+    return { error: insertError.message };
+  }
+
+  revalidatePath(`/dashboard/instructor/courses/${courseId}`);
+  return { success: true };
 }

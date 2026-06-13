@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Team } from '@/types/team';
-import { studentCreateTeam, studentJoinTeamByInvite, studentLeaveTeam, getStudentTeamsSnapshot } from '../../actions';
+import { studentCreateTeam, studentJoinTeamByInvite, studentLeaveTeam, getStudentTeamsSnapshot, studentTransferLeadership } from '../../actions';
 
 interface TeamSectionProps {
   courseId: string;
@@ -15,6 +15,7 @@ interface TeamSectionProps {
   maxSize: number;
   myTeam: Team | null;
   allTeams: Team[];
+  currentUserId: string;
 }
 
 export function TeamSection({
@@ -24,6 +25,7 @@ export function TeamSection({
   maxSize,
   myTeam,
   allTeams,
+  currentUserId,
 }: TeamSectionProps) {
   const [isPending, startTransition] = useTransition();
   const [inviteInput, setInviteInput] = useState('');
@@ -136,6 +138,19 @@ export function TeamSection({
     });
   };
 
+  const handleTransferLeadership = (targetStudentId: string) => {
+    if (!localMyTeam) return;
+    startTransition(async () => {
+      const result = await studentTransferLeadership(courseId, localMyTeam.id, targetStudentId);
+      if (result.error) {
+        showMessage(result.error, 'error');
+      } else {
+        showMessage('Liderlik devredildi.', 'success');
+        await refreshTeams();
+      }
+    });
+  };
+
   const copyToClipboard = (value: string) => {
     navigator.clipboard.writeText(value);
     setCopied(value);
@@ -211,6 +226,7 @@ export function TeamSection({
     if (!localMyTeam) return null;
 
     const memberCount = localMyTeam.members?.length ?? 0;
+    const amILeader = localMyTeam.members?.some((m) => m.studentId === currentUserId && m.role === 'leader');
 
     return (
       <Card className="relative overflow-hidden border-white/10 bg-white/[0.03]">
@@ -248,16 +264,29 @@ export function TeamSection({
                       <p className="break-words text-xs text-white/45">{member.studentEmail ?? '—'}</p>
                     </div>
                   </div>
-                  <span
-                    className={`flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] uppercase tracking-widest ${
-                      isLeader
-                        ? 'border-purple-400/60 bg-purple-500/20 text-purple-100'
-                        : 'border-white/10 bg-white/5 text-white/40'
-                    }`}
-                  >
-                    {isLeader ? <Shield className="h-3 w-3" /> : <Users className="h-3 w-3" />}
-                    {isLeader ? 'Lider' : 'Üye'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] uppercase tracking-widest ${
+                        isLeader
+                          ? 'border-purple-400/60 bg-purple-500/20 text-purple-100'
+                          : 'border-white/10 bg-white/5 text-white/40'
+                      }`}
+                    >
+                      {isLeader ? <Shield className="h-3 w-3" /> : <Users className="h-3 w-3" />}
+                      {isLeader ? 'Lider' : 'Üye'}
+                    </span>
+                    {amILeader && !isLeader && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-[10px] uppercase tracking-wider border border-purple-500/20 text-purple-300 hover:bg-purple-500/20"
+                        onClick={() => handleTransferLeadership(member.studentId)}
+                        disabled={isPending}
+                      >
+                        Devret
+                      </Button>
+                    )}
+                  </div>
                 </div>
               );
             })
@@ -416,35 +445,28 @@ export function TeamSection({
   const isBusy = isPending || isRefreshing;
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 space-y-6">
+    <div className="flex flex-col gap-6">
       {message && (
         <div
-          className={`rounded-lg border px-4 py-3 text-sm ${
+          className={`rounded-xl border px-4 py-3 text-sm backdrop-blur-md ${
             message.type === 'success'
-              ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-300'
-              : 'border-red-400/40 bg-red-400/10 text-red-300'
+              ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200'
+              : 'border-red-500/20 bg-red-500/10 text-red-200'
           }`}
         >
           {message.text}
         </div>
       )}
 
-      <div className="grid gap-6 xl:[grid-template-columns:minmax(0,1.6fr)_minmax(0,1fr)] xl:items-start">
-        <div className="space-y-6">
-          {renderSummaryCard()}
-          {showActionCards && renderActionCards()}
-          {renderMembersCard()}
-        </div>
-
-        <div className="space-y-6">
-          {renderOtherTeamsCard()}
-        </div>
-      </div>
+      {renderSummaryCard()}
+      {showActionCards && renderActionCards()}
+      {renderMembersCard()}
+      {renderOtherTeamsCard()}
 
       {isBusy && (
-        <div className="flex items-center justify-center gap-2 text-white/60 text-sm">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          İşlem devam ediyor...
+        <div className="flex items-center justify-center gap-2 text-white/50 text-sm py-4">
+          <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
+          <span>Lütfen bekleyin...</span>
         </div>
       )}
     </div>

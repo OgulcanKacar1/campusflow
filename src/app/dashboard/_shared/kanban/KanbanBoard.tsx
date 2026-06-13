@@ -1,6 +1,7 @@
 'use client';
 
-import { ReactNode, useEffect, useMemo } from 'react';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { DragDropContext, type DropResult } from '@hello-pangea/dnd';
 import { Badge } from '@/components/ui/badge';
 import type {
   KanbanBoardSnapshot,
@@ -17,10 +18,12 @@ interface KanbanBoardProps {
   className?: string;
   backlogTitle?: string;
   onTaskClick?: (task: KanbanTask) => void;
+  onDragEnd?: (result: DropResult) => void;
   /** Sprint header'ını override et (silme butonu vb. için) */
   renderSprintHeader?: (sprint: KanbanSprint, defaultHeader: ReactNode) => ReactNode;
   renderColumnHeader?: (column: ColumnType, sprint: KanbanSprint | null) => ReactNode;
   headerExtra?: ReactNode;
+  canMoveTasks?: boolean;
 }
 
 function formatDateRange(startAt: string, endAt: string): string {
@@ -60,9 +63,11 @@ export function KanbanBoard({
   className,
   backlogTitle = 'Backlog',
   onTaskClick,
+  onDragEnd = () => {},
   renderSprintHeader,
   renderColumnHeader,
   headerExtra,
+  canMoveTasks = true,
 }: KanbanBoardProps) {
   useEffect(() => {
     console.log('[KANBAN DEBUG] Board snapshot', board);
@@ -72,6 +77,11 @@ export function KanbanBoard({
       });
     });
   }, [board]);
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const backlogSection = useMemo(() => {
     const backlogColumns = board.backlogColumns ?? [];
@@ -102,6 +112,7 @@ export function KanbanBoard({
               column={column}
               className="bg-slate-900/40 w-[300px] shrink-0 snap-start"
               onTaskClick={onTaskClick}
+              canMoveTasks={canMoveTasks}
               emptyState={
                 <div className="rounded-lg border border-dashed border-slate-700/60 bg-slate-900/50 p-4 text-center text-xs text-slate-500">
                   Boş
@@ -114,8 +125,13 @@ export function KanbanBoard({
     );
   }, [board.backlogColumns, backlogTitle, onTaskClick]);
 
+  if (!mounted) {
+    return <div className={`min-h-[500px] animate-pulse rounded-2xl bg-slate-900/50 ${className ?? ''}`} />;
+  }
+
   return (
-    <div className={`flex flex-col gap-5 ${className ?? ''}`.trim()}>
+    <DragDropContext onDragEnd={onDragEnd}>
+      <div className={`flex flex-col gap-5 ${className ?? ''}`.trim()}>
       {/* Header bar */}
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
@@ -176,6 +192,7 @@ export function KanbanBoard({
                     column={column}
                     className="w-[300px] shrink-0 snap-start"
                     onTaskClick={onTaskClick}
+                    canMoveTasks={canMoveTasks}
                     headerExtra={renderColumnHeader?.(column, sprint) ?? null}
                   />
                 ))}
@@ -184,6 +201,7 @@ export function KanbanBoard({
           );
         })
       )}
-    </div>
+      </div>
+    </DragDropContext>
   );
 }

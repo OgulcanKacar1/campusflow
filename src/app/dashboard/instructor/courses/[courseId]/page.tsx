@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, BookOpen, Users, Settings, Loader2, CheckCircle } from 'lucide-react';
 import { getCourseById, updateCourse, getCourseStudents } from '../../actions';
-import { getTeamsByCourse, removeTeamMember, moveTeamMember, regenerateTeamInviteCode } from '@/app/dashboard/instructor/teams/actions';
+import { getTeamsByCourse, removeTeamMember, moveTeamMember, regenerateTeamInviteCode, setTeamLeader } from '@/app/dashboard/instructor/teams/actions';
 import { TeamsList } from '@/components/dashboard/instructor/teams/TeamsList';
 import { EditTeamModal } from '@/components/dashboard/instructor/teams/EditTeamModal';
 import { DeleteTeamDialog } from '@/components/dashboard/instructor/teams/DeleteTeamDialog';
@@ -17,6 +17,7 @@ import { AddMemberModal } from '@/components/dashboard/instructor/teams/AddMembe
 import { RemoveMemberDialog } from '@/components/dashboard/instructor/teams/RemoveMemberDialog';
 import { CreateTeamButton } from '@/components/dashboard/instructor/teams/CreateTeamButton';
 import { RandomTeamsButton } from '@/components/dashboard/instructor/teams/RandomTeamsButton';
+import { SprintTemplateModal } from '@/components/dashboard/instructor/courses/SprintTemplateModal';
 import type { InstructorCourse } from '@/types/course';
 import type { Team, TeamMember } from '@/types/team';
 import type { CourseStudentSummary } from '@/types/instructor';
@@ -34,6 +35,8 @@ export default function CourseDetailPage() {
   
   // Team mode from settings (instructor | random | student)
   const [teamMode, setTeamMode] = useState<'instructor' | 'random' | 'student'>('instructor');
+  // Sprint mode from settings (instructor | team)
+  const [sprintMode, setSprintMode] = useState<'instructor' | 'team'>('team');
   
   // Team size settings
   const [teamSettings, setTeamSettings] = useState({
@@ -58,6 +61,7 @@ export default function CourseDetailPage() {
   const [removeMemberTeam, setRemoveMemberTeam] = useState<Team | null>(null);
   const [removeMember, setRemoveMember] = useState<TeamMember | null>(null);
   const [isRemoveMemberOpen, setIsRemoveMemberOpen] = useState(false);
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
 
   const loadCourse = useCallback(async () => {
     setLoading(true);
@@ -71,6 +75,7 @@ export default function CourseDetailPage() {
         section: result.data.section || ''
       });
       setTeamMode(result.data.teamMode ?? 'instructor');
+      setSprintMode(result.data.sprintMode ?? 'team');
       setTeamSettings({
         minSize: result.data.teamMinSize ?? 3,
         maxSize: result.data.teamMaxSize ?? 5
@@ -180,6 +185,16 @@ export default function CourseDetailPage() {
     }
   };
 
+  const handleSetLeader = async (team: Team, member: TeamMember) => {
+    const result = await setTeamLeader(courseId, team.id, member.studentId);
+    if (result.error) {
+      showToast('Hata: ' + result.error, 'error');
+    } else {
+      showToast(`${member.studentName || 'Öğrenci'} takım lideri yapıldı`, 'success');
+      void loadTeams();
+    }
+  };
+
   const handleSaveCourse = async () => {
     const result = await updateCourse({
       courseId,
@@ -208,6 +223,19 @@ export default function CourseDetailPage() {
       showToast('Hata: ' + result.error, 'error');
     } else {
       showToast('Takım ayarları kaydedildi', 'success');
+    }
+  };
+
+  const handleSaveSprintSettings = async () => {
+    const result = await updateCourse({
+      courseId,
+      sprintMode: sprintMode
+    });
+    
+    if (result.error) {
+      showToast('Hata: ' + result.error, 'error');
+    } else {
+      showToast('Kanban ve Sprint ayarları kaydedildi', 'success');
     }
   };
 
@@ -393,6 +421,7 @@ export default function CourseDetailPage() {
                   onRegenerateInviteCode={handleRegenerateInvite}
                   onRemoveMember={handleRemoveMemberClick}
                   onMoveMember={handleMoveMember}
+                  onSetLeader={handleSetLeader}
                 />
               </>
             )}
@@ -546,6 +575,8 @@ export default function CourseDetailPage() {
                 </CardContent>
               </Card>
 
+
+
               {/* Tehlikeli Bölge */}
               <Card className="bg-[#0f1523] border-red-900/50">
                 <CardHeader>
@@ -608,6 +639,13 @@ export default function CourseDetailPage() {
         open={isRemoveMemberOpen}
         onOpenChange={setIsRemoveMemberOpen}
         onConfirm={handleRemoveMemberConfirm}
+      />
+
+      <SprintTemplateModal
+        courseId={courseId}
+        open={isTemplateModalOpen}
+        onOpenChange={setIsTemplateModalOpen}
+        onSuccess={() => showToast('Şablon tüm takımlara başarıyla uygulandı', 'success')}
       />
     </div>
   );

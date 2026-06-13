@@ -49,6 +49,7 @@ interface TeamRow {
     id: string;
     instructor_id: string;
     organization_id: string | null;
+    sprint_mode: 'team' | 'instructor';
   } | null;
   team_members: TeamMembershipRow[] | null;
 }
@@ -102,7 +103,9 @@ interface TeamAccessContext {
   isAdmin: boolean;
   isTeamMember: boolean;
   isLeader: boolean;
-  canManage: boolean;
+  canManageTasks: boolean;
+  canManageSprints: boolean;
+  canMoveTasks: boolean;
   userId: string;
 }
 
@@ -126,6 +129,7 @@ function mapTask(row: TaskRow, assignments: KanbanTaskAssignment[]): KanbanTask 
     teamId: row.team_id,
     sprintId: row.sprint_id,
     title: row.title,
+    short_id: row.short_id ?? null,
     description: row.description,
     developerNote: row.developer_note ?? null,
     status: normalizeTaskStatus(row.status),
@@ -179,7 +183,7 @@ async function resolveTeamAccess(teamId: string): Promise<{ context?: TeamAccess
     .from('teams')
     .select(
       `id, name, course_id,
-       course:course_id ( id, instructor_id, organization_id ),
+       course:course_id ( id, instructor_id, organization_id, sprint_mode ),
        team_members ( student_id, role, left_at )`
     )
     .eq('id', teamId)
@@ -200,7 +204,11 @@ async function resolveTeamAccess(teamId: string): Promise<{ context?: TeamAccess
   const isAdmin = profile.role === 'admin' || profile.role === 'super_admin';
   const isTeamMember = Boolean(activeMembership);
   const isLeader = Boolean(activeMembership && ['leader', 'owner'].includes(activeMembership.role));
-  const canManage = isInstructor || isAdmin || isLeader;
+  const sprintMode = course.sprint_mode ?? 'team';
+
+  const canManageSprints = isInstructor || isAdmin || (isLeader && sprintMode === 'team');
+  const canManageTasks = isInstructor || isAdmin || isTeamMember;
+  const canMoveTasks = isInstructor || isAdmin || isTeamMember;
 
   const sameOrganization =
     profile.role === 'super_admin' ||
@@ -209,6 +217,11 @@ async function resolveTeamAccess(teamId: string): Promise<{ context?: TeamAccess
 
   if (!sameOrganization && !isAdmin && !isInstructor) {
     return { error: buildError('Bu takıma erişiminiz yok.', 'NOT_AUTHORIZED') };
+  }
+
+  // Öğrenci ise ve bu takımın üyesi değilse panoya erişemez
+  if (!isAdmin && !isInstructor && !isTeamMember) {
+    return { error: buildError('Bu takımın görev panosuna erişim yetkiniz yok.', 'NOT_AUTHORIZED') };
   }
 
   return {
@@ -221,7 +234,9 @@ async function resolveTeamAccess(teamId: string): Promise<{ context?: TeamAccess
       isAdmin,
       isTeamMember,
       isLeader,
-      canManage,
+      canManageTasks,
+      canManageSprints,
+      canMoveTasks,
       userId: user.id,
     },
   };
@@ -288,7 +303,7 @@ async function fetchBoardData(context: TeamAccessContext): Promise<KanbanActionR
 
   const { data: taskRows, error: taskError } = await supabase
     .from('tasks')
-    .select('id, team_id, sprint_id, title, description, status, priority, position, assigned_to, created_by, created_at, updated_at')
+    .select('id, team_id, sprint_id, title, short_id, description, developer_note, status, priority, position, assigned_to, created_by, created_at, updated_at')
     .eq('team_id', team.id)
     .order('position', { ascending: true });
 
@@ -343,7 +358,9 @@ async function fetchBoardData(context: TeamAccessContext): Promise<KanbanActionR
     data: {
       teamId: team.id,
       courseId: team.course_id,
-      canManage: context.canManage || context.isInstructor || context.isAdmin,
+      canManageTasks: context.canManageTasks,
+      canManageSprints: context.canManageSprints,
+      canMoveTasks: context.canMoveTasks,
       sprints,
       backlogColumns,
       teamMembers,
@@ -452,7 +469,7 @@ export async function createSprint(input: CreateSprintInput): Promise<KanbanActi
   if (resolved.error) return resolved.error;
   const context = resolved.context!;
 
-  if (!context.canManage && !context.isInstructor && !context.isAdmin) {
+  if (!context.canManageSprints) {
     return buildError('Sprint oluşturma yetkiniz yok.', 'NOT_AUTHORIZED');
   }
 
@@ -502,7 +519,7 @@ export async function updateSprint(input: UpdateSprintInput): Promise<KanbanActi
   if (resolved.error) return resolved.error;
   const context = resolved.context!;
 
-  if (!context.canManage && !context.isInstructor && !context.isAdmin) {
+  if (!context.canManageSprints) {
     return buildError('Sprint güncelleme yetkiniz yok.', 'NOT_AUTHORIZED');
   }
 
@@ -544,7 +561,7 @@ export async function reorderSprints(input: ReorderSprintsInput): Promise<Kanban
   if (resolved.error) return resolved.error;
   const context = resolved.context!;
 
-  if (!context.canManage && !context.isInstructor && !context.isAdmin) {
+  if (!context.canManageSprints) {
     return buildError('Sprint sıralama yetkiniz yok.', 'NOT_AUTHORIZED');
   }
 
@@ -573,7 +590,7 @@ export async function createTask(input: CreateTaskInput): Promise<KanbanActionRe
   if (resolved.error) return resolved.error;
   const context = resolved.context!;
 
-  if (!context.isTeamMember && !context.canManage && !context.isInstructor && !context.isAdmin) {
+  if (!context.canManageTasks) {
     return buildError('Görev oluşturma yetkiniz yok.', 'NOT_AUTHORIZED');
   }
 
@@ -616,8 +633,19 @@ export async function createTask(input: CreateTaskInput): Promise<KanbanActionRe
     return buildError('Görev oluşturulamadı.', 'SUPABASE_ERROR');
   }
 
+  let finalAssignments: KanbanTaskAssignment[] = [];
+  if (input.assignees && input.assignees.length > 0) {
+    const rows = input.assignees.map(studentId => ({
+      task_id: data.id,
+      student_id: studentId,
+    }));
+    await context.supabase.from('task_members').upsert(rows);
+    // Hızlı dönüş için assignees objesini oluştur, tam profil detayı revalidate ile gelecek
+    finalAssignments = input.assignees.map(id => ({ taskId: data.id, studentId: id }));
+  }
+
   await revalidateKanban(input.options, context.team.course_id, input.teamId);
-  return { data: mapTask(data, []) };
+  return { data: mapTask(data, finalAssignments) };
 }
 
 export async function updateTask(input: UpdateTaskInput): Promise<KanbanActionResult<KanbanTask>> {
@@ -625,7 +653,7 @@ export async function updateTask(input: UpdateTaskInput): Promise<KanbanActionRe
   if (resolved.error) return resolved.error;
   const context = resolved.context!;
 
-  if (!context.isTeamMember && !context.canManage && !context.isInstructor && !context.isAdmin) {
+  if (!context.canManageTasks) {
     return buildError('Görev güncelleme yetkiniz yok.', 'NOT_AUTHORIZED');
   }
 
@@ -639,20 +667,47 @@ export async function updateTask(input: UpdateTaskInput): Promise<KanbanActionRe
   if (input.assignedTo !== undefined) updatePayload.assigned_to = input.assignedTo;
   if (input.position !== undefined) updatePayload.position = input.position;
 
-  if (Object.keys(updatePayload).length === 0) {
+  if (Object.keys(updatePayload).length === 0 && input.assignees === undefined) {
     return buildError('Güncellenecek alan bulunamadı.', 'VALIDATION_ERROR');
   }
 
-  const { data, error } = await context.supabase
-    .from('tasks')
-    .update(updatePayload)
-    .eq('id', input.taskId)
-    .eq('team_id', input.teamId)
-    .select('id, team_id, sprint_id, title, description, developer_note, status, priority, position, assigned_to, created_by, created_at, updated_at')
-    .single<TaskRow>();
+  let data = null;
+  if (Object.keys(updatePayload).length > 0) {
+    const { data: updateData, error } = await context.supabase
+      .from('tasks')
+      .update(updatePayload)
+      .eq('id', input.taskId)
+      .eq('team_id', input.teamId)
+      .select('id, team_id, sprint_id, title, description, developer_note, status, priority, position, assigned_to, created_by, created_at, updated_at')
+      .single<TaskRow>();
 
-  if (error || !data) {
-    return buildError('Görev güncellenemedi.', 'SUPABASE_ERROR');
+    if (error || !updateData) {
+      return buildError('Görev güncellenemedi.', 'SUPABASE_ERROR');
+    }
+    data = updateData;
+  } else {
+    // Sadece assignee güncelleniyorsa, mevcut görevi getir
+    const { data: existingData } = await context.supabase
+      .from('tasks')
+      .select('id, team_id, sprint_id, title, description, developer_note, status, priority, position, assigned_to, created_by, created_at, updated_at')
+      .eq('id', input.taskId)
+      .single<TaskRow>();
+    data = existingData;
+  }
+
+  if (input.assignees !== undefined) {
+    await context.supabase.from('task_members').delete().eq('task_id', input.taskId);
+    if (input.assignees.length > 0) {
+      const rows = input.assignees.map(studentId => ({
+        task_id: input.taskId,
+        student_id: studentId,
+      }));
+      await context.supabase.from('task_members').insert(rows);
+    }
+  }
+
+  if (!data) {
+    return buildError('Görev bulunamadı.', 'SUPABASE_ERROR');
   }
 
   await revalidateKanban(input.options, context.team.course_id, input.teamId);
@@ -664,7 +719,7 @@ export async function moveTask(input: MoveTaskInput): Promise<KanbanActionResult
   if (resolved.error) return resolved.error;
   const context = resolved.context!;
 
-  if (!context.isTeamMember && !context.canManage && !context.isInstructor && !context.isAdmin) {
+  if (!context.canMoveTasks) {
     return buildError('Görev taşıma yetkiniz yok.', 'NOT_AUTHORIZED');
   }
 
@@ -716,8 +771,8 @@ export async function assignTaskMembers(input: AssignTaskMembersInput): Promise<
   if (resolved.error) return resolved.error;
   const context = resolved.context!;
 
-  if (!context.canManage && !context.isInstructor && !context.isAdmin) {
-    return buildError('Görev üyeleri atama yetkiniz yok.', 'NOT_AUTHORIZED');
+  if (!context.canManageTasks) {
+    return buildError('Görev üye atama yetkiniz yok.', 'NOT_AUTHORIZED');
   }
 
   if (!Array.isArray(input.studentIds) || input.studentIds.length === 0) {
@@ -747,8 +802,8 @@ export async function removeTaskMember(input: RemoveTaskMemberInput): Promise<Ka
   const context = resolved.context!;
 
   const isSelfRemoval = input.studentId === context.userId;
-  if (!isSelfRemoval && !context.canManage && !context.isInstructor && !context.isAdmin) {
-    return buildError('Görev üyesi çıkarma yetkiniz yok.', 'NOT_AUTHORIZED');
+  if (!isSelfRemoval && !context.canManageTasks) {
+    return buildError('Görevden üye çıkarma yetkiniz yok.', 'NOT_AUTHORIZED');
   }
 
   const { error } = await context.supabase
@@ -770,7 +825,7 @@ export async function deleteSprint(input: DeleteSprintInput): Promise<KanbanActi
   if (resolved.error) return resolved.error;
   const context = resolved.context!;
 
-  if (!context.canManage && !context.isInstructor && !context.isAdmin) {
+  if (!context.canManageSprints) {
     return buildError('Sprint silme yetkiniz yok.', 'NOT_AUTHORIZED');
   }
 
@@ -808,7 +863,7 @@ export async function deleteTask(input: DeleteTaskInput): Promise<KanbanActionRe
   if (resolved.error) return resolved.error;
   const context = resolved.context!;
 
-  if (!context.isTeamMember && !context.canManage && !context.isInstructor && !context.isAdmin) {
+  if (!context.canManageTasks) {
     return buildError('Görev silme yetkiniz yok.', 'NOT_AUTHORIZED');
   }
 

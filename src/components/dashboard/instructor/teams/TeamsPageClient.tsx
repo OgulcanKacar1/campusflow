@@ -15,6 +15,7 @@ import {
   moveTeamMember,
   getTeamsByCourse,
   regenerateTeamInviteCode,
+  setTeamLeader,
 } from '@/app/dashboard/instructor/teams/actions';
 import type { Team, TeamSettings, TeamMember } from '@/types/team';
 import { Loader2 } from 'lucide-react';
@@ -162,6 +163,15 @@ export function TeamsPageClient({
     handleMutationSuccess('Üye taşındı');
   };
 
+  const handleSetLeader = async (team: Team, member: TeamMember) => {
+    const result = await setTeamLeader(courseId, team.id, member.studentId);
+    if (result.error) {
+      handleMutationError('Lider atanamadı: ' + result.error);
+      return;
+    }
+    handleMutationSuccess(`${member.studentName || 'Öğrenci'} takım lideri yapıldı`);
+  };
+
   return (
     <div className="min-h-screen bg-[#060b18]">
       {/* Header */}
@@ -226,6 +236,7 @@ export function TeamsPageClient({
               onCopyInviteCode={handleCopyInviteCode}
               onRegenerateInviteCode={handleRegenerateInviteCode}
               onMoveMember={handleMoveMember}
+              onSetLeader={handleSetLeader}
             />
           </div>
         </div>

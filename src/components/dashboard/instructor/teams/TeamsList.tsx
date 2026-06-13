@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Users, ExternalLink, Copy, Check, Trash2, UserPlus, Mail, UserX } from 'lucide-react';
+import { Users, ExternalLink, Copy, Check, Trash2, UserPlus, Mail, UserX, Crown } from 'lucide-react';
 import type { Team, TeamMember } from '@/types/team';
 
 interface TeamsListProps {
@@ -20,6 +20,7 @@ interface TeamsListProps {
   onCopyInviteCode: (code: string) => void;
   onRegenerateInviteCode?: (team: Team) => void;
   onMoveMember?: (memberId: string, fromTeamId: string, toTeamId: string) => void;
+  onSetLeader?: (team: Team, member: TeamMember) => void;
 }
 
 export function TeamsList({
@@ -33,6 +34,7 @@ export function TeamsList({
   onCopyInviteCode,
   onRegenerateInviteCode,
   onMoveMember,
+  onSetLeader,
 }: TeamsListProps) {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<{ member: TeamMember; team: Team } | null>(null);
@@ -279,6 +281,19 @@ export function TeamsList({
               >
                 <UserX className="w-4 h-4 mr-2" />
                 Takımdan Çıkar
+              </Button>
+            )}
+            {onSetLeader && selectedMember && selectedMember.member.role !== 'leader' && (
+              <Button
+                variant="outline"
+                className="border-amber-700 text-amber-400 hover:bg-amber-500/10 mt-2"
+                onClick={() => {
+                  onSetLeader(selectedMember.team, selectedMember.member);
+                  setSelectedMember(null);
+                }}
+              >
+                <Crown className="w-4 h-4 mr-2" />
+                Lider Yap
               </Button>
             )}
           </div>

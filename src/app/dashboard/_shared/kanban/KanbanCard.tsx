@@ -29,6 +29,7 @@ export function KanbanCard({ task, className, onClick, footer }: KanbanCardProps
       <CardHeader className="p-4 pb-2 space-y-3">
         <div className="flex items-start justify-between gap-3">
           <CardTitle className="text-sm font-medium leading-snug text-slate-100 line-clamp-2">
+            {task.short_id && <span className="text-indigo-400 mr-1.5 font-bold">[{task.short_id}]</span>}
             {task.title}
           </CardTitle>
           <Badge variant="outline" className="shrink-0 border-indigo-500/70 bg-indigo-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-indigo-300">
@@ -39,10 +40,19 @@ export function KanbanCard({ task, className, onClick, footer }: KanbanCardProps
           <Badge variant="secondary" className="bg-slate-800/80 px-2 py-0.5 text-[10px] uppercase tracking-wider text-slate-300">
             {KANBAN_STATUS_LABELS[task.status]}
           </Badge>
-          {task.assignedTo && (
-            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
-              {task.assignments.find(assignment => assignment.studentId === task.assignedTo)?.fullName ?? 'Sorumlu'}
-            </span>
+          {task.assignments.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {task.assignments.slice(0, 2).map((assignment) => (
+                <span key={assignment.studentId} className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
+                  {assignment.fullName?.split(' ')[0] ?? assignment.email?.split('@')[0] ?? 'Üye'}
+                </span>
+              ))}
+              {task.assignments.length > 2 && (
+                <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-300">
+                  +{task.assignments.length - 2}
+                </span>
+              )}
+            </div>
           )}
         </div>
       </CardHeader>

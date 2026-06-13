@@ -250,3 +250,21 @@ export async function joinCourseByCode(joinCode: string) {
   if (error) return { error: error.message };
   return { success: true };
 }
+
+export async function studentTransferLeadership(courseId: string, teamId: string, targetStudentId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Oturum bulunamadı' };
+
+  const { error } = await supabase.rpc('student_transfer_leadership', {
+    p_team_id: teamId,
+    p_target_student_id: targetStudentId,
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  // Sadece öğrencinin ilgili kurs panosunu invalidate et (ör. courseId var ise)
+  return { success: true };
+}

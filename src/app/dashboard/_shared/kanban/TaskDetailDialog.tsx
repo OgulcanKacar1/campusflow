@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2, Trash2 } from 'lucide-react';
+import { Loader2, Trash2, Check, User2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MarkdownEditor } from '@/components/ui/markdown-editor';
 // Select components removed in favor of native select for consistency with TaskDialog
 import {
   KANBAN_PRIORITIES,
@@ -31,14 +32,14 @@ interface TaskDetailDialogProps {
   sprints: KanbanSprint[];
   teamMembers: Array<{ studentId: string; fullName: string | null; email: string | null }>;
   isSubmitting: boolean;
-  canManage: boolean;
+  canManageTasks: boolean;
   onSave: (taskId: string, data: {
     title: string;
     description: string;
     sprintId: string | null;
     status: TaskStatus;
     priority: TaskPriority;
-    assignedTo: string | null;
+    assignees: string[];
     developerNote: string | null;
   }) => Promise<void>;
   onDelete: (taskId: string) => Promise<void>;
@@ -51,7 +52,7 @@ export function TaskDetailDialog({
   sprints,
   teamMembers,
   isSubmitting,
-  canManage,
+  canManageTasks,
   onSave,
   onDelete,
 }: TaskDetailDialogProps) {
@@ -60,11 +61,19 @@ export function TaskDetailDialog({
   const [sprintId, setSprintId] = useState<string | null>(null);
   const [status, setStatus] = useState<TaskStatus>('todo');
   const [priority, setPriority] = useState<TaskPriority>('medium');
-  const [assignedTo, setAssignedTo] = useState<string | null>(null);
+  const [assignees, setAssignees] = useState<string[]>([]);
   const [developerNote, setDeveloperNote] = useState('');
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const toggleAssignee = (studentId: string) => {
+    setAssignees(prev => 
+      prev.includes(studentId) 
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
 
   // Initialize state when task changes
   useEffect(() => {
@@ -75,8 +84,12 @@ export function TaskDetailDialog({
       setStatus(task.status);
       setPriority(task.priority);
       setDeveloperNote(task.developerNote ?? '');
-      // If task has assignedTo, use it. Otherwise check assignments array.
-      setAssignedTo(task.assignedTo ?? task.assignments[0]?.studentId ?? null);
+      // Ensure we merge single legacy assignedTo with new assignments if needed
+      const initialAssignees = task.assignments.map(a => a.studentId);
+      if (task.assignedTo && !initialAssignees.includes(task.assignedTo)) {
+        initialAssignees.push(task.assignedTo);
+      }
+      setAssignees(initialAssignees);
     } else if (!open) {
       setIsDeleteDialogOpen(false);
     }
@@ -92,7 +105,7 @@ export function TaskDetailDialog({
       sprintId,
       status,
       priority,
-      assignedTo,
+      assignees,
       developerNote: developerNote.trim() || null,
     });
   };
@@ -125,34 +138,28 @@ export function TaskDetailDialog({
                   onChange={e => setTitle(e.target.value)}
                   placeholder="örn. API Entegrasyonu"
                   required
-                  disabled={!canManage || isSubmitting}
+                  disabled={!canManageTasks || isSubmitting}
                   className="border-slate-700 bg-slate-900/50 text-white placeholder:text-slate-500"
                 />
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="detail-description" className="text-slate-400">Açıklama</Label>
-                <textarea
-                  id="detail-description"
+                <MarkdownEditor
                   value={description}
-                  onChange={e => setDescription(e.target.value)}
+                  onChange={setDescription}
                   placeholder="Görevin detaylarını buraya yazın..."
-                  rows={4}
-                  disabled={!canManage || isSubmitting}
-                  className="w-full rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 disabled:cursor-not-allowed disabled:opacity-50"
+                  mode={(!canManageTasks || isSubmitting) ? 'view' : 'edit'}
                 />
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="detail-developer-note" className="text-slate-400">Geliştirici Notu / Durum Açıklaması</Label>
-                <textarea
-                  id="detail-developer-note"
+                <MarkdownEditor
                   value={developerNote}
-                  onChange={e => setDeveloperNote(e.target.value)}
+                  onChange={setDeveloperNote}
                   placeholder="Örn: Neden bloke oldu? Ne eksik? Geliştirici buraya not bırakabilir..."
-                  rows={3}
-                  disabled={!canManage || isSubmitting}
-                  className="w-full rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-sm text-amber-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 disabled:cursor-not-allowed disabled:opacity-50"
+                  mode={(!canManageTasks || isSubmitting) ? 'view' : 'edit'}
                 />
               </div>
 
@@ -162,7 +169,7 @@ export function TaskDetailDialog({
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value as TaskStatus)}
-                    disabled={!canManage || isSubmitting}
+                    disabled={!canManageTasks || isSubmitting}
                     className="w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {KANBAN_STATUS_DEFINITIONS.map(opt => (
@@ -178,7 +185,7 @@ export function TaskDetailDialog({
                   <select
                     value={priority}
                     onChange={(e) => setPriority(e.target.value as TaskPriority)}
-                    disabled={!canManage || isSubmitting}
+                    disabled={!canManageTasks || isSubmitting}
                     className="w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {KANBAN_PRIORITIES.map(key => (
@@ -190,20 +197,34 @@ export function TaskDetailDialog({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-slate-400">Sorumlu Üye</Label>
-                  <select
-                    value={assignedTo ?? 'none'}
-                    onChange={(e) => setAssignedTo(e.target.value === 'none' ? null : e.target.value)}
-                    disabled={!canManage || isSubmitting}
-                    className="w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <option value="none">Sorumlu Yok</option>
-                    {teamMembers.map(member => (
-                      <option key={member.studentId} value={member.studentId}>
-                        {member.fullName ?? member.email ?? member.studentId}
-                      </option>
-                    ))}
-                  </select>
+                  <Label className="text-slate-400">Sorumlu Üyeler</Label>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {teamMembers.length === 0 ? (
+                      <p className="text-xs text-slate-500 py-1">Takımda üye yok.</p>
+                    ) : (
+                      teamMembers.map((member) => {
+                        const isSelected = assignees.includes(member.studentId);
+                        return (
+                          <button
+                            key={member.studentId}
+                            type="button"
+                            onClick={() => toggleAssignee(member.studentId)}
+                            disabled={!canManageTasks || isSubmitting}
+                            className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-all ${
+                              isSelected 
+                                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/50' 
+                                : 'bg-slate-800/50 text-slate-400 border border-slate-700/50 hover:bg-slate-700 hover:text-slate-300'
+                            } disabled:opacity-50 disabled:cursor-not-allowed`}
+                          >
+                            <div className={`flex h-4 w-4 items-center justify-center rounded-full ${isSelected ? 'bg-indigo-500/30' : 'bg-slate-700'}`}>
+                              {isSelected ? <Check className="h-2.5 w-2.5 text-indigo-300" /> : <User2 className="h-2.5 w-2.5 text-slate-400" />}
+                            </div>
+                            {member.fullName ?? member.email?.split('@')[0] ?? 'Bilinmeyen Üye'}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-1.5">
@@ -211,7 +232,7 @@ export function TaskDetailDialog({
                   <select
                     value={sprintId ?? 'none'}
                     onChange={(e) => setSprintId(e.target.value === 'none' ? null : e.target.value)}
-                    disabled={!canManage || isSubmitting}
+                    disabled={!canManageTasks || isSubmitting}
                     className="w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <option value="none">Backlog (Sprint Yok)</option>
@@ -227,7 +248,7 @@ export function TaskDetailDialog({
 
             <DialogFooter className="mt-8 border-t border-slate-800 pt-5 flex flex-col sm:flex-row sm:justify-between items-center gap-4 sm:gap-0 w-full">
               <div className="flex w-full sm:w-auto justify-start">
-                {canManage && (
+                {canManageTasks && (
                   <Button
                     type="button"
                     variant="ghost"
@@ -251,7 +272,7 @@ export function TaskDetailDialog({
                 >
                   Kapat
                 </Button>
-                {canManage && (
+                {canManageTasks && (
                   <Button
                     type="submit"
                     disabled={isSubmitting || !title.trim()}

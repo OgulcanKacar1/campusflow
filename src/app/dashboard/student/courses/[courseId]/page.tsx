@@ -144,6 +144,9 @@ export default async function CourseDetailPage({
 
   const { teams, myTeam } = await getTeamsData(courseId);
 
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
   let kanbanSnapshot = null;
   let kanbanError: string | null = null;
 
@@ -154,8 +157,8 @@ export default async function CourseDetailPage({
   }
 
   return (
-    <div className="p-8">
-      <div className="max-w-6xl">
+    <div className="p-4 md:p-8">
+      <div className="max-w-[1400px] mx-auto w-full">
         {/* Breadcrumb */}
         <Link href="/dashboard/student/courses" className="text-gray-400 hover:text-white flex items-center text-sm w-fit mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4 mr-1" /> Derslerime Dön
@@ -208,7 +211,7 @@ export default async function CourseDetailPage({
         </div>
 
         {/* Content Grid */}
-        <div className="grid gap-6 lg:[grid-template-columns:minmax(0,1.65fr)_minmax(0,1fr)] items-start">
+        <div className="grid gap-6 lg:[grid-template-columns:minmax(320px,1fr)_minmax(0,2.2fr)] items-start">
           <TeamSection
             courseId={courseId}
             teamMode={course.team_mode as 'instructor' | 'random' | 'student'}
@@ -216,6 +219,7 @@ export default async function CourseDetailPage({
             maxSize={course.team_max_size ?? 5}
             myTeam={myTeam}
             allTeams={teams}
+            currentUserId={user?.id ?? ''}
           />
 
           {myTeam && kanbanSnapshot ? (
@@ -223,6 +227,7 @@ export default async function CourseDetailPage({
               teamId={myTeam.id}
               teamName={myTeam.name}
               courseName={course.name}
+              courseId={courseId}
               initialSnapshot={kanbanSnapshot}
               initialError={kanbanError}
             />

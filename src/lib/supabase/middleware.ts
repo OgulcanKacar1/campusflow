@@ -36,7 +36,7 @@ export async function updateSession(request: NextRequest) {
 
   // Eğer kullanıcı giriş yapmamışsa ve korumalı bir sayfaya girmeye çalışıyorsa login'e at
   // Not: '/' (ana sayfa), '/login' ve '/auth' sayfaları halka açıktır.
-  if (!user && pathname !== '/' && !pathname.startsWith('/login') && !pathname.startsWith('/auth')) {
+  if (!user && pathname !== '/' && !pathname.startsWith('/login') && !pathname.startsWith('/auth') && !pathname.startsWith('/api/webhooks')) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

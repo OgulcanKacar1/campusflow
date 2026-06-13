@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import {
   assignTaskMembers,
   createSprint,
@@ -94,6 +95,32 @@ export function useKanbanState({ teamId, initialSnapshot, onError }: UseKanbanSt
       setIsRefreshing(false);
     }
   }, [teamId, handleError]);
+
+  useEffect(() => {
+    const supabase = createClient();
+    
+    const channel = supabase
+      .channel(`kanban_updates_${teamId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tasks', filter: `team_id=eq.${teamId}` },
+        () => {
+          refresh();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'sprints', filter: `team_id=eq.${teamId}` },
+        () => {
+          refresh();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [teamId, refresh]);
 
   const runAction = useCallback(
     async <T>(executor: () => Promise<KanbanActionResult<T>>) => {

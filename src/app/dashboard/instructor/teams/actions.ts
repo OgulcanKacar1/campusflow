@@ -583,3 +583,46 @@ export async function regenerateTeamInviteCode(teamId: string): Promise<ActionRe
   revalidatePath(`/dashboard/instructor/courses/${team.course_id}/teams`);
   return { data: { inviteCode } };
 }
+
+export async function setTeamLeader(
+  courseId: string,
+  teamId: string,
+  studentId: string
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Oturum bulunamadı' };
+
+  // Eğitmen yetki kontrolü
+  const { data: course, error: courseError } = await supabase
+    .from('courses')
+    .select('id')
+    .eq('id', courseId)
+    .eq('instructor_id', user.id)
+    .single();
+
+  if (courseError || !course) {
+    return { error: 'Bu işlem için yetkiniz yok' };
+  }
+
+  // 1. Mevcut liderleri normal üyeye çevir
+  await supabase
+    .from('team_members')
+    .update({ role: 'member' })
+    .eq('team_id', teamId)
+    .eq('role', 'leader');
+
+  // 2. Hedef öğrenciyi lider yap
+  const { error } = await supabase
+    .from('team_members')
+    .update({ role: 'leader' })
+    .eq('team_id', teamId)
+    .eq('student_id', studentId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath(`/dashboard/instructor/courses/${courseId}/teams`);
+  return {};
+}

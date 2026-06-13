@@ -38,6 +38,7 @@ export interface KanbanTaskAssignment {
 
 export interface KanbanTask {
   id: string;
+  short_id?: string | null;
   teamId: string;
   sprintId: string | null;
   title: string;
@@ -76,7 +77,9 @@ export interface KanbanSprint {
 export interface KanbanBoardSnapshot {
   teamId: string;
   courseId: string;
-  canManage: boolean;
+  canManageTasks: boolean;
+  canManageSprints: boolean;
+  canMoveTasks: boolean;
   sprints: KanbanSprint[];
   backlogColumns: KanbanColumn[];
   teamMembers: Array<{ studentId: string; fullName: string | null; email: string | null }>;
@@ -151,6 +154,7 @@ export interface CreateTaskInput {
   developerNote?: string | null;
   sprintId?: string | null;
   assignedTo?: string | null;
+  assignees?: string[];
   position?: number;
   options?: MutationOptions;
 }
@@ -165,6 +169,7 @@ export interface UpdateTaskInput {
   developerNote?: string | null;
   sprintId?: string | null;
   assignedTo?: string | null;
+  assignees?: string[];
   position?: number;
   options?: MutationOptions;
 }

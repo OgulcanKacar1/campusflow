@@ -44,6 +44,17 @@ export default async function InstructorTeamKanbanPage({
     notFound();
   }
 
+  // Fetch all teams for the course to enable the Team Switcher
+  const { data: allTeams, error: allTeamsError } = await supabase
+    .from('teams')
+    .select('id, name')
+    .eq('course_id', courseId)
+    .order('name');
+    
+  if (allTeamsError || !allTeams) {
+    notFound();
+  }
+
   const boardResult = await getKanbanBoard(teamId);
   console.log('[SERVER DEBUG] boardResult:', boardResult);
 
@@ -57,7 +68,9 @@ export default async function InstructorTeamKanbanPage({
     <InstructorKanbanClient
       teamId={teamId}
       teamName={team.name}
+      courseId={courseId}
       courseName={team.course?.name ?? 'Bilinmeyen Ders'}
+      courseTeams={allTeams}
       initialSnapshot={initialSnapshot}
       initialError={boardResult.error}
     />
