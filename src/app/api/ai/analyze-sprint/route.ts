@@ -66,6 +66,12 @@ export async function POST(req: Request) {
 
     if (tasksError) throw tasksError;
 
+    // 1.5 Sprint Toplantılarını ve Notlarını Çek
+    const { data: sprintMeetings } = await supabase
+      .from('meetings')
+      .select('title, start_time, meeting_notes')
+      .eq('sprint_id', sprintId);
+
     // 2. Görev Atamalarını Çek
     const taskIds = tasks.map(t => t.id);
     const { data: assignments } = await supabase
@@ -184,9 +190,13 @@ Proje Açıklaması/Amacı: ${teamAccess?.project_description || 'Belirtilmemiş
 
 Aşağıda takım üyeleri ve o sprintteki görevlerin dökümü JSON formatında verilmiştir.
 Görevlerin durumları, kimlere atandığı, eklenen Drive/Figma linkleri (attachments) ve atılan GitHub commitlerine bakarak detaylı bir analiz çıkar.
+Ayrıca, takımın bu sprint boyunca yaptığı toplantıların notları/kararları (eğer varsa) verilmiştir. Bunları takımın iletişimini ve aldığı kararları değerlendirmek için kullan.
 
 TAKIM ÜYELERİ:
 ${JSON.stringify(studentsData, null, 2)}
+
+TOPLANTI NOTLARI / KARARLAR:
+${JSON.stringify(sprintMeetings || [], null, 2)}
 
 GÖREVLER VE İŞLEMLER:
 ${JSON.stringify(formattedTasks, null, 2)}
@@ -196,7 +206,8 @@ ${JSON.stringify(formattedTasks, null, 2)}
 2. Öğrencilerin katkı yüzdelerinin toplamı her zaman %100 olmalıdır.
 3. 'feedback' (Geri bildirim) alanı yapıcı olmalı. Örneğin: "Ali çok sayıda commit atmış ancak hiçbir göreve tasarım/döküman linki eklememiş" veya "Ayşe commit atmamış ancak tüm analiz dokümanlarını o yüklemiş".
 4. 'recommendations' alanı takımın genel gidişatı için 2-3 cümlelik tavsiyeler içermeli.
-5. (ÇOK KRİTİK): GÖREVLER VE İŞLEMLER içindeki 'code_changes' (Git diff/patch) verilerini DİKKATLİCE İNCELE. Öğrencinin değiştirdiği kod gerçekten mantıksal bir özellik (logic, UI, backend vb.) ekliyor mu? Yoksa sadece boşlukları, yorum satırlarını veya önemsiz dosyaları (README ufak harf değişimi vb.) değiştirerek sahte bir aktivite mi yaratmış? Eğer bir öğrenci 'sahte' (fake/önemsiz) commitlerle sistemi kandırmaya çalışıyorsa onun katkı oranını düşür ve 'feedback' kısmında bu zayıf/anlamsız kod katkısını hocaya kesinlikle raporla (Örn: "Commit sayıları yüksek görünse de kod içeriklerinde sadece yorum satırları değiştirilmiş, gerçek bir mantıksal katkı bulunmuyor."). Eğer gerçekten kaliteli ve projeye değer katan zorlu kodlar (diff'ler) yazılmışsa bunu da mutlaka öv.
+5. (ÇOK KRİTİK): GÖREVLER VE İŞLEMLER içindeki 'code_changes' (Git diff/patch) verilerini DİKKATLİCE İNCELE. Öğrencinin değiştirdiği kod gerçekten mantıksal bir özellik (logic, UI, backend vb.) ekliyor mu? Yoksa sadece boşlukları, yorum satırlarını veya önemsiz dosyaları (README ufak harf değişimi vb.) değiştirerek sahte bir aktivite mi yaratmış? Eğer bir öğrenci 'sahte' (fake/önemsiz) commitlerle sistemi kandırmaya çalışıyorsa onun katkı oranını düşür ve 'feedback' kısmında bu zayıf/anlamsız kod katkısını hocaya kesinlikle raporla.
+6. 'meetingInsights' alanında takım toplantılarından çıkarılan anahtar kararları listele. Eğer bir toplantı planlanmış/yapılmış ancak 'meeting_notes' boş (null) bırakılmışsa, bunu bir eksiklik olarak belirterek "Şu isimli toplantı planlanmış ancak toplantı kararları/notları sisteme girilmemiştir." şeklinde uyar. Hiç toplantı yoksa bu diziyi boş bırak.
 `;
 
     // Vercel AI SDK ile garantili JSON üretimi
@@ -214,7 +225,8 @@ ${JSON.stringify(formattedTasks, null, 2)}
           attachmentsAdded: z.number().describe('Eklenen link (Drive/Figma) sayısı'),
           feedback: z.string().describe('Öğrenciye özel, neyi iyi yaptığına ve neyi geliştirmesi gerektiğine dair yapıcı geri bildirim.'),
         })),
-        recommendations: z.array(z.string()).describe('Takımın geneline yönelik eyleme geçirilebilir tavsiyeler.')
+        recommendations: z.array(z.string()).describe('Takımın geneline yönelik eyleme geçirilebilir tavsiyeler.'),
+        meetingInsights: z.array(z.string()).optional().describe('Toplantı notlarından elde edilen teknik/proje kararları, çıkarımlar veya riskler.'),
       }),
       prompt: systemPrompt,
     });

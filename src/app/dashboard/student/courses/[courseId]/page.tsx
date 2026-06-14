@@ -1,10 +1,12 @@
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, ClipboardList, Calendar, KeyRound } from 'lucide-react';
+import { ArrowLeft, ClipboardList, Calendar, KeyRound, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TeamSection } from './TeamSection.client';
 import { StudentKanbanClient } from '@/app/dashboard/_shared/kanban/StudentKanbanClient';
+import { ProjectDetailsTab } from './ProjectDetailsTab.client';
 import { getKanbanBoard } from '@/app/dashboard/shared/kanban-actions';
 import { createEmptyBoardSnapshot } from '@/app/dashboard/_shared/kanban/utils';
 import { DashboardBreadcrumb } from '@/components/dashboard/DashboardBreadcrumb';
@@ -26,6 +28,9 @@ interface TeamRow {
   id: string;
   name: string;
   invite_code: string | null;
+  project_name?: string | null;
+  project_description?: string | null;
+  repo_url?: string | null;
   created_at: string;
   course_id: string;
   team_members: TeamMemberRow[] | null;
@@ -76,6 +81,9 @@ async function getTeamsData(courseId: string) {
       id,
       name,
       invite_code,
+      project_name,
+      project_description,
+      repo_url,
       created_at,
       course_id,
       team_members (
@@ -114,6 +122,9 @@ async function getTeamsData(courseId: string) {
       id: team.id,
       courseId,
       name: team.name,
+      projectName: team.project_name,
+      projectDescription: team.project_description,
+      repoUrl: team.repo_url,
       inviteCode: team.invite_code,
       status: 'active',
       createdAt: team.created_at,
@@ -212,42 +223,88 @@ export default async function CourseDetailPage({
           )}
         </div>
 
-        {/* Content Grid */}
-        <div className="grid gap-6 lg:[grid-template-columns:minmax(320px,1fr)_minmax(0,2.2fr)] items-start">
-          <TeamSection
-            courseId={courseId}
-            teamMode={course.team_mode as 'instructor' | 'random' | 'student'}
-            minSize={course.team_min_size ?? 2}
-            maxSize={course.team_max_size ?? 5}
-            myTeam={myTeam}
-            allTeams={teams}
-            currentUserId={user?.id ?? ''}
-          />
-
-          {myTeam && kanbanSnapshot ? (
-            <StudentKanbanClient
-              teamId={myTeam.id}
-              teamName={myTeam.name}
-              courseName={course.name}
-              courseId={courseId}
-              initialSnapshot={kanbanSnapshot}
-              initialError={kanbanError}
-            />
-          ) : (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
-              <div className="flex items-center gap-2 mb-5">
-                <div className="p-2 bg-blue-500/10 rounded-lg">
-                  <ClipboardList className="w-5 h-5 text-blue-400" />
-                </div>
-                <h2 className="text-lg font-semibold text-white">Görevler</h2>
-              </div>
-              <div className="flex flex-col items-center justify-center h-32 text-center">
-                <p className="text-white/30 text-sm">Henüz görev eklenmedi</p>
-                <p className="text-white/20 text-xs mt-1">Hocan görev oluşturduğunda burada görünecek.</p>
-              </div>
+        {/* Content Tabs */}
+        {myTeam ? (
+          <Tabs defaultValue="kanban" className="w-full">
+            <div className="mb-6 overflow-x-auto custom-scrollbar pb-2">
+              <TabsList className="bg-[#1a1f36] border border-white/5 h-12">
+                <TabsTrigger value="kanban" className="data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-400 gap-2 h-9 px-4">
+                  <ClipboardList className="w-4 h-4" />
+                  Görev Panosu
+                </TabsTrigger>
+                <TabsTrigger value="team" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400 gap-2 h-9 px-4">
+                  <Users className="w-4 h-4" />
+                  Takım Detayları
+                </TabsTrigger>
+                <TabsTrigger value="project" className="data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-400 gap-2 h-9 px-4">
+                  <ClipboardList className="w-4 h-4" />
+                  Proje Bilgileri
+                </TabsTrigger>
+              </TabsList>
             </div>
-          )}
-        </div>
+
+            <TabsContent value="kanban" className="m-0 outline-none">
+              {kanbanSnapshot ? (
+                <StudentKanbanClient
+                  teamId={myTeam.id}
+                  teamName={myTeam.name}
+                  courseName={course.name}
+                  courseId={courseId}
+                  initialSnapshot={kanbanSnapshot}
+                  initialError={kanbanError}
+                />
+              ) : (
+                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 max-w-3xl">
+                  <div className="flex items-center gap-2 mb-5">
+                    <div className="p-2 bg-blue-500/10 rounded-lg">
+                      <ClipboardList className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-white">Görevler</h2>
+                  </div>
+                  <div className="flex flex-col items-center justify-center h-32 text-center">
+                    <p className="text-white/30 text-sm">Henüz görev eklenmedi</p>
+                    <p className="text-white/20 text-xs mt-1">Hocan görev oluşturduğunda burada görünecek.</p>
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="team" className="m-0 outline-none">
+              <div className="max-w-2xl">
+                <TeamSection
+                  courseId={courseId}
+                  teamMode={course.team_mode as 'instructor' | 'random' | 'student'}
+                  minSize={course.team_min_size ?? 2}
+                  maxSize={course.team_max_size ?? 5}
+                  myTeam={myTeam}
+                  allTeams={teams}
+                  currentUserId={user?.id ?? ''}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="project" className="m-0 outline-none">
+              <div className="max-w-3xl">
+                <ProjectDetailsTab 
+                  myTeam={myTeam} 
+                  amILeader={myTeam.members?.some(m => m.studentId === user?.id && m.role === 'leader') ?? false} 
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <div className="max-w-2xl">
+            <TeamSection
+              courseId={courseId}
+              teamMode={course.team_mode as 'instructor' | 'random' | 'student'}
+              minSize={course.team_min_size ?? 2}
+              maxSize={course.team_max_size ?? 5}
+              myTeam={myTeam}
+              allTeams={teams}
+              currentUserId={user?.id ?? ''}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

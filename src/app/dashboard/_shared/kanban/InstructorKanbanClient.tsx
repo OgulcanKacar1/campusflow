@@ -297,11 +297,21 @@ export function TeamKanbanClient({
       if (!destination) return;
       if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
-      const [sourceSprintIdStr, sourceStatus] = source.droppableId.split('::');
-      const [destSprintIdStr, destStatus] = destination.droppableId.split('::');
+      const sourceSprintIdStr = source.droppableId.split('::')[0];
+      const sourceStatus = source.droppableId.split('::')[1];
+      const destSprintIdStr = destination.droppableId.split('::')[0];
+      const destStatus = destination.droppableId.split('::')[1];
 
       const sourceSprintId = sourceSprintIdStr === 'backlog' ? null : sourceSprintIdStr;
       const targetSprintId = destSprintIdStr === 'backlog' ? null : destSprintIdStr;
+
+      const sourceSprint = sourceSprintId ? board.sprints.find(s => s.id === sourceSprintId) : null;
+      const targetSprint = targetSprintId ? board.sprints.find(s => s.id === targetSprintId) : null;
+
+      if (sourceSprint?.status === 'completed' || targetSprint?.status === 'completed') {
+        setBanner({ type: 'error', text: 'Tamamlanmış sprintlerde görevler taşınamaz.' });
+        return;
+      }
 
       // Optimistic update
       setLocalBoard((prev) => {
@@ -375,13 +385,16 @@ export function TeamKanbanClient({
   // ── Sprint header renderer ──────────────────────────────────────────
   const renderSprintHeader = useCallback(
     (sprint: KanbanSprint, defaultHeader: React.ReactNode) => {
-      if (!board.canManageSprints) return defaultHeader;
+      const canManageFully = board.canManageSprints;
+      const canComplete = canManageFully || board.isLeader;
+
+      if (!canManageFully && !canComplete) return defaultHeader;
 
       return (
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">{defaultHeader}</div>
           <div className="flex items-center gap-2 mt-0.5">
-            {sprint.status === 'planning' && (
+            {canManageFully && sprint.status === 'planning' && (
               <Button
                 variant="outline"
                 size="sm"
@@ -392,7 +405,7 @@ export function TeamKanbanClient({
                 Sprinti Başlat
               </Button>
             )}
-            {courseId && board.isInstructor && (sprint.status === 'completed' || sprint.status === 'active') && (
+            {canManageFully && courseId && board.isInstructor && sprint.status === 'completed' && (
               <Button
                 variant="outline"
                 size="sm"
@@ -412,7 +425,7 @@ export function TeamKanbanClient({
                 {sprint.hasAiReport ? 'Raporu Görüntüle' : 'Yeni Rapor Oluştur'}
               </Button>
             )}
-            {sprint.status === 'active' && (
+            {canComplete && sprint.status === 'active' && (
               <Button
                 variant="outline"
                 size="sm"
@@ -423,20 +436,22 @@ export function TeamKanbanClient({
                 Tamamla
               </Button>
             )}
-            <button
-              onClick={() => setSprintToDelete(sprint)}
-              disabled={isBusy}
-              aria-label={`${sprint.name} sprintini sil`}
-              title="Sprinti Sil"
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-600 transition hover:bg-red-500/10 hover:text-red-400 disabled:pointer-events-none disabled:opacity-30"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
+            {canManageFully && (
+              <button
+                onClick={() => setSprintToDelete(sprint)}
+                disabled={isBusy}
+                aria-label={`${sprint.name} sprintini sil`}
+                title="Sprinti Sil"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-600 transition hover:bg-red-500/10 hover:text-red-400 disabled:pointer-events-none disabled:opacity-30"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         </div>
       );
     },
-    [board.canManageSprints, board.isInstructor, courseId, isBusy, handleUpdateSprintStatus],
+    [board.canManageSprints, board.isInstructor, board.isLeader, courseId, isBusy, handleUpdateSprintStatus],
   );
 
   // ── Delete confirm dialog content ───────────────────────────────────
@@ -470,19 +485,7 @@ export function TeamKanbanClient({
               <h1 className="text-2xl font-semibold text-white sm:text-3xl">
                 {teamName}
               </h1>
-              {(board.isLeader || board.isInstructor) && (
-                <Button variant="ghost" size="sm" onClick={() => setProjectDetailsOpen(true)} className="h-8 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10">
-                  {board.projectName ? 'Proje Detayını Düzenle' : 'Proje Detayı Ekle'}
-                </Button>
-              )}
             </div>
-            {(board.projectName || board.projectDescription) && (
-              <p className="text-sm text-slate-400 max-w-2xl mt-1">
-                {board.projectName && <strong className="text-slate-300">{board.projectName}</strong>}
-                {board.projectName && board.projectDescription && " - "}
-                {board.projectDescription}
-              </p>
-            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -680,7 +683,7 @@ export function TeamKanbanClient({
         onOpenChange={setTaskDialogOpen}
         onSubmit={handleTaskSubmit}
         isSubmitting={isCreatingTask}
-        sprints={localBoard.sprints}
+        sprints={localBoard.sprints.filter(s => s.status !== 'completed')}
         teamMembers={localBoard.teamMembers || []}
       />
 
@@ -688,9 +691,9 @@ export function TeamKanbanClient({
         task={selectedTask}
         open={isTaskDetailOpen}
         onOpenChange={setTaskDetailOpen}
-        sprints={localBoard.sprints}
+        sprints={localBoard.sprints.filter(s => s.status !== 'completed' || s.id === selectedTask?.sprintId)}
         teamMembers={localBoard.teamMembers ?? []}
-        canManageTasks={board.canManageTasks}
+        canManageTasks={board.canManageTasks && (!selectedTask?.sprintId || localBoard.sprints.find(s => s.id === selectedTask.sprintId)?.status !== 'completed')}
         isSubmitting={isUpdatingTask}
         onSave={handleTaskUpdate}
         onDelete={handleTaskDelete}

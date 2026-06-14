@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useTransition } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Search, BookOpen, ArrowLeft } from 'lucide-react';
@@ -101,79 +102,88 @@ export default function InstructorCoursesPage() {
           <div className="flex justify-center items-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
-        ) : filteredCourses.length === 0 ? (
-          <div className="text-center py-16 text-muted-foreground">
-            <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-lg">{search ? 'Aramaya uygun ders bulunamadı.' : 'Henüz hiç ders açmadınız.'}</p>
-          </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCourses.map(course => (
-              <Link 
-                key={course.id} 
-                href={`/dashboard/instructor/courses/${course.id}`}
-                className="group block"
-              >
-                <Card className="h-full bg-[#0f1523] border-gray-800 hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10 hover:-translate-y-1 transition-all duration-300 overflow-hidden">
-                  {/* Renkli üst bar */}
-                  <div className={`
-                    h-2 w-full
-                    ${course.status === 'active' ? 'bg-gradient-to-r from-emerald-500 to-emerald-600' : ''}
-                    ${course.status === 'archived' ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' : ''}
-                    ${course.status === 'deleted' ? 'bg-gradient-to-r from-red-500 to-red-600' : ''}
-                  `} />
-                  
-                  <CardContent className="p-5">
-                    {/* Header */}
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="text-xl font-bold text-white group-hover:text-blue-400 transition-colors">
-                          {course.code}
-                        </h3>
-                        {course.section && (
-                          <span className="text-xs text-gray-500">Şube {course.section}</span>
-                        )}
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={
-                          course.status === 'active'
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-xs'
-                            : course.status === 'archived'
-                            ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20 text-xs'
-                            : 'bg-red-500/10 text-red-400 border-red-500/20 text-xs'
-                        }
-                      >
-                        {course.status === 'active' ? 'Aktif' : course.status === 'archived' ? 'Arşiv' : 'Silinmiş'}
-                      </Badge>
+          <Tabs defaultValue="active" className="w-full">
+            <TabsList className="mb-6 bg-[#0f1523] border border-gray-800">
+              <TabsTrigger value="active" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">Aktif Dersler</TabsTrigger>
+              <TabsTrigger value="archived" className="data-[state=active]:bg-yellow-600 data-[state=active]:text-white">Arşivlenen Dersler</TabsTrigger>
+            </TabsList>
+            
+            {['active', 'archived'].map(status => {
+              const list = status === 'active' 
+                ? filteredCourses.filter(c => c.status !== 'archived')
+                : filteredCourses.filter(c => c.status === 'archived');
+
+              const grouped = list.reduce((acc, course) => {
+                const year = course.year || new Date().getFullYear();
+                if (!acc[year]) acc[year] = [];
+                acc[year].push(course);
+                return acc;
+              }, {} as Record<number, Course[]>);
+              const sortedYears = Object.entries(grouped).sort(([a], [b]) => Number(b) - Number(a));
+
+              return (
+                <TabsContent key={status} value={status}>
+                  {sortedYears.length === 0 ? (
+                    <div className="text-center py-16 text-muted-foreground">
+                      <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg">
+                        {search 
+                          ? `Aramaya uygun ${status === 'active' ? 'aktif' : 'arşivlenmiş'} ders bulunamadı.` 
+                          : `Henüz hiç ${status === 'active' ? 'aktif' : 'arşivlenmiş'} dersiniz yok.`}
+                      </p>
                     </div>
-                    
-                    <p className="text-gray-400 text-sm mb-4 line-clamp-2">{course.name}</p>
-                    
-                    {/* Stats */}
-                    <div className="grid grid-cols-2 gap-3 text-sm mb-4">
-                      <div className="bg-white/5 rounded-lg p-2">
-                        <p className="text-gray-500 text-xs mb-1">Dönem</p>
-                        <p className="text-white font-medium">{course.year} - {translateTerm(course.term)}</p>
+                  ) : (
+                    sortedYears.map(([year, yearCourses]) => (
+                      <div key={year} className="mb-10">
+                        <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                          <span className="bg-white/10 px-3 py-1 rounded-md text-sm">{year}</span>
+                          Dönemi Dersleri
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {yearCourses.map(course => (
+                            <Link key={course.id} href={`/dashboard/instructor/courses/${course.id}`} className="group block">
+                              <Card className={`h-full bg-[#0f1523] border-gray-800 hover:shadow-lg transition-all duration-300 overflow-hidden ${status === 'archived' ? 'hover:border-yellow-500/50 hover:shadow-yellow-500/10 opacity-80' : 'hover:border-blue-500/50 hover:shadow-blue-500/10 hover:-translate-y-1'}`}>
+                                <div className={`h-2 w-full ${status === 'archived' ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' : course.status === 'active' ? 'bg-gradient-to-r from-emerald-500 to-emerald-600' : 'bg-gradient-to-r from-gray-500 to-gray-600'}`} />
+                                <CardContent className="p-5">
+                                  <div className="flex items-start justify-between mb-3">
+                                    <div>
+                                      <h3 className={`text-xl font-bold transition-colors ${status === 'archived' ? 'text-gray-300 group-hover:text-yellow-400' : 'text-white group-hover:text-blue-400'}`}>{course.code}</h3>
+                                      {course.section && <span className="text-xs text-gray-500">Şube {course.section}</span>}
+                                    </div>
+                                    <Badge variant="outline" className={status === 'archived' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20 text-xs' : course.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-xs' : 'bg-gray-500/10 text-gray-400 border-gray-500/20 text-xs'}>
+                                      {status === 'archived' ? 'Arşiv' : course.status === 'active' ? 'Aktif' : 'Pasif'}
+                                    </Badge>
+                                  </div>
+                                  <p className={`text-sm mb-4 line-clamp-2 ${status === 'archived' ? 'text-gray-500' : 'text-gray-400'}`}>{course.name}</p>
+                                  <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+                                    <div className="bg-white/5 rounded-lg p-2">
+                                      <p className={`text-xs mb-1 ${status === 'archived' ? 'text-gray-600' : 'text-gray-500'}`}>Dönem</p>
+                                      <p className={`font-medium ${status === 'archived' ? 'text-gray-400' : 'text-white'}`}>{course.year} - {translateTerm(course.term)}</p>
+                                    </div>
+                                    <div className="bg-white/5 rounded-lg p-2">
+                                      <p className={`text-xs mb-1 ${status === 'archived' ? 'text-gray-600' : 'text-gray-500'}`}>Öğrenci</p>
+                                      <p className={`font-medium ${status === 'archived' ? 'text-gray-400' : 'text-white'}`}>{course.studentCount} kişi</p>
+                                    </div>
+                                  </div>
+                                  {course.joinCode && status !== 'archived' && (
+                                    <div className="flex items-center gap-2 bg-purple-500/10 rounded-lg px-3 py-2">
+                                      <span className="text-gray-500 text-xs">Katılım Kodu:</span>
+                                      <span className="font-mono text-purple-400 font-semibold text-sm">{course.joinCode}</span>
+                                    </div>
+                                  )}
+                                </CardContent>
+                              </Card>
+                            </Link>
+                          ))}
+                        </div>
                       </div>
-                      <div className="bg-white/5 rounded-lg p-2">
-                        <p className="text-gray-500 text-xs mb-1">Öğrenci</p>
-                        <p className="text-white font-medium">{course.studentCount} kişi</p>
-                      </div>
-                    </div>
-                    
-                    {/* Join Code */}
-                    {course.joinCode && (
-                      <div className="flex items-center gap-2 bg-purple-500/10 rounded-lg px-3 py-2">
-                        <span className="text-gray-500 text-xs">Katılım Kodu:</span>
-                        <span className="font-mono text-purple-400 font-semibold text-sm">{course.joinCode}</span>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
+                    ))
+                  )}
+                </TabsContent>
+              );
+            })}
+          </Tabs>
         )}
       </div>
     </div>

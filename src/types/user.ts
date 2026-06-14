@@ -3,6 +3,7 @@ export type OrgUser = {
   full_name: string | null;
   email: string | null;
   role: string;
+  status: 'active' | 'suspended';
   created_at: string;
 };
 

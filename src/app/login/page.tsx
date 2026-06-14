@@ -23,6 +23,12 @@ export default function LoginPage() {
   useEffect(() => {
     const urlMode = searchParams.get('mode');
     const urlEmail = searchParams.get('email');
+    const urlError = searchParams.get('error');
+
+    if (urlError) {
+      setError(urlError);
+    }
+
     if (urlMode === 'otp' && urlEmail) {
       startTransition(() => {
         setMode('otp');

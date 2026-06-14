@@ -1,8 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
+
+const getAdminClient = () => createSupabaseClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 import {
   KANBAN_STATUS_DEFINITIONS,
   normalizeSprintStatus,
@@ -31,6 +36,8 @@ import {
   type UpdateSprintInput,
   type UpdateTaskInput,
 } from '@/types/kanban';
+import { createNotification } from './notification-actions';
+import { sendEmail } from '@/lib/mail';
 
 interface ProfileRow {
   id: string;
@@ -52,6 +59,8 @@ interface TeamRow {
   course_id: string;
   course: {
     id: string;
+    code: string;
+    name: string;
     instructor_id: string;
     organization_id: string | null;
     sprint_mode: 'team' | 'instructor';
@@ -193,7 +202,7 @@ async function resolveTeamAccess(teamId: string): Promise<{ context?: TeamAccess
     .from('teams')
     .select(
       `id, name, project_name, project_description, course_id,
-       course:course_id ( id, instructor_id, organization_id, sprint_mode ),
+       course:course_id ( id, code, name, instructor_id, organization_id, sprint_mode ),
        team_members ( student_id, role, left_at )`
     )
     .eq('id', teamId)
@@ -300,9 +309,10 @@ function groupAssignments(rows: TaskMemberRow[]): Map<string, KanbanTaskAssignme
 }
 
 async function fetchBoardData(context: TeamAccessContext): Promise<KanbanActionResult<KanbanBoardSnapshot>> {
-  const { supabase, team } = context;
+  const { team } = context;
+  const supabaseAdmin = getAdminClient();
 
-  const { data: sprintRows, error: sprintError } = await supabase
+  const { data: sprintRows, error: sprintError } = await supabaseAdmin
     .from('sprints')
     .select('id, team_id, name, status, start_at, end_at, position, created_by, created_at, updated_at')
     .eq('team_id', team.id)
@@ -312,7 +322,7 @@ async function fetchBoardData(context: TeamAccessContext): Promise<KanbanActionR
     return buildError('Sprint verileri alınamadı.', 'SUPABASE_ERROR');
   }
 
-  const { data: taskRows, error: taskError } = await supabase
+  const { data: taskRows, error: taskError } = await supabaseAdmin
     .from('tasks')
     .select('id, team_id, sprint_id, title, short_id, description, developer_note, status, priority, position, assigned_to, created_by, created_at, updated_at, attachments')
     .eq('team_id', team.id)
@@ -327,7 +337,7 @@ async function fetchBoardData(context: TeamAccessContext): Promise<KanbanActionR
 
   let assignmentMap = new Map<string, KanbanTaskAssignment[]>();
   if (taskIds.length > 0) {
-    const { data: assignmentRows, error: assignmentError } = await supabase
+    const { data: assignmentRows, error: assignmentError } = await supabaseAdmin
       .from('task_members')
       .select('task_id, student_id, profile:student_id ( full_name, email )')
       .in('task_id', taskIds);
@@ -343,7 +353,7 @@ async function fetchBoardData(context: TeamAccessContext): Promise<KanbanActionR
   const tasks = tasksList.map(row => mapTask(row, assignmentMap.get(row.id) ?? []));
   const sprintList = (sprintRows ?? []) as SprintRow[];
 
-  const { data: reportsData } = await supabase
+  const { data: reportsData } = await supabaseAdmin
     .from('ai_sprint_reports')
     .select('sprint_id')
     .eq('team_id', team.id);
@@ -358,7 +368,7 @@ async function fetchBoardData(context: TeamAccessContext): Promise<KanbanActionR
   const backlogTasks = tasks.filter(task => task.sprintId === null);
   const backlogColumns = buildColumns(backlogTasks);
 
-  const { data: teamMembersData } = await supabase
+  const { data: teamMembersData } = await supabaseAdmin
     .from('team_members')
     .select('student_id, profile:student_id ( full_name, email )')
     .eq('team_id', team.id)
@@ -505,6 +515,18 @@ export async function createSprint(input: CreateSprintInput): Promise<KanbanActi
     return buildError('Sprint başlangıç ve bitiş tarihleri geçerli değil.', 'VALIDATION_ERROR');
   }
 
+  if (input.status === 'active') {
+    const { count } = await context.supabase
+      .from('sprints')
+      .select('id', { count: 'exact', head: true })
+      .eq('team_id', input.teamId)
+      .eq('status', 'active');
+      
+    if (count && count > 0) {
+      return buildError('Zaten aktif bir sprintiniz var. Lütfen önce aktif sprinti tamamlayın.', 'VALIDATION_ERROR');
+    }
+  }
+
   let position = input.position ?? 0;
   if (input.position === undefined) {
     try {
@@ -553,6 +575,19 @@ export async function updateSprint(input: UpdateSprintInput): Promise<KanbanActi
   if (input.startAt !== undefined) updatePayload.start_at = input.startAt;
   if (input.endAt !== undefined) updatePayload.end_at = input.endAt;
   if (input.position !== undefined) updatePayload.position = input.position;
+
+  if (input.status === 'active') {
+    const { count } = await context.supabase
+      .from('sprints')
+      .select('id', { count: 'exact', head: true })
+      .eq('team_id', input.teamId)
+      .eq('status', 'active')
+      .neq('id', input.sprintId);
+      
+    if (count && count > 0) {
+      return buildError('Zaten aktif bir sprintiniz var. Lütfen önce aktif sprinti tamamlayın.', 'VALIDATION_ERROR');
+    }
+  }
 
   if (updatePayload.start_at && updatePayload.end_at) {
     if (!validateDateOrder(updatePayload.start_at as string, updatePayload.end_at as string)) {
@@ -663,9 +698,61 @@ export async function createTask(input: CreateTaskInput): Promise<KanbanActionRe
       task_id: data.id,
       student_id: studentId,
     }));
-    await context.supabase.from('task_members').upsert(rows);
+    const supabaseAdmin = getAdminClient();
+    const { error: upsertError } = await supabaseAdmin.from('task_members').upsert(rows);
+    if (upsertError) {
+      console.error('Task assignees upsert error:', upsertError);
+    }
     // Hızlı dönüş için assignees objesini oluştur, tam profil detayı revalidate ile gelecek
     finalAssignments = input.assignees.map(id => ({ taskId: data.id, studentId: id }));
+
+    // Belirli atanan kişilere bildirim ve e-posta gönder (paralel)
+    const contextTitle = `[${context.team.course?.code || 'Ders'} - ${context.team.name}]`;
+    const notifyPromises = input.assignees
+      .filter(studentId => studentId !== context.userId)
+      .map(async (studentId) => {
+        await createNotification({
+          userId: studentId,
+          title: 'Yeni Görev Atandı',
+          content: `${contextTitle} '${data.title}' adlı görev size atandı.`,
+          type: 'task_assigned',
+          entityType: 'task',
+          entityId: data.id,
+        });
+
+        const { data: profile } = await context.supabase.from('profiles').select('email, full_name').eq('id', studentId).maybeSingle();
+        if (profile && profile.email) {
+          await sendEmail({
+            to: profile.email,
+            subject: `CampusFlow - Yeni Görev Ataması: ${contextTitle}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+                <h2 style="color: #4f46e5;">Yeni Görev Atandı</h2>
+                <p>Merhaba <b>${profile.full_name || 'Öğrenci'}</b>,</p>
+                <p>Sana yeni bir görev atandı:</p>
+                <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                  <p><b>Görev Başlığı:</b> ${data.title}</p>
+                  <p><b>Öncelik:</b> ${data.priority}</p>
+                </div>
+                <p>CampusFlow panosuna giderek göreve başlayabilirsin.</p>
+              </div>
+            `
+          });
+        }
+      });
+    await Promise.all(notifyPromises);
+  } else {
+    // Sadece takıma "yeni görev eklendi" bildirimi gönder (e-posta yok)
+    const members = context.team.team_members?.filter(m => m.left_at === null && m.student_id !== context.userId) || [];
+    const sysPromises = members.map(m => createNotification({
+      userId: m.student_id,
+      title: 'Yeni Görev Eklendi',
+      content: `'${data.title}' adlı yeni bir görev oluşturuldu.`,
+      type: 'system',
+      entityType: 'task',
+      entityId: data.id,
+    }));
+    await Promise.all(sysPromises);
   }
 
   await revalidateKanban(input.options, context.team.course_id, input.teamId);
@@ -720,13 +807,59 @@ export async function updateTask(input: UpdateTaskInput): Promise<KanbanActionRe
   }
 
   if (input.assignees !== undefined) {
-    await context.supabase.from('task_members').delete().eq('task_id', input.taskId);
+    const supabaseAdmin = getAdminClient();
+    
+    // Mevcut atananları bul ki sadece "yeni" eklenenlere mail atalım
+    const { data: existingMembers } = await context.supabase
+      .from('task_members')
+      .select('student_id')
+      .eq('task_id', input.taskId);
+    const existingIds = new Set(existingMembers?.map(m => m.student_id) || []);
+
+    await supabaseAdmin.from('task_members').delete().eq('task_id', input.taskId);
+    
     if (input.assignees.length > 0) {
       const rows = input.assignees.map(studentId => ({
         task_id: input.taskId,
         student_id: studentId,
       }));
-      await context.supabase.from('task_members').insert(rows);
+      await supabaseAdmin.from('task_members').insert(rows);
+    }
+
+    // Sadece "yeni" eklenen üyelere mail ve bildirim gönder
+    const newlyAdded = input.assignees.filter(id => !existingIds.has(id) && id !== context.userId);
+    if (newlyAdded.length > 0) {
+      const contextTitle = `[${context.team.course?.code || 'Ders'} - ${context.team.name}]`;
+      const notifyPromises = newlyAdded.map(async (studentId) => {
+        await createNotification({
+          userId: studentId,
+          title: 'Görev Size Atandı',
+          content: `${contextTitle} '${data?.title || 'Bilinmeyen Görev'}' adlı görev size atandı.`,
+          type: 'task_assigned',
+          entityType: 'task',
+          entityId: input.taskId,
+        });
+
+        const { data: profile } = await context.supabase.from('profiles').select('email, full_name').eq('id', studentId).maybeSingle();
+        if (profile && profile.email) {
+          await sendEmail({
+            to: profile.email,
+            subject: `CampusFlow - Görev Ataması: ${contextTitle}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+                <h2 style="color: #4f46e5;">Görev Ataması</h2>
+                <p>Merhaba <b>${profile.full_name || 'Öğrenci'}</b>,</p>
+                <p>Seni mevcut bir göreve atadılar:</p>
+                <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                  <p><b>Görev Başlığı:</b> ${data?.title}</p>
+                </div>
+                <p>Panoyu kontrol edebilirsin.</p>
+              </div>
+            `
+          });
+        }
+      });
+      await Promise.all(notifyPromises);
     }
   }
 
@@ -751,10 +884,10 @@ export async function moveTask(input: MoveTaskInput): Promise<KanbanActionResult
 
   const { data: currentTask, error: fetchError } = await context.supabase
     .from('tasks')
-    .select('id, sprint_id, status')
+    .select('id, sprint_id, status, short_id, title')
     .eq('id', input.taskId)
     .eq('team_id', input.teamId)
-    .single<{ id: string; sprint_id: string | null; status: string }>();
+    .single<{ id: string; sprint_id: string | null; status: string; short_id: string; title: string }>();
 
   if (fetchError || !currentTask) {
     return buildError('Görev bulunamadı.', 'NOT_FOUND');
@@ -786,6 +919,21 @@ export async function moveTask(input: MoveTaskInput): Promise<KanbanActionResult
     return buildError('Görev sıralaması normalize edilemedi.', 'SUPABASE_ERROR');
   }
 
+  if (previousStatus !== targetStatus) {
+    const members = context.team.team_members?.filter(m => m.left_at === null && m.student_id !== context.userId) || [];
+    const contextTitle = `[${context.team.course?.code || 'Ders'} - ${context.team.name}]`;
+    for (const m of members) {
+      await createNotification({
+        userId: m.student_id,
+        title: 'Görev Durumu Güncellendi',
+        content: `${contextTitle} '${currentTask.short_id} ${currentTask.title}' görevinin durumu '${targetStatus}' oldu.`,
+        type: 'task_status',
+        entityType: 'task',
+        entityId: input.taskId,
+      });
+    }
+  }
+
   await revalidateKanban(input.options, context.team.course_id, input.teamId);
   return { data: null };
 }
@@ -808,13 +956,49 @@ export async function assignTaskMembers(input: AssignTaskMembersInput): Promise<
     student_id: studentId,
   }));
 
-  const { error } = await context.supabase
+  const supabaseAdmin = getAdminClient();
+  const { error } = await supabaseAdmin
     .from('task_members')
     .upsert(rows, { onConflict: 'task_id,student_id', ignoreDuplicates: true });
 
   if (error) {
     return buildError('Görev üyeleri atanamadı.', 'SUPABASE_ERROR');
   }
+
+  const { data: taskData } = await context.supabase.from('tasks').select('title').eq('id', input.taskId).maybeSingle();
+  const contextTitle = `[${context.team.course?.code || 'Ders'} - ${context.team.name}]`;
+  const notifyPromises = input.studentIds
+    .filter(studentId => studentId !== context.userId)
+    .map(async (studentId) => {
+      await createNotification({
+        userId: studentId,
+        title: 'Görev Size Atandı',
+        content: `${contextTitle} '${taskData?.title || 'Bilinmeyen Görev'}' adlı görev size atandı.`,
+        type: 'task_assigned',
+        entityType: 'task',
+        entityId: input.taskId,
+      });
+
+      const { data: profile } = await context.supabase.from('profiles').select('email, full_name').eq('id', studentId).maybeSingle();
+      if (profile && profile.email) {
+        await sendEmail({
+          to: profile.email,
+          subject: `CampusFlow - Görev Ataması: ${contextTitle}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+              <h2 style="color: #4f46e5;">Görev Ataması</h2>
+              <p>Merhaba <b>${profile.full_name || 'Öğrenci'}</b>,</p>
+              <p>Seni mevcut bir göreve atadılar:</p>
+              <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                <p><b>Görev Başlığı:</b> ${taskData?.title}</p>
+              </div>
+              <p>Panoyu kontrol edebilirsin.</p>
+            </div>
+          `
+        });
+      }
+    });
+  await Promise.all(notifyPromises);
 
   await revalidateKanban(input.options, context.team.course_id, input.teamId);
   return { data: null };

@@ -1,111 +1,200 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
+import { createAdminClient } from '@/lib/supabase/admin';
+
+const WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET;
+
+// GitHub'dan gelen HMAC imzasını doğrular
+function verifySignature(payload: string, signature: string | null) {
+  if (!WEBHOOK_SECRET || !signature) return true; // Geliştirme ortamında veya secret tanımlı değilse geçerli say
+  
+  const hmac = crypto.createHmac('sha256', WEBHOOK_SECRET);
+  const digest = 'sha256=' + hmac.update(payload).digest('hex');
+  
+  try {
+    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest));
+  } catch (e) {
+    return false;
+  }
+}
 
 // Helper: Metin içinden T-1, t-42 gibi ID'leri çıkarır
 function extractTaskIds(text: string): string[] {
   if (!text) return [];
-  const regex = /\b(T-\d+)\b/gi;
-  const matches = text.match(regex) || [];
-  return [...new Set(matches.map(m => m.toUpperCase()))];
+  const regex = /T-(\d+)/gi;
+  const matches = [...text.matchAll(regex)];
+  return [...new Set(matches.map(m => `T-${m[1].toUpperCase()}`))];
+}
+
+import { createNotification } from '@/app/dashboard/shared/notification-actions';
+
+// Yardımcı Fonksiyon: Takım üyelerine bildirim at
+async function notifyTeam(
+  supabase: any,
+  teamId: string,
+  courseId: string,
+  teamName: string,
+  targetStatus: string,
+  taskShortId: string,
+  taskTitle: string,
+  taskId: string
+) {
+  const { data: course } = await supabase.from('courses').select('code').eq('id', courseId).single();
+  const courseCode = course?.code || 'Ders';
+  const contextTitle = `[${courseCode} - ${teamName}]`;
+  const content = `${contextTitle} '${taskShortId} ${taskTitle}' görevinin durumu '${targetStatus}' oldu.`;
+
+  const { data: members } = await supabase.from('team_members').select('student_id').eq('team_id', teamId).is('left_at', null);
+  if (!members) return;
+
+  for (const m of members) {
+    await createNotification({
+      userId: m.student_id,
+      title: 'Görev Durumu Güncellendi',
+      content: content,
+      type: 'task_status',
+      entityType: 'task',
+      entityId: taskId,
+    });
+  }
 }
 
 export async function POST(request: Request) {
   try {
+    const signature = request.headers.get('x-hub-signature-256');
+    const eventType = request.headers.get('x-github-event');
+    const payloadString = await request.text();
     const { searchParams } = new URL(request.url);
-    const teamId = searchParams.get('teamId');
+    const urlTeamId = searchParams.get('teamId');
 
-    if (!teamId) {
-      return new NextResponse('Missing teamId in webhook URL', { status: 400 });
+    if (WEBHOOK_SECRET && !verifySignature(payloadString, signature)) {
+      console.error('Invalid GitHub webhook signature');
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
-    const eventType = request.headers.get('x-github-event');
-    const payload = await request.json();
+    const payload = JSON.parse(payloadString);
+    const repoUrl = payload.repository?.html_url || payload.repository?.url;
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+    if (!repoUrl) {
+      return NextResponse.json({ message: 'No repository URL found in payload' }, { status: 400 });
+    }
 
-    // 1. Push Event (Sadece commit loglanır, statü değişmez)
+    const supabase = createAdminClient();
+
+    let team = null;
+
+    if (urlTeamId) {
+      const { data } = await supabase.from('teams').select('id, name, course_id').eq('id', urlTeamId).single();
+      team = data;
+    } else {
+      const { data } = await supabase.from('teams').select('id, name, course_id').ilike('repo_url', `${repoUrl}%`).single();
+      team = data;
+    }
+
+    if (!team) {
+      console.log(`No team found for repo: ${repoUrl} or teamId: ${urlTeamId}`);
+      return NextResponse.json({ message: 'Repo not linked to any team' }, { status: 200 });
+    }
+
+    const updatedTasks: { id: string; title: string; newStatus: string }[] = [];
+
+    // 2. Event İşleme
     if (eventType === 'push') {
       const commits = payload.commits || [];
-      for (const commit of commits) {
-        const shortIds = extractTaskIds(commit.message);
-        
-        for (const shortId of shortIds) {
-          // Görevi bul
-          const { data: task } = await supabaseAdmin
-            .from('tasks')
-            .select('id')
-            .eq('team_id', teamId)
-            .eq('short_id', shortId)
-            .maybeSingle();
+      const branch = payload.ref?.replace('refs/heads/', '');
+      const pusherName = payload.pusher?.name || payload.sender?.login || 'Bir geliştirici';
 
-          if (task) {
-            // Veritabanına logla
-            await supabaseAdmin.from('task_github_events').insert({
-              task_id: task.id,
-              event_type: 'commit',
-              commit_hash: commit.id,
-              message: commit.message,
-              author_name: commit.author?.name || 'Unknown',
-              author_username: commit.author?.username || commit.author?.name,
-              url: commit.url
-            });
+      for (const commit of commits) {
+        const message = commit.message || '';
+        const shortIds = extractTaskIds(message);
+        
+        if (shortIds.length === 0) continue;
+
+        const { data: tasks } = await supabase
+          .from('tasks')
+          .select('id, title, status, short_id')
+          .eq('team_id', team.id)
+          .in('short_id', shortIds);
+
+        if (!tasks || tasks.length === 0) continue;
+
+        for (const task of tasks) {
+          // Sadece 'todo' olanları 'in_progress' yapalım (zaten devam ediyorsa veya bittiyse dokunma)
+          if (task.status === 'todo') {
+            await supabase
+              .from('tasks')
+              .update({ status: 'in_progress', updated_at: new Date().toISOString() })
+              .eq('id', task.id);
+
+            updatedTasks.push({ id: task.id, title: task.title, newStatus: 'in_progress' });
+
+            await notifyTeam(
+              supabase,
+              team.id,
+              team.course_id,
+              team.name,
+              'in_progress',
+              task.short_id,
+              task.title,
+              task.id
+            );
           }
         }
       }
     } 
-    // 2. Pull Request Event (Açılınca Review, Merge olunca Done)
     else if (eventType === 'pull_request') {
-      const action = payload.action;
       const pr = payload.pull_request;
+      const action = payload.action;
+      const prTitle = pr.title || '';
+      const prBody = pr.body || '';
+      const senderName = payload.sender?.login || 'Bir geliştirici';
+
+      // Hem PR başlığında hem açıklamasında task arayalım
+      const combinedText = `${prTitle} ${prBody}`;
+      const shortIds = extractTaskIds(combinedText);
       
-      // PR Başlığı ve Açıklamasındaki ID'leri bul (Örn: "Fix T-5: header issue")
-      const textToSearch = `${pr.title} ${pr.body || ''}`;
-      const shortIds = extractTaskIds(textToSearch);
-
-      for (const shortId of shortIds) {
-        const { data: task } = await supabaseAdmin
+      if (shortIds.length > 0) {
+        const { data: tasks } = await supabase
           .from('tasks')
-          .select('id, status')
-          .eq('team_id', teamId)
-          .eq('short_id', shortId)
-          .maybeSingle();
+          .select('id, title, status, short_id')
+          .eq('team_id', team.id)
+          .in('short_id', shortIds);
 
-        if (task) {
-          // PR eventini logla
-          const { error: insertError } = await supabaseAdmin.from('task_github_events').insert({
-            task_id: task.id,
-            event_type: 'pull_request',
-            message: `PR ${action}: ${pr.title}`,
-            author_username: pr.user.login,
-            url: pr.html_url
-          });
-          if (insertError) console.error("Event Insert Error:", insertError);
+        if (tasks && tasks.length > 0) {
+          for (const task of tasks) {
+            let newStatus = null;
+            let notifMessage = '';
 
-          // Otomasyon: Statüyü güncelle
-          let newStatus = null;
-          if (action === 'opened' || action === 'reopened') {
-            if (task.status !== 'review' && task.status !== 'done') {
-              newStatus = 'review';
+            if (action === 'opened' || action === 'reopened' || action === 'edited' || action === 'synchronize') {
+              if (task.status !== 'review' && task.status !== 'done') {
+                newStatus = 'review';
+                notifMessage = `GitHub'da PR güncellendi. '${task.title}' görevi 'İnceleme' aşamasına alındı.`;
+              }
+            } else if (action === 'closed' && pr.merged) {
+              if (task.status !== 'done') {
+                newStatus = 'done';
+                notifMessage = `GitHub'da PR merge edildi! '${task.title}' görevi 'Tamamlandı' olarak işaretlendi.`;
+              }
             }
-          } else if (action === 'closed' && pr.merged) {
-            if (task.status !== 'done') {
-              newStatus = 'done';
-            }
-          }
 
-          if (newStatus) {
-            const { error: updateError } = await supabaseAdmin.from('tasks').update({ status: newStatus }).eq('id', task.id);
-            if (updateError) console.error("Task Update Error:", updateError);
+            if (newStatus) {
+              await supabase.from('tasks').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', task.id);
+              updatedTasks.push({ id: task.id, title: task.title, newStatus });
+              await notifyTeam(supabase, team.id, team.course_id, team.name, newStatus, task.short_id, task.title, task.id);
+            }
           }
         }
       }
     }
 
-    return new NextResponse('Webhook processed successfully', { status: 200 });
-  } catch (error) {
-    console.error('Webhook processing error:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Webhook processed',
+      updatedTasks 
+    });
+
+  } catch (error: any) {
+    console.error('Webhook error:', error);
+    return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
   }
 }

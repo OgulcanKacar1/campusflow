@@ -9,6 +9,7 @@ type OrgUserRow = {
   full_name: string | null;
   email: string | null;
   role: string;
+  status: 'active' | 'suspended';
   created_at: string;
 };
 
@@ -109,27 +110,27 @@ export async function getOrgUsers(): Promise<{ data: OrgUser[]; error?: string }
   if (!orgId) return { error: 'Organizasyon bulunamadı', data: [] };
 
   // 2. Kendi organizasyonundaki diğer kullanıcıları getir
-  const { data, error } = await supabase
+  const { data: users, error: usersError } = await supabase
     .from('profiles')
-    .select('id, full_name, email, role, created_at')
+    .select('id, full_name, email, role, metadata, created_at')
     .eq('organization_id', orgId)
-    // .neq('id', user.id) // Kendisini de görebilir, sorun değil
     .order('role', { ascending: true })
     .order('full_name', { ascending: true });
 
-  if (error) {
-    return { error: error.message, data: [] };
+  if (usersError) {
+    return { error: usersError.message, data: [] };
   }
 
-  const users: OrgUser[] = (data ?? []).map((user: OrgUserRow) => ({
+  const formattedUsers: OrgUser[] = (users ?? []).map((user: OrgUserRow) => ({
     id: user.id,
     full_name: user.full_name ?? 'Bilinmiyor',
     email: user.email ?? '',
     role: user.role,
+    status: user.metadata?.status === 'suspended' ? 'suspended' : 'active',
     created_at: user.created_at,
   }));
 
-  return { data: users };
+  return { data: formattedUsers };
 }
 
 export async function updateOrgUserRole(userId: string, newRole: 'student' | 'instructor') {
@@ -169,13 +170,55 @@ export async function updateOrgUserRole(userId: string, newRole: 'student' | 'in
   }
 
   // 3. Güncellemeyi yap
-  const { error } = await supabase
+  const { error: updateError } = await supabase
     .from('profiles')
     .update({ role: newRole })
     .eq('id', userId);
 
-  if (error) {
-    return { error: error.message };
+  if (updateError) {
+    return { error: 'Kullanıcı rolü güncellenirken bir hata oluştu.' };
+  }
+
+  return { success: true };
+}
+
+export async function updateOrgUserStatus(userId: string, status: 'active' | 'suspended'): Promise<{ success?: boolean; error?: string }> {
+  const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Oturum bulunamadı' };
+
+  // Super admin veya Admin kontrolü yap
+  const { data: adminProfile } = await supabase
+    .from('profiles')
+    .select('role, organization_id')
+    .eq('id', user.id)
+    .single();
+
+  if (!adminProfile || (adminProfile.role !== 'admin' && adminProfile.role !== 'super_admin')) {
+    return { error: 'Bu işlem için yetkiniz yok.' };
+  }
+
+  // Kullanıcının organizasyonunu kontrol et
+  const { data: targetUser } = await supabase
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', userId)
+    .single();
+
+  if (!targetUser || targetUser.organization_id !== adminProfile.organization_id) {
+    return { error: 'Bu kullanıcıyı düzenleme yetkiniz yok.' };
+  }
+
+  const newMetadata = { ...(targetUser.metadata || {}), status };
+
+  const { error: updateError } = await supabase
+    .from('profiles')
+    .update({ metadata: newMetadata })
+    .eq('id', userId);
+
+  if (updateError) {
+    return { error: updateError.message };
   }
 
   return { success: true };

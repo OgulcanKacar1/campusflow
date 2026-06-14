@@ -15,6 +15,8 @@ export interface Team {
   id: string;
   courseId: string;
   name: string;
+  projectName?: string | null;
+  projectDescription?: string | null;
   repoUrl?: string | null;
   inviteCode?: string | null;
   status: 'active' | 'inactive';

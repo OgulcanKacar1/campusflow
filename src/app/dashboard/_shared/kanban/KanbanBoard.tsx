@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type {
   KanbanBoardSnapshot,
@@ -60,15 +61,46 @@ export function KanbanBoard({
   board,
   isLoading,
   error,
-  className,
+  className = '',
   backlogTitle = 'Backlog',
   onTaskClick,
-  onDragEnd = () => {},
+  onDragEnd,
   renderSprintHeader,
   renderColumnHeader,
   headerExtra,
   canMoveTasks = true,
 }: KanbanBoardProps) {
+  const [expandedSprints, setExpandedSprints] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (board.sprints.length > 0) {
+      setExpandedSprints(prev => {
+        // Eğer daha önce state ayarlandıysa (kullanıcı değiştirdiyse) dokunma
+        if (Object.keys(prev).length > 0) return prev;
+        
+        const initialExpanded: Record<string, boolean> = {};
+        board.sprints.forEach(sprint => {
+          initialExpanded[sprint.id] = sprint.status === 'active';
+        });
+        
+        // Eğer hiçbirisi active değilse, en yakın planning sprintini aç veya ilkini aç.
+        if (!Object.values(initialExpanded).includes(true)) {
+           const firstPlanning = board.sprints.find(s => s.status === 'planning');
+           if (firstPlanning) initialExpanded[firstPlanning.id] = true;
+           else if (board.sprints.length > 0) initialExpanded[board.sprints[0].id] = true;
+        }
+        return initialExpanded;
+      });
+    }
+  }, [board.sprints]);
+
+  const toggleSprint = (sprintId: string) => {
+    setExpandedSprints(prev => ({
+      ...prev,
+      [sprintId]: !prev[sprintId]
+    }));
+  };
+
   useEffect(() => {
     console.log('[KANBAN DEBUG] Board snapshot', board);
     board.sprints.forEach(sprint => {
@@ -157,11 +189,14 @@ export function KanbanBoard({
           const statusColor = STATUS_COLORS[sprint.status] ?? STATUS_COLORS.planning;
           const statusLabel = STATUS_LABELS[sprint.status] ?? sprint.status;
 
+          const isExpanded = expandedSprints[sprint.id] ?? false;
+
           const defaultHeader = (
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-base font-semibold text-slate-100">{sprint.name}</h3>
+                <div className="flex items-center gap-2 cursor-pointer" onClick={() => toggleSprint(sprint.id)}>
+                  {isExpanded ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronRight className="w-5 h-5 text-slate-400" />}
+                  <h3 className="text-base font-semibold text-slate-100 select-none hover:text-white transition-colors">{sprint.name}</h3>
                   <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusColor}`}>
                     {statusLabel}
                   </span>
@@ -184,19 +219,21 @@ export function KanbanBoard({
               {renderSprintHeader ? renderSprintHeader(sprint, defaultHeader) : defaultHeader}
 
               {/* Kolonlar — yatay kaydırma */}
-              <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
-                {sprint.columns.map(column => (
-                  <KanbanColumn
-                    key={`${sprint.id}-${column.status}`}
-                    sprint={sprint}
-                    column={column}
-                    className="w-[300px] shrink-0 snap-start"
-                    onTaskClick={onTaskClick}
-                    canMoveTasks={canMoveTasks}
-                    headerExtra={renderColumnHeader?.(column, sprint) ?? null}
-                  />
-                ))}
-              </div>
+              {isExpanded && (
+                <div className="flex gap-4 overflow-x-auto pb-4 pt-2 snap-x snap-mandatory animate-in fade-in slide-in-from-top-2 duration-300">
+                  {sprint.columns.map(column => (
+                    <KanbanColumn
+                      key={`${sprint.id}-${column.status}`}
+                      sprint={sprint}
+                      column={column}
+                      className="w-[300px] shrink-0 snap-start"
+                      onTaskClick={onTaskClick}
+                      canMoveTasks={canMoveTasks}
+                      headerExtra={renderColumnHeader?.(column, sprint) ?? null}
+                    />
+                  ))}
+                </div>
+              )}
             </section>
           );
         })

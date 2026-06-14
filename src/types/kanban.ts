@@ -102,6 +102,35 @@ export interface KanbanBoardSnapshot {
   lastSyncedAt: string;
 }
 
+export interface Meeting {
+  id: string;
+  course_id: string;
+  team_id: string | null;
+  sprint_id: string | null;
+  title: string;
+  description: string | null;
+  meeting_link: string | null;
+  meeting_notes: string | null;
+  start_time: string;
+  end_time: string;
+  created_by: string;
+  created_at: string;
+}
+
+export type CalendarEventType = 'meeting' | 'sprint' | 'task';
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  start: Date;
+  end: Date;
+  type: CalendarEventType;
+  description?: string;
+  link?: string;
+  isCourseWide?: boolean;
+  originalData?: any;
+}
+
 export interface AiSprintReportContent {
   summary: string;
   overallScore: number;

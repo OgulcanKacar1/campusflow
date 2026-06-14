@@ -221,11 +221,26 @@ export async function deleteCourse(courseId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Oturum bulunamadı' };
 
-  // Soft delete: sadece status = 'deleted' olarak işaretle
-  // Veriler korunur, CASCADE ile veri kaybı olmaz
+  // Hard delete: Kalıcı silme (CASCADE ile bağlı tüm takımlar, sprintler vb. silinir)
   const { error } = await supabase
     .from('courses')
-    .update({ status: 'deleted' })
+    .delete()
+    .eq('id', courseId)
+    .eq('instructor_id', user.id);
+
+  if (error) return { error: error.message };
+  return { success: true };
+}
+
+export async function archiveCourse(courseId: string) {
+  const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Oturum bulunamadı' };
+
+  const { error } = await supabase
+    .from('courses')
+    .update({ status: 'archived' })
     .eq('id', courseId)
     .eq('instructor_id', user.id);
 
@@ -304,6 +319,99 @@ export async function enrollStudentsFromCSV(courseId: string, csvContent: string
     alreadyEnrolled: existingStudentIds.length,
     unregistered: unregisteredEmails
   };
+}
+
+export async function enrollSingleStudent(courseId: string, email: string) {
+  const supabase = await createClient();
+
+  const { data: { user: instructor } } = await supabase.auth.getUser();
+  if (!instructor) return { error: 'Oturum bulunamadı' };
+
+  // 1. Ders kontrolü
+  const { data: course } = await supabase
+    .from('courses')
+    .select('id, organization_id')
+    .eq('id', courseId)
+    .eq('instructor_id', instructor.id)
+    .single();
+
+  if (!course) return { error: 'Ders bulunamadı veya yetkiniz yok.' };
+
+  // 2. Öğrenci kontrolü
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id, organization_id')
+    .eq('email', email.trim().toLowerCase())
+    .eq('role', 'student')
+    .single();
+
+  if (!profile) return { error: 'Bu e-posta adresiyle kayıtlı bir öğrenci bulunamadı.' };
+  
+  if (profile.organization_id !== course.organization_id) {
+    return { error: 'Öğrenci farklı bir organizasyona (okula) kayıtlı.' };
+  }
+
+  // 3. Öğrenciyi ekle
+  const { error: enrollError } = await supabase
+    .from('course_enrollments')
+    .upsert({
+      course_id: courseId,
+      student_id: profile.id,
+      status: 'enrolled'
+    }, { onConflict: 'course_id, student_id' });
+
+  if (enrollError) return { error: 'Öğrenci derse eklenirken bir hata oluştu.' };
+
+  return { success: true };
+}
+
+export async function removeStudentsFromCourse(courseId: string, studentIds: string[]) {
+  const supabase = await createClient();
+
+  const { data: { user: instructor } } = await supabase.auth.getUser();
+  if (!instructor) return { error: 'Oturum bulunamadı' };
+
+  // 1. Ders kontrolü
+  const { data: course } = await supabase
+    .from('courses')
+    .select('id')
+    .eq('id', courseId)
+    .eq('instructor_id', instructor.id)
+    .single();
+
+  if (!course) return { error: 'Ders bulunamadı veya yetkiniz yok.' };
+
+  // 2. Takımlardan çıkarma (team_members)
+  // Öğrenci dersten çıkınca dersin tüm takımlarından da düşmeli
+  const { data: teams } = await supabase
+    .from('teams')
+    .select('id')
+    .eq('course_id', courseId);
+
+  if (teams && teams.length > 0) {
+    const teamIds = teams.map(t => t.id);
+    
+    // RLS engeline takılmamak için teker teker RPC çağıran fonksiyonu kullan
+    for (const teamId of teamIds) {
+      for (const studentId of studentIds) {
+        await supabase.rpc('remove_team_member', {
+          p_team_id: teamId,
+          p_student_id: studentId
+        });
+      }
+    }
+  }
+
+  // 3. Dersten çıkarma (course_enrollments)
+  const { error: deleteError } = await supabase
+    .from('course_enrollments')
+    .delete()
+    .eq('course_id', courseId)
+    .in('student_id', studentIds);
+
+  if (deleteError) return { error: 'Öğrenciler dersten çıkarılamadı.' };
+
+  return { success: true };
 }
 
 /**
@@ -421,8 +529,10 @@ export async function getCourseStudents(courseId: string): Promise<ActionResult<
   if (studentIds.length > 0) {
     const { data: tmData } = await supabase
       .from('team_members')
-      .select('student_id, team_id, teams(name)')
-      .in('student_id', studentIds);
+      .select('student_id, team_id, teams!inner(name, course_id)')
+      .in('student_id', studentIds)
+      .is('left_at', null)
+      .eq('teams.course_id', courseId);
     teamMembers = (tmData ?? []) as unknown as TeamMemberRow[];
   }
 

@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Sparkles, AlertCircle, CheckCircle2, TrendingUp, Users, GitCommit, Link as LinkIcon, Trash2, Download } from 'lucide-react';
+import { Loader2, Sparkles, AlertCircle, CheckCircle2, TrendingUp, Users, GitCommit, Link as LinkIcon, Trash2, Download, FileText, Video } from 'lucide-react';
 import type { AiSprintReportContent } from '@/types/kanban';
 import { FormalAiReportDocument } from '@/components/dashboard/instructor/FormalAiReportPdf';
 
@@ -229,6 +229,27 @@ export function AiReportDialog({ isOpen, onOpenChange, teamId, sprintId, sprintN
                 </ul>
               </div>
             </div>
+
+            {/* Meeting Insights */}
+            {report.meetingInsights && report.meetingInsights.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                  <Video className="h-5 w-5 text-blue-400" /> Toplantı Çıkarımları & Kararlar
+                </h3>
+                <div className="bg-blue-950/10 border border-blue-900/30 rounded-2xl p-5">
+                  <ul className="space-y-4">
+                    {report.meetingInsights.map((insight: string, idx: number) => (
+                      <li key={idx} className="flex items-start gap-3">
+                        <div className="mt-0.5 bg-blue-500/20 rounded-full p-1 text-blue-400 shrink-0 shadow-[0_0_10px_-2px_rgba(59,130,246,0.3)]">
+                          <CheckCircle2 className="h-4 w-4" />
+                        </div>
+                        <span className="text-sm md:text-base text-blue-100/90 leading-relaxed">{insight}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
 
           </div>
         )}

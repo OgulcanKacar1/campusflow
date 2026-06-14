@@ -102,6 +102,20 @@ export const FormalAiReportDocument = ({ report, sprintName, courseCode, teamNam
           </View>
         </View>
 
+        {report.meetingInsights && report.meetingInsights.length > 0 && (
+          <View style={styles.section} wrap={false}>
+            <Text style={styles.sectionTitle}>4. Toplantı Çıkarımları & Kararlar</Text>
+            <View style={styles.list}>
+              {report.meetingInsights.map((insight, idx) => (
+                <View key={idx} style={styles.listItem}>
+                  <Text style={styles.bullet}>•</Text>
+                  <Text style={styles.text}>{insight}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
         <View style={styles.footer} wrap={false}>
           <Text style={styles.disclaimer}>
             Yasal Uyarı: Bu belge CampusFlow sistemine entegre Yapay Zeka tarafından oluşturulmuş yardımcı bir analiz raporudur. 

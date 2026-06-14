@@ -34,6 +34,11 @@ export default async function InstructorReportsPage() {
           sprint_id,
           report_content,
           created_at
+        ),
+        ai_final_reports (
+          id,
+          report_content,
+          created_at
         )
       )
     `)
@@ -65,7 +70,22 @@ export default async function InstructorReportsPage() {
             content
           };
         })
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+      finalReport: team.ai_final_reports 
+        ? Array.isArray(team.ai_final_reports)
+          ? team.ai_final_reports.length > 0 
+            ? {
+                id: team.ai_final_reports[0].id,
+                createdAt: team.ai_final_reports[0].created_at,
+                content: team.ai_final_reports[0].report_content
+              } 
+            : null
+          : {
+              id: (team.ai_final_reports as any).id,
+              createdAt: (team.ai_final_reports as any).created_at,
+              content: (team.ai_final_reports as any).report_content
+            }
+        : null
     }))
   }));
 

@@ -7,15 +7,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Search, ArrowLeft } from 'lucide-react';
+import { Loader2, Search, ArrowLeft, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
-import { getOrgUsers, updateOrgUserRole } from '../actions';
+import { getOrgUsers, updateOrgUserRole, updateOrgUserStatus } from '../actions';
 import type { OrgUser } from '@/types/user';
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<OrgUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [roleUpdateLoading, setRoleUpdateLoading] = useState<string | null>(null);
+  const [statusUpdateLoading, setStatusUpdateLoading] = useState<string | null>(null);
 
   // Filtreler
   const [search, setSearch] = useState('');
@@ -50,6 +51,17 @@ export default function AdminUsersPage() {
       setUsers(prev => prev.map(u => (u.id === userId ? { ...u, role: newRole } : u)));
     }
     setRoleUpdateLoading(null);
+  };
+
+  const handleStatusUpdate = async (userId: string, newStatus: 'active' | 'suspended') => {
+    setStatusUpdateLoading(userId);
+    const result = await updateOrgUserStatus(userId, newStatus);
+    if (result.error) {
+      alert(result.error);
+    } else {
+      setUsers(prev => prev.map(u => (u.id === userId ? { ...u, status: newStatus } : u)));
+    }
+    setStatusUpdateLoading(null);
   };
 
   const filteredUsers = useMemo(() => {
@@ -115,6 +127,7 @@ export default function AdminUsersPage() {
                     <TableHead>Ad Soyad</TableHead>
                     <TableHead>E-posta</TableHead>
                     <TableHead>Mevcut Rol</TableHead>
+                    <TableHead>Durum</TableHead>
                     <TableHead className="text-right">Rol İşlemleri</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -148,6 +161,26 @@ export default function AdminUsersPage() {
                           >
                             {user.role === 'admin' || user.role === 'super_admin' ? 'Admin' : user.role === 'instructor' ? 'Hoca' : 'Öğrenci'}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {user.role === 'admin' || user.role === 'super_admin' ? (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          ) : statusUpdateLoading === user.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                          ) : (
+                            <Select
+                              value={user.status || 'active'}
+                              onValueChange={(val) => handleStatusUpdate(user.id, val as 'active' | 'suspended')}
+                            >
+                              <SelectTrigger className={`w-[100px] h-8 text-xs font-medium border-0 ${user.status === 'suspended' ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20' : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'}`}>
+                                <span>{user.status === 'suspended' ? 'Askıda' : 'Aktif'}</span>
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="active" className="text-emerald-500 font-medium focus:text-emerald-400">Aktif</SelectItem>
+                                <SelectItem value="suspended" className="text-red-500 font-medium focus:text-red-400">Askıya Al</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           {user.role === 'admin' || user.role === 'super_admin' ? (
