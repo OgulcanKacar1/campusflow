@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { getInstructorCourses } from '../actions';
 import type { InstructorCourse as Course } from '@/types/course';
 import { CreateCourseModal } from '@/components/dashboard/instructor/CreateCourseModal';
+import { DashboardBreadcrumb } from '@/components/dashboard/DashboardBreadcrumb';
 
 export default function InstructorCoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -65,13 +66,11 @@ export default function InstructorCoursesPage() {
   };
 
   return (
-    <div className="p-8">
-      <div className="max-w-6xl">
+    <div className="p-6 md:p-8">
+      <div className="max-w-7xl mx-auto flex flex-col gap-6">
+        <DashboardBreadcrumb items={[{ label: 'Derslerim' }]} />
+        
         <div className="mb-6">
-          <Link href="/dashboard/instructor" className="text-gray-400 hover:text-white flex items-center text-sm w-fit mb-4 transition-colors">
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Hoca Paneline Dön
-          </Link>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h1 className="text-3xl font-bold text-white mb-2">Derslerim</h1>

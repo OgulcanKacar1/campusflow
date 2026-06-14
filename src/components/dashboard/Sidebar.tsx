@@ -17,6 +17,7 @@ import {
   Building2,
   GraduationCap,
   ClipboardList,
+  BarChart2,
 } from 'lucide-react';
 
 // --- Rol Bazlı Menü Tanımları ---
@@ -36,6 +37,7 @@ const menuByRole: Record<string, { label: string; href: string; icon: React.Elem
   instructor: [
     { label: 'Genel Bakış', href: '/dashboard/instructor', icon: LayoutDashboard },
     { label: 'Derslerim', href: '/dashboard/instructor/courses', icon: BookOpen },
+    { label: 'AI Raporları', href: '/dashboard/instructor/reports', icon: BarChart2 },
     { label: 'Ayarlar', href: '/dashboard/instructor/settings', icon: Settings },
   ],
   student: [

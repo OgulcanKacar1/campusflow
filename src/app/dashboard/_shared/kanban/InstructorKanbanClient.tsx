@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Loader2, Plus, RefreshCw, Trash2, Info, LayoutTemplate, GitBranch, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { SprintTemplateModal } from '@/components/dashboard/instructor/courses/SprintTemplateModal';
 import type { DropResult } from '@hello-pangea/dnd';
 import type { KanbanBoardSnapshot, KanbanSprint, KanbanTask, TaskPriority, TaskStatus, SprintStatus } from '@/types/kanban';
@@ -15,13 +15,16 @@ import { TaskDialog } from './TaskDialog';
 import { TaskDetailDialog } from './TaskDetailDialog';
 import { AiReportDialog } from './AiReportDialog';
 import { ConfirmDialog } from './ConfirmDialog';
-import { moveTask as moveTaskAction, updateCourseSprintMode } from '../../shared/kanban-actions';
+import { moveTask as moveTaskAction, updateCourseSprintMode, updateTeamProjectDetails } from '../../shared/kanban-actions';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { checkGithubConnection, disconnectGithub } from '../../shared/github-actions';
+import { DashboardBreadcrumb } from '@/components/dashboard/DashboardBreadcrumb';
 
 interface TeamKanbanClientProps {
   teamId: string;
   teamName: string;
   courseName: string;
+  courseCode?: string;
   courseId?: string;
   courseTeams?: { id: string; name: string }[];
   initialSnapshot: KanbanBoardSnapshot;
@@ -34,12 +37,14 @@ export function TeamKanbanClient({
   teamId,
   teamName,
   courseName,
+  courseCode,
   courseId,
   courseTeams = [],
   initialSnapshot,
   initialError,
 }: TeamKanbanClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   
   // ── AI Report UI State ───────────────────────────────────────────────
@@ -56,6 +61,11 @@ export function TeamKanbanClient({
   const [isTaskDialogOpen, setTaskDialogOpen] = useState(false);
   const [isCreatingSprint, setCreatingSprint] = useState(false);
   const [isCreatingTask, setCreatingTask] = useState(false);
+
+  const [isProjectDetailsOpen, setProjectDetailsOpen] = useState(false);
+  const [projectNameForm, setProjectNameForm] = useState(initialSnapshot.projectName || '');
+  const [projectDescForm, setProjectDescForm] = useState(initialSnapshot.projectDescription || '');
+  const [isSavingProjectDetails, setIsSavingProjectDetails] = useState(false);
 
   // ── Task detail & update states ─────────────────────────────────────
   const [selectedTask, setSelectedTask] = useState<KanbanTask | null>(null);
@@ -113,9 +123,39 @@ export function TeamKanbanClient({
     };
   }, [teamId]);
 
+  // Auto-open AI Report if navigated from Reports Archive
+  useEffect(() => {
+    const openReport = searchParams.get('openReport');
+    const sprintIdParam = searchParams.get('sprint');
+    
+    if (openReport === 'true' && sprintIdParam && board.sprints) {
+      const sprint = board.sprints.find(s => s.id === sprintIdParam);
+      if (sprint) {
+        setAiReportSprint({ id: sprint.id, name: sprint.name });
+        setAiReportOpen(true);
+        
+        // Clean up the URL so it doesn't re-open on refresh
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, [board.sprints, searchParams]);
+
   const isBusy = isRefreshing || isMutating || githubState.loading || isDisconnectingGithub;
 
   // ── Handlers ────────────────────────────────────────────────────────
+  const handleSaveProjectDetails = async () => {
+    setIsSavingProjectDetails(true);
+    const res = await updateTeamProjectDetails(teamId, projectNameForm, projectDescForm);
+    setIsSavingProjectDetails(false);
+    if (res.error) {
+      handleError(res.error);
+    } else {
+      handleSuccess('Proje detayları başarıyla kaydedildi.');
+      setProjectDetailsOpen(false);
+      handleRefresh();
+    }
+  };
+
   const handleRefresh = useCallback(() => {
     setBanner(null);
     void actions.refresh();
@@ -361,11 +401,15 @@ export function TeamKanbanClient({
                   setAiReportOpen(true);
                 }}
                 disabled={isBusy}
-                className="h-7 px-3 text-[11px] uppercase tracking-wider font-semibold border-amber-700/50 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 gap-1.5"
-                title="Yapay Zeka ile Öğrenci Katkı Raporu Al"
+                className={`h-7 px-3 text-[11px] uppercase tracking-wider font-semibold gap-1.5 ${
+                  sprint.hasAiReport
+                    ? 'border-indigo-700/50 text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300'
+                    : 'border-amber-700/50 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300'
+                }`}
+                title={sprint.hasAiReport ? "Mevcut Raporu Görüntüle" : "Yapay Zeka ile Öğrenci Katkı Raporu Al"}
               >
                 <Sparkles className="h-3 w-3" />
-                AI Raporu
+                {sprint.hasAiReport ? 'Raporu Görüntüle' : 'Yeni Rapor Oluştur'}
               </Button>
             )}
             {sprint.status === 'active' && (
@@ -407,22 +451,39 @@ export function TeamKanbanClient({
   // ── Render ──────────────────────────────────────────────────────────
   const isInstructorManaged = !board.canManageSprints;
 
+  const breadcrumbItems = [
+    { label: 'Derslerim', href: '/dashboard/instructor/courses' },
+    { label: courseName, href: courseId ? `/dashboard/instructor/courses/${courseId}` : undefined },
+    { label: teamName }
+  ];
+
   return (
     <div className="flex flex-col gap-6 bg-[#050a19] px-6 py-8 min-h-screen">
       {/* Sticky, Glassmorphism Header */}
       <header className="sticky top-0 z-20 flex flex-col gap-3 rounded-2xl border border-slate-800/60 bg-slate-900/40 p-6 shadow-lg shadow-slate-950/40 backdrop-blur-md">
+        
+        <DashboardBreadcrumb items={breadcrumbItems} />
+
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-2">
-            <div className="flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-slate-500">
-              <span>{courseName}</span>
-              <span className="text-slate-700">•</span>
-              <span>Kanban</span>
-            </div>
-            
+            <div className="flex items-center gap-3">
               <h1 className="text-2xl font-semibold text-white sm:text-3xl">
                 {teamName}
               </h1>
+              {(board.isLeader || board.isInstructor) && (
+                <Button variant="ghost" size="sm" onClick={() => setProjectDetailsOpen(true)} className="h-8 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10">
+                  {board.projectName ? 'Proje Detayını Düzenle' : 'Proje Detayı Ekle'}
+                </Button>
+              )}
             </div>
+            {(board.projectName || board.projectDescription) && (
+              <p className="text-sm text-slate-400 max-w-2xl mt-1">
+                {board.projectName && <strong className="text-slate-300">{board.projectName}</strong>}
+                {board.projectName && board.projectDescription && " - "}
+                {board.projectDescription}
+              </p>
+            )}
+          </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <Badge
@@ -659,12 +720,57 @@ export function TeamKanbanClient({
         />
       )}
 
+      <Dialog open={isProjectDetailsOpen} onOpenChange={setProjectDetailsOpen}>
+        <DialogContent className="sm:max-w-[500px] bg-slate-900 border-slate-800 text-slate-200">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-white">Proje Detayları</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Yapay zeka analizinin daha tutarlı olabilmesi için takımın üzerinde çalıştığı projenin konusunu ve amacını belirtin.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <label htmlFor="projectName" className="text-sm font-medium text-slate-300">Proje Adı</label>
+              <input
+                id="projectName"
+                value={projectNameForm}
+                onChange={(e) => setProjectNameForm(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Örn: E-Ticaret Platformu"
+              />
+            </div>
+            <div className="grid gap-2">
+              <label htmlFor="projectDesc" className="text-sm font-medium text-slate-300">Proje Açıklaması ve Amacı</label>
+              <textarea
+                id="projectDesc"
+                value={projectDescForm}
+                onChange={(e) => setProjectDescForm(e.target.value)}
+                className="flex min-h-[100px] w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Takımın genel amacı ve bu projenin neyi çözeceği..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProjectDetailsOpen(false)} className="border-slate-700 text-slate-300 hover:bg-slate-800">
+              İptal
+            </Button>
+            <Button onClick={handleSaveProjectDetails} disabled={isSavingProjectDetails} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+              {isSavingProjectDetails ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Kaydet
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <AiReportDialog
         isOpen={isAiReportOpen}
         onOpenChange={setAiReportOpen}
         teamId={teamId}
         sprintId={aiReportSprint?.id || null}
         sprintName={aiReportSprint?.name}
+        courseName={courseName}
+        courseCode={courseCode}
+        teamName={teamName}
       />
     </div>
   );

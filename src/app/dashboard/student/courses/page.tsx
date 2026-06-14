@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Loader2, ArrowLeft, KeyRound, BookOpen, Users, ClipboardList, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import { DashboardBreadcrumb } from '@/components/dashboard/DashboardBreadcrumb';
 import type { StudentCourse as Course } from '@/types/course';
 
 const termColors: Record<string, string> = {
@@ -73,13 +74,12 @@ export default function StudentCoursesPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="max-w-6xl">
+    <div className="p-6 md:p-8">
+      <div className="max-w-7xl mx-auto flex flex-col gap-6">
+        <DashboardBreadcrumb items={[{ label: 'Derslerim' }]} />
+
         {/* Header */}
-        <div className="mb-8">
-          <Link href="/dashboard/student" className="text-gray-400 hover:text-white flex items-center text-sm w-fit mb-4 transition-colors">
-            <ArrowLeft className="w-4 h-4 mr-1" /> Öğrenci Paneline Dön
-          </Link>
+        <div className="mb-2">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h1 className="text-3xl font-bold text-white mb-1">Derslerim</h1>

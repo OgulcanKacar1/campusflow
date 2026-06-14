@@ -47,6 +47,8 @@ interface TeamMembershipRow {
 interface TeamRow {
   id: string;
   name: string;
+  project_name?: string | null;
+  project_description?: string | null;
   course_id: string;
   course: {
     id: string;
@@ -150,7 +152,7 @@ function mapTask(row: TaskRow, assignments: KanbanTaskAssignment[]): KanbanTask 
   };
 }
 
-function mapSprint(row: SprintRow, tasks: KanbanTask[]): KanbanSprint {
+function mapSprint(row: SprintRow, tasks: KanbanTask[], hasAiReport: boolean = false): KanbanSprint {
   return {
     id: row.id,
     teamId: row.team_id,
@@ -159,6 +161,7 @@ function mapSprint(row: SprintRow, tasks: KanbanTask[]): KanbanSprint {
     startAt: row.start_at,
     endAt: row.end_at,
     position: row.position ?? 0,
+    hasAiReport,
     createdBy: row.created_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -189,7 +192,7 @@ async function resolveTeamAccess(teamId: string): Promise<{ context?: TeamAccess
   const { data: team, error: teamError } = await supabase
     .from('teams')
     .select(
-      `id, name, course_id,
+      `id, name, project_name, project_description, course_id,
        course:course_id ( id, instructor_id, organization_id, sprint_mode ),
        team_members ( student_id, role, left_at )`
     )
@@ -340,9 +343,16 @@ async function fetchBoardData(context: TeamAccessContext): Promise<KanbanActionR
   const tasks = tasksList.map(row => mapTask(row, assignmentMap.get(row.id) ?? []));
   const sprintList = (sprintRows ?? []) as SprintRow[];
 
+  const { data: reportsData } = await supabase
+    .from('ai_sprint_reports')
+    .select('sprint_id')
+    .eq('team_id', team.id);
+  
+  const reportedSprintIds = new Set((reportsData || []).map(r => r.sprint_id));
+
   const sprints = sprintList.map(sprint => {
     const sprintTasks = tasks.filter(task => task.sprintId === sprint.id);
-    return mapSprint(sprint, sprintTasks);
+    return mapSprint(sprint, sprintTasks, reportedSprintIds.has(sprint.id));
   });
 
   const backlogTasks = tasks.filter(task => task.sprintId === null);
@@ -367,6 +377,8 @@ async function fetchBoardData(context: TeamAccessContext): Promise<KanbanActionR
     data: {
       teamId: team.id,
       courseId: team.course_id,
+      projectName: team.project_name ?? null,
+      projectDescription: team.project_description ?? null,
       canManageTasks: context.canManageTasks,
       canManageSprints: context.canManageSprints,
       canMoveTasks: context.canMoveTasks,
@@ -992,3 +1004,26 @@ export async function updateCourseSprintMode(courseId: string, teamId: string, m
   revalidatePath(`/dashboard/student/courses/${courseId}`);
   return { data: null };
 }
+
+export async function updateTeamProjectDetails(teamId: string, projectName: string, projectDescription: string): Promise<KanbanActionResult<null>> {
+  const resolved = await resolveTeamAccess(teamId);
+  if (resolved.error) return resolved.error;
+  const context = resolved.context!;
+
+  if (!context.isInstructor && !context.isLeader) {
+    return buildError('Bu işlemi sadece eğitmen veya takım lideri yapabilir.', 'NOT_AUTHORIZED');
+  }
+
+  const { error } = await context.supabase
+    .from('teams')
+    .update({ project_name: projectName, project_description: projectDescription })
+    .eq('id', teamId);
+
+  if (error) {
+    return buildError('Proje detayları güncellenirken bir hata oluştu.', 'SUPABASE_ERROR');
+  }
+
+  await revalidateKanban(undefined, context.team.course_id, teamId);
+  return { data: null };
+}
+

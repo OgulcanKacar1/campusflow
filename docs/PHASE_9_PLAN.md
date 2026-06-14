@@ -20,17 +20,17 @@
 ## 1. Veritabanı ve Şema (Database & Schema)
 Öncelikle AI raporlarını kalıcı olarak saklayacağımız yapıyı kurmalıyız.
 
-- [ ] `supabase/migrations/0047_ai_sprint_reports.sql` migration dosyasını oluştur.
+- [x] `supabase/migrations/0047_ai_sprint_reports.sql` migration dosyasını oluştur.
   - Sütunlar: `id` (UUID), `team_id` (UUID), `sprint_id` (UUID), `report_content` (JSONB - AI'ın ürettiği yapılandırılmış veri), `created_at` (Timestamp).
-- [ ] TypeScript tiplerini (`src/types/kanban.ts` veya yeni bir `ai.ts`) güncelle:
+- [x] TypeScript tiplerini (`src/types/kanban.ts` veya yeni bir `ai.ts`) güncelle:
   - `AiSprintReport` arayüzünü oluştur.
 
 ## 2. Yapay Zeka Entegrasyonu (Backend & AI SDK)
 Vercel AI SDK paketlerini kurup Gemini entegrasyonunu yapacağız.
 
-- [ ] Gerekli paketlerin kurulumu: `npm install ai @ai-sdk/google`
-- [ ] `.env.local` dosyasına `GOOGLE_GENERATIVE_AI_API_KEY` eklenmesi (Local testler için ayarlanacak).
-- [ ] `src/app/api/ai/analyze-sprint/route.ts` API Endpoint'inin oluşturulması.
+- [x] Gerekli paketlerin kurulumu: `npm install ai @ai-sdk/google`
+- [x] `.env.local` dosyasına `GOOGLE_GENERATIVE_AI_API_KEY` eklenmesi (Local testler için ayarlanacak).
+- [x] `src/app/api/ai/analyze-sprint/route.ts` API Endpoint'inin oluşturulması.
   - Bu API, veritabanından sprint'teki tüm görevleri, GitHub commitlerini ve bağlantıları (attachments) çekecek.
   - Sistematik bir prompt oluşturulacak. Örnek: *"Sen bir yazılım eğitmenisin. Aşağıdaki JSON verisi Takım 2'nin Sprint 1 verisidir. Kimin ne kadar efor sarf ettiğini, kaliteyi ve iş dağılımını analiz et."*
   - Vercel AI SDK `generateObject` fonksiyonu ile JSON formatında garantili bir rapor çıktısı alınacak.
@@ -39,8 +39,8 @@ Vercel AI SDK paketlerini kurup Gemini entegrasyonunu yapacağız.
 ## 3. Kullanıcı Arayüzü (Frontend UI)
 Eğitmen için şık ve fütüristik bir raporlama ekranı çizeceğiz.
 
-- [ ] `InstructorKanbanClient.tsx` içine "Sprint AI Analizi" butonu (Sparkles/Yıldız ikonu ile) eklenecek.
-- [ ] Tıklandığında açılacak olan `AiReportDialog.tsx` bileşeninin oluşturulması.
+- [x] `InstructorKanbanClient.tsx` içine "Sprint AI Analizi" butonu (Sparkles/Yıldız ikonu ile) eklenecek.
+- [x] Tıklandığında açılacak olan `AiReportDialog.tsx` bileşeninin oluşturulması.
   - Bileşen açıldığında önce veritabanında bu sprint için rapor var mı diye bakacak.
   - Yoksa API'ye istek atacak ve loading (skeleton) durumunda "AI Verileri İnceliyor...", "Commitler Okunuyor..." gibi havalı yükleme metinleri gösterecek.
   - Rapor geldiğinde: 
@@ -49,6 +49,6 @@ Eğitmen için şık ve fütüristik bir raporlama ekranı çizeceğiz.
     - **Tavsiyeler:** AI'ın takıma veya eğitmene tavsiyeleri (Örn: "Tolga daha çok kod yazarken, Oğulcan sadece tasarım linkleri eklemiş, kodlamaya daha çok katılmalı").
 
 ## 4. Test ve Doğrulama (QA)
-- [ ] Test takımına örnek görevler, Drive linkleri ve GitHub commitleri girilmesi.
-- [ ] Eğitmen olarak butona basılması ve JSON raporunun hatasız bir şekilde UI'da görselleştirilmesinin doğrulanması.
-- [ ] Sayfa yenilendiğinde tekrar API'ye gitmek yerine doğrudan Supabase üzerinden anında okunabilmesi.
+- [x] Test takımına örnek görevler, Drive linkleri ve GitHub commitleri girilmesi.
+- [x] Eğitmen olarak butona basılması ve JSON raporunun hatasız bir şekilde UI'da görselleştirilmesinin doğrulanması.
+- [x] Sayfa yenilendiğinde tekrar API'ye gitmek yerine doğrudan Supabase üzerinden anında okunabilmesi.

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { generateObject } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { z } from 'zod';
+import { createClient as createAdminClient } from '@supabase/supabase-js';
 
 export async function POST(req: Request) {
   try {
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
     // Yetki kontrolü (Sadece eğitmenler)
     const { data: teamAccess, error: accessError } = await supabase
       .from('teams')
-      .select('course:courses!inner(instructor_id)')
+      .select('project_name, project_description, course:courses!inner(instructor_id)')
       .eq('id', teamId)
       .single();
 
@@ -81,8 +82,54 @@ export async function POST(req: Request) {
     // 4. GitHub Etkinliklerini (Commitler) Çek
     const { data: githubEvents } = await supabase
       .from('task_github_events')
-      .select('task_id, event_type, payload, created_at')
+      .select('task_id, event_type, commit_hash, message, author_name, created_at')
       .in('task_id', taskIds.length > 0 ? taskIds : [null]);
+
+    // 5. GitHub Token Çek ve Diff'leri (Değişen Kodları) Fetch Et
+    const { data: githubConnection } = await supabase
+      .from('github_connections')
+      .select('access_token, repo_full_name')
+      .eq('team_id', teamId)
+      .maybeSingle();
+
+    const accessToken = githubConnection?.access_token;
+    const commitDiffs: Record<string, string> = {};
+
+    if (accessToken) {
+      const commitsToFetch = new Map<string, string>(); // sha -> repoFullName
+      githubEvents?.forEach(e => {
+        if (e.event_type === 'commit' && e.commit_hash) {
+          const repo = githubConnection.repo_full_name;
+          if (repo && repo !== 'baglanildi') {
+            commitsToFetch.set(e.commit_hash, repo);
+          }
+        }
+      });
+
+      for (const [sha, repo] of commitsToFetch.entries()) {
+        try {
+          const res = await fetch(`https://api.github.com/repos/${repo}/commits/${sha}`, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              Accept: 'application/vnd.github.v3.diff',
+              'User-Agent': 'CampusFlow-App'
+            }
+          });
+          if (res.ok) {
+            let diff = await res.text();
+            // Yapay zeka token limitini korumak için çok uzun diff'leri kırp
+            if (diff.length > 2500) {
+              diff = diff.substring(0, 2500) + '\n... [Diff çok uzun olduğu için kırpıldı]';
+            }
+            commitDiffs[sha] = diff;
+          } else {
+            console.warn(`GitHub Diff alınamadı: ${sha} (Status: ${res.status})`);
+          }
+        } catch (err) {
+          console.error('Diff fetch error for', sha, err);
+        }
+      }
+    }
 
     // Verileri AI için formatla
     const studentsData = members?.map(m => {
@@ -99,12 +146,22 @@ export async function POST(req: Request) {
         return s ? s.name : 'Bilinmeyen Öğrenci';
       }) || [];
 
-      const events = githubEvents?.filter(e => e.task_id === t.id).map(e => ({
-        type: e.event_type,
-        author: (e.payload as any)?.author_name || 'Bilinmiyor',
-        message: (e.payload as any)?.commit_message || 'Bilinmiyor',
-        date: e.created_at
-      })) || [];
+      const events = githubEvents?.filter(e => e.task_id === t.id).map(e => {
+        let diffs = '';
+        
+        if (e.event_type === 'commit' && e.commit_hash) {
+          const patch = commitDiffs[e.commit_hash] ? `Değişen Kodlar (Diff):\n${commitDiffs[e.commit_hash]}` : 'Kod içeriği alınamadı.';
+          diffs = `Commit: ${e.message}\nYazar: ${e.author_name}\n${patch}`;
+        }
+
+        return {
+          type: e.event_type,
+          author: e.author_name || 'Bilinmiyor',
+          message: e.message || 'Bilinmiyor',
+          date: e.created_at,
+          code_changes: diffs // Yapay zekanın analiz edeceği ana kanıt
+        };
+      }) || [];
 
       return {
         title: t.title,
@@ -118,6 +175,12 @@ export async function POST(req: Request) {
 
     // Sistem Promptunu oluştur
     const systemPrompt = `Sen bir yazılım eğitmeni asistanısın. Görevin, bir yazılım geliştirme takımının (Öğrencilerin) belirli bir sprint boyunca yaptığı çalışmaları analiz ederek, her bir öğrencinin katkısını adil ve detaylı bir şekilde değerlendirmektir.
+
+Takımın üzerinde çalıştığı proje ve hedefleri şunlardır:
+Proje Adı: ${teamAccess?.project_name || 'Belirtilmemiş'}
+Proje Açıklaması/Amacı: ${teamAccess?.project_description || 'Belirtilmemiş'}
+
+(Lütfen analizini ve takımın ilerlemesini değerlendirirken bu proje hedefini göz önünde bulundur. Eklenen kodların veya tasarımların bu hedefe ne kadar hizmet ettiğini değerlendirmenıze dahil et.)
 
 Aşağıda takım üyeleri ve o sprintteki görevlerin dökümü JSON formatında verilmiştir.
 Görevlerin durumları, kimlere atandığı, eklenen Drive/Figma linkleri (attachments) ve atılan GitHub commitlerine bakarak detaylı bir analiz çıkar.
@@ -133,6 +196,7 @@ ${JSON.stringify(formattedTasks, null, 2)}
 2. Öğrencilerin katkı yüzdelerinin toplamı her zaman %100 olmalıdır.
 3. 'feedback' (Geri bildirim) alanı yapıcı olmalı. Örneğin: "Ali çok sayıda commit atmış ancak hiçbir göreve tasarım/döküman linki eklememiş" veya "Ayşe commit atmamış ancak tüm analiz dokümanlarını o yüklemiş".
 4. 'recommendations' alanı takımın genel gidişatı için 2-3 cümlelik tavsiyeler içermeli.
+5. (ÇOK KRİTİK): GÖREVLER VE İŞLEMLER içindeki 'code_changes' (Git diff/patch) verilerini DİKKATLİCE İNCELE. Öğrencinin değiştirdiği kod gerçekten mantıksal bir özellik (logic, UI, backend vb.) ekliyor mu? Yoksa sadece boşlukları, yorum satırlarını veya önemsiz dosyaları (README ufak harf değişimi vb.) değiştirerek sahte bir aktivite mi yaratmış? Eğer bir öğrenci 'sahte' (fake/önemsiz) commitlerle sistemi kandırmaya çalışıyorsa onun katkı oranını düşür ve 'feedback' kısmında bu zayıf/anlamsız kod katkısını hocaya kesinlikle raporla (Örn: "Commit sayıları yüksek görünse de kod içeriklerinde sadece yorum satırları değiştirilmiş, gerçek bir mantıksal katkı bulunmuyor."). Eğer gerçekten kaliteli ve projeye değer katan zorlu kodlar (diff'ler) yazılmışsa bunu da mutlaka öv.
 `;
 
     // Vercel AI SDK ile garantili JSON üretimi
@@ -155,8 +219,13 @@ ${JSON.stringify(formattedTasks, null, 2)}
       prompt: systemPrompt,
     });
 
-    // Üretilen JSON'ı veritabanına kaydet
-    const { error: insertError } = await supabase
+    // Üretilen JSON'ı veritabanına kaydet (Admin Client ile RLS bypass)
+    const adminSupabase = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    const { error: insertError } = await adminSupabase
       .from('ai_sprint_reports')
       .insert({
         team_id: teamId,
@@ -173,5 +242,40 @@ ${JSON.stringify(formattedTasks, null, 2)}
   } catch (error: any) {
     console.error('AI Analysis Error:', error);
     return NextResponse.json({ error: error?.message || 'AI analizi sırasında beklenmeyen bir hata oluştu.' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const sprintId = searchParams.get('sprintId');
+
+    if (!sprintId) {
+      return NextResponse.json({ error: 'sprintId is required' }, { status: 400 });
+    }
+
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const adminSupabase = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    const { error } = await adminSupabase
+      .from('ai_sprint_reports')
+      .delete()
+      .eq('sprint_id', sprintId);
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Delete Report Error:', error);
+    return NextResponse.json({ error: 'Rapor silinirken hata oluştu.' }, { status: 500 });
   }
 }

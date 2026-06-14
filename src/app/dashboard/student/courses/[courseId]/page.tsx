@@ -7,6 +7,7 @@ import { TeamSection } from './TeamSection.client';
 import { StudentKanbanClient } from '@/app/dashboard/_shared/kanban/StudentKanbanClient';
 import { getKanbanBoard } from '@/app/dashboard/shared/kanban-actions';
 import { createEmptyBoardSnapshot } from '@/app/dashboard/_shared/kanban/utils';
+import { DashboardBreadcrumb } from '@/components/dashboard/DashboardBreadcrumb';
 import type { Team, TeamMember } from '@/types/team';
 
 interface TeamMemberRow {
@@ -157,15 +158,16 @@ export default async function CourseDetailPage({
   }
 
   return (
-    <div className="p-4 md:p-8">
-      <div className="max-w-[1400px] mx-auto w-full">
+    <div className="p-6 md:p-8">
+      <div className="max-w-7xl mx-auto flex flex-col gap-6">
         {/* Breadcrumb */}
-        <Link href="/dashboard/student/courses" className="text-gray-400 hover:text-white flex items-center text-sm w-fit mb-6 transition-colors">
-          <ArrowLeft className="w-4 h-4 mr-1" /> Derslerime Dön
-        </Link>
+        <DashboardBreadcrumb items={[
+          { label: 'Derslerim', href: '/dashboard/student/courses' },
+          { label: course.name }
+        ]} />
 
         {/* Course Hero */}
-        <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-transparent p-8 mb-8">
+        <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-transparent p-8 mb-2">
           <div className="flex items-start justify-between flex-wrap gap-4">
             <div>
               <p className="text-xs font-mono text-white/40 tracking-widest uppercase mb-1">{course.code}</p>

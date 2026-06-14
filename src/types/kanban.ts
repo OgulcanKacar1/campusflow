@@ -78,6 +78,7 @@ export interface KanbanSprint {
   startAt: string;
   endAt: string;
   position: number;
+  hasAiReport?: boolean;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -87,6 +88,8 @@ export interface KanbanSprint {
 export interface KanbanBoardSnapshot {
   teamId: string;
   courseId: string;
+  projectName?: string | null;
+  projectDescription?: string | null;
   canManageTasks: boolean;
   canManageSprints: boolean;
   canMoveTasks: boolean;

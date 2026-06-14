@@ -2,6 +2,7 @@ import { getStudentStats } from './actions';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { GraduationCap, ClipboardList, Users, BookOpen, ChevronRight, Sparkles } from 'lucide-react';
+import { DashboardBreadcrumb } from '@/components/dashboard/DashboardBreadcrumb';
 
 async function getStudentName() {
   const supabase = await createClient();
@@ -20,11 +21,12 @@ export default async function StudentDashboard() {
   const greeting = hour < 12 ? 'Günaydın' : hour < 18 ? 'İyi günler' : 'İyi akşamlar';
 
   return (
-    <div className="p-8">
-      <div className="max-w-5xl">
+    <div className="p-6 md:p-8">
+      <div className="max-w-7xl mx-auto flex flex-col gap-6">
+        <DashboardBreadcrumb items={[{ label: 'Genel Bakış' }]} />
 
         {/* Hero Greeting */}
-        <div className="mb-10">
+        <div className="mb-10 mt-2">
           <div className="flex items-center gap-2 text-yellow-400/70 text-sm mb-2">
             <Sparkles className="w-4 h-4" />
             <span>{greeting}, {firstName}!</span>

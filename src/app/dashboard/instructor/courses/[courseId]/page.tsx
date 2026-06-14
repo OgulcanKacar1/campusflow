@@ -18,6 +18,7 @@ import { RemoveMemberDialog } from '@/components/dashboard/instructor/teams/Remo
 import { CreateTeamButton } from '@/components/dashboard/instructor/teams/CreateTeamButton';
 import { RandomTeamsButton } from '@/components/dashboard/instructor/teams/RandomTeamsButton';
 import { SprintTemplateModal } from '@/components/dashboard/instructor/courses/SprintTemplateModal';
+import { DashboardBreadcrumb } from '@/components/dashboard/DashboardBreadcrumb';
 import type { InstructorCourse } from '@/types/course';
 import type { Team, TeamMember } from '@/types/team';
 import type { CourseStudentSummary } from '@/types/instructor';
@@ -248,7 +249,7 @@ export default function CourseDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0f1e]">
+    <div className="min-h-screen bg-[#0a0f1e] p-6 md:p-8">
       {/* Toast Notification */}
       {toast && (
         <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg transition-all ${
@@ -261,16 +262,14 @@ export default function CourseDetailPage() {
         </div>
       )}
       
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto flex flex-col gap-6">
+        <DashboardBreadcrumb items={[
+          { label: 'Derslerim', href: '/dashboard/instructor/courses' },
+          { label: course?.name || 'Yükleniyor...' }
+        ]} />
+
         {/* Header */}
-        <div className="mb-8">
-          <Link 
-            href="/dashboard/instructor/courses" 
-            className="text-gray-400 hover:text-white flex items-center text-sm w-fit mb-4 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Derslere Dön
-          </Link>
+        <div className="mb-2">
           
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
