@@ -61,14 +61,42 @@ export async function updateSession(request: NextRequest) {
       if (pathSegments.length >= 2) {
         const attemptedRoleSection = pathSegments[1]; // 'super-admin', 'admin', 'instructor', 'student'
 
-        // Rolü çek
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role')
+          .select('role, metadata, organizations(status)')
           .eq('id', user.id)
           .single();
 
         if (profile) {
+          // Bireysel hesap askıya alınmışsa dashboard'a girişini engelle (Super admin hariç)
+          if (profile.role !== 'super_admin' && profile.metadata?.status === 'suspended') {
+            const url = request.nextUrl.clone();
+            url.pathname = '/login';
+            url.searchParams.set('error', 'Hesabınız askıya alındığı için oturumunuz sonlandırıldı.');
+            
+            const redirectResponse = NextResponse.redirect(url);
+            request.cookies.getAll().forEach(cookie => {
+              if (cookie.name.startsWith('sb-')) redirectResponse.cookies.delete(cookie.name);
+            });
+            return redirectResponse;
+          }
+
+          // Okul askıya alınmışsa dashboard'a girişini engelle (Super admin hariç)
+          if (profile.role !== 'super_admin' && profile.organizations && profile.organizations.status === 'suspended') {
+            const url = request.nextUrl.clone();
+            url.pathname = '/login';
+            url.searchParams.set('error', 'Okulunuz askıya alındığı için oturumunuz sonlandırıldı.');
+            
+            const redirectResponse = NextResponse.redirect(url);
+            
+            // Oturum çerezlerini doğrudan redirect response üzerinden temizle
+            request.cookies.getAll().forEach(cookie => {
+              if (cookie.name.startsWith('sb-')) {
+                redirectResponse.cookies.delete(cookie.name);
+              }
+            });
+            return redirectResponse;
+          }
           let userRolePath = profile.role;
           // 'super_admin' olan rolümüz URL'de 'super-admin' olarak geçiyor
           if (userRolePath === 'super_admin') userRolePath = 'super-admin';

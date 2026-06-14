@@ -1,8 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
+
+const getAdminClient = () => createSupabaseClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 import {
   KANBAN_STATUS_DEFINITIONS,
   normalizeSprintStatus,
@@ -13,6 +18,9 @@ import {
   type CreateTaskInput,
   type DeleteSprintInput,
   type DeleteTaskInput,
+  type AddTaskAttachmentInput,
+  type RemoveTaskAttachmentInput,
+  type TaskAttachment,
   type KanbanActionResult,
   type KanbanBoardSnapshot,
   type KanbanColumn,
@@ -28,6 +36,8 @@ import {
   type UpdateSprintInput,
   type UpdateTaskInput,
 } from '@/types/kanban';
+import { createNotification } from './notification-actions';
+import { sendEmail } from '@/lib/mail';
 
 interface ProfileRow {
   id: string;
@@ -44,9 +54,13 @@ interface TeamMembershipRow {
 interface TeamRow {
   id: string;
   name: string;
+  project_name?: string | null;
+  project_description?: string | null;
   course_id: string;
   course: {
     id: string;
+    code: string;
+    name: string;
     instructor_id: string;
     organization_id: string | null;
     sprint_mode: 'team' | 'instructor';
@@ -81,6 +95,8 @@ interface TaskRow {
   created_by: string;
   created_at: string;
   updated_at: string;
+  short_id?: string | null;
+  attachments?: any;
 }
 
 type ProfileRelation =
@@ -106,6 +122,7 @@ interface TeamAccessContext {
   canManageTasks: boolean;
   canManageSprints: boolean;
   canMoveTasks: boolean;
+  sprintMode: 'instructor' | 'team';
   userId: string;
 }
 
@@ -140,10 +157,11 @@ function mapTask(row: TaskRow, assignments: KanbanTaskAssignment[]): KanbanTask 
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     assignments,
+    attachments: row.attachments || [],
   };
 }
 
-function mapSprint(row: SprintRow, tasks: KanbanTask[]): KanbanSprint {
+function mapSprint(row: SprintRow, tasks: KanbanTask[], hasAiReport: boolean = false): KanbanSprint {
   return {
     id: row.id,
     teamId: row.team_id,
@@ -152,6 +170,7 @@ function mapSprint(row: SprintRow, tasks: KanbanTask[]): KanbanSprint {
     startAt: row.start_at,
     endAt: row.end_at,
     position: row.position ?? 0,
+    hasAiReport,
     createdBy: row.created_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -182,8 +201,8 @@ async function resolveTeamAccess(teamId: string): Promise<{ context?: TeamAccess
   const { data: team, error: teamError } = await supabase
     .from('teams')
     .select(
-      `id, name, course_id,
-       course:course_id ( id, instructor_id, organization_id, sprint_mode ),
+      `id, name, project_name, project_description, course_id,
+       course:course_id ( id, code, name, instructor_id, organization_id, sprint_mode ),
        team_members ( student_id, role, left_at )`
     )
     .eq('id', teamId)
@@ -237,6 +256,7 @@ async function resolveTeamAccess(teamId: string): Promise<{ context?: TeamAccess
       canManageTasks,
       canManageSprints,
       canMoveTasks,
+      sprintMode,
       userId: user.id,
     },
   };
@@ -289,9 +309,10 @@ function groupAssignments(rows: TaskMemberRow[]): Map<string, KanbanTaskAssignme
 }
 
 async function fetchBoardData(context: TeamAccessContext): Promise<KanbanActionResult<KanbanBoardSnapshot>> {
-  const { supabase, team } = context;
+  const { team } = context;
+  const supabaseAdmin = getAdminClient();
 
-  const { data: sprintRows, error: sprintError } = await supabase
+  const { data: sprintRows, error: sprintError } = await supabaseAdmin
     .from('sprints')
     .select('id, team_id, name, status, start_at, end_at, position, created_by, created_at, updated_at')
     .eq('team_id', team.id)
@@ -301,9 +322,9 @@ async function fetchBoardData(context: TeamAccessContext): Promise<KanbanActionR
     return buildError('Sprint verileri alınamadı.', 'SUPABASE_ERROR');
   }
 
-  const { data: taskRows, error: taskError } = await supabase
+  const { data: taskRows, error: taskError } = await supabaseAdmin
     .from('tasks')
-    .select('id, team_id, sprint_id, title, short_id, description, developer_note, status, priority, position, assigned_to, created_by, created_at, updated_at')
+    .select('id, team_id, sprint_id, title, short_id, description, developer_note, status, priority, position, assigned_to, created_by, created_at, updated_at, attachments')
     .eq('team_id', team.id)
     .order('position', { ascending: true });
 
@@ -316,13 +337,14 @@ async function fetchBoardData(context: TeamAccessContext): Promise<KanbanActionR
 
   let assignmentMap = new Map<string, KanbanTaskAssignment[]>();
   if (taskIds.length > 0) {
-    const { data: assignmentRows, error: assignmentError } = await supabase
+    const { data: assignmentRows, error: assignmentError } = await supabaseAdmin
       .from('task_members')
       .select('task_id, student_id, profile:student_id ( full_name, email )')
       .in('task_id', taskIds);
 
     if (assignmentError) {
-      return buildError('Görev üyeleri alınamadı.', 'SUPABASE_ERROR');
+      console.error('Task members fetch error:', assignmentError);
+      return buildError(`Görev üyeleri alınamadı: ${assignmentError.message || JSON.stringify(assignmentError)}`, 'SUPABASE_ERROR');
     }
 
     assignmentMap = groupAssignments((assignmentRows ?? []) as TaskMemberRow[]);
@@ -331,15 +353,22 @@ async function fetchBoardData(context: TeamAccessContext): Promise<KanbanActionR
   const tasks = tasksList.map(row => mapTask(row, assignmentMap.get(row.id) ?? []));
   const sprintList = (sprintRows ?? []) as SprintRow[];
 
+  const { data: reportsData } = await supabaseAdmin
+    .from('ai_sprint_reports')
+    .select('sprint_id')
+    .eq('team_id', team.id);
+  
+  const reportedSprintIds = new Set((reportsData || []).map(r => r.sprint_id));
+
   const sprints = sprintList.map(sprint => {
     const sprintTasks = tasks.filter(task => task.sprintId === sprint.id);
-    return mapSprint(sprint, sprintTasks);
+    return mapSprint(sprint, sprintTasks, reportedSprintIds.has(sprint.id));
   });
 
   const backlogTasks = tasks.filter(task => task.sprintId === null);
   const backlogColumns = buildColumns(backlogTasks);
 
-  const { data: teamMembersData } = await supabase
+  const { data: teamMembersData } = await supabaseAdmin
     .from('team_members')
     .select('student_id, profile:student_id ( full_name, email )')
     .eq('team_id', team.id)
@@ -358,9 +387,14 @@ async function fetchBoardData(context: TeamAccessContext): Promise<KanbanActionR
     data: {
       teamId: team.id,
       courseId: team.course_id,
+      projectName: team.project_name ?? null,
+      projectDescription: team.project_description ?? null,
       canManageTasks: context.canManageTasks,
       canManageSprints: context.canManageSprints,
       canMoveTasks: context.canMoveTasks,
+      isInstructor: context.isInstructor,
+      isLeader: context.isLeader,
+      sprintMode: context.sprintMode,
       sprints,
       backlogColumns,
       teamMembers,
@@ -481,6 +515,18 @@ export async function createSprint(input: CreateSprintInput): Promise<KanbanActi
     return buildError('Sprint başlangıç ve bitiş tarihleri geçerli değil.', 'VALIDATION_ERROR');
   }
 
+  if (input.status === 'active') {
+    const { count } = await context.supabase
+      .from('sprints')
+      .select('id', { count: 'exact', head: true })
+      .eq('team_id', input.teamId)
+      .eq('status', 'active');
+      
+    if (count && count > 0) {
+      return buildError('Zaten aktif bir sprintiniz var. Lütfen önce aktif sprinti tamamlayın.', 'VALIDATION_ERROR');
+    }
+  }
+
   let position = input.position ?? 0;
   if (input.position === undefined) {
     try {
@@ -529,6 +575,19 @@ export async function updateSprint(input: UpdateSprintInput): Promise<KanbanActi
   if (input.startAt !== undefined) updatePayload.start_at = input.startAt;
   if (input.endAt !== undefined) updatePayload.end_at = input.endAt;
   if (input.position !== undefined) updatePayload.position = input.position;
+
+  if (input.status === 'active') {
+    const { count } = await context.supabase
+      .from('sprints')
+      .select('id', { count: 'exact', head: true })
+      .eq('team_id', input.teamId)
+      .eq('status', 'active')
+      .neq('id', input.sprintId);
+      
+    if (count && count > 0) {
+      return buildError('Zaten aktif bir sprintiniz var. Lütfen önce aktif sprinti tamamlayın.', 'VALIDATION_ERROR');
+    }
+  }
 
   if (updatePayload.start_at && updatePayload.end_at) {
     if (!validateDateOrder(updatePayload.start_at as string, updatePayload.end_at as string)) {
@@ -639,9 +698,61 @@ export async function createTask(input: CreateTaskInput): Promise<KanbanActionRe
       task_id: data.id,
       student_id: studentId,
     }));
-    await context.supabase.from('task_members').upsert(rows);
+    const supabaseAdmin = getAdminClient();
+    const { error: upsertError } = await supabaseAdmin.from('task_members').upsert(rows);
+    if (upsertError) {
+      console.error('Task assignees upsert error:', upsertError);
+    }
     // Hızlı dönüş için assignees objesini oluştur, tam profil detayı revalidate ile gelecek
     finalAssignments = input.assignees.map(id => ({ taskId: data.id, studentId: id }));
+
+    // Belirli atanan kişilere bildirim ve e-posta gönder (paralel)
+    const contextTitle = `[${context.team.course?.code || 'Ders'} - ${context.team.name}]`;
+    const notifyPromises = input.assignees
+      .filter(studentId => studentId !== context.userId)
+      .map(async (studentId) => {
+        await createNotification({
+          userId: studentId,
+          title: 'Yeni Görev Atandı',
+          content: `${contextTitle} '${data.title}' adlı görev size atandı.`,
+          type: 'task_assigned',
+          entityType: 'task',
+          entityId: data.id,
+        });
+
+        const { data: profile } = await context.supabase.from('profiles').select('email, full_name').eq('id', studentId).maybeSingle();
+        if (profile && profile.email) {
+          await sendEmail({
+            to: profile.email,
+            subject: `CampusFlow - Yeni Görev Ataması: ${contextTitle}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+                <h2 style="color: #4f46e5;">Yeni Görev Atandı</h2>
+                <p>Merhaba <b>${profile.full_name || 'Öğrenci'}</b>,</p>
+                <p>Sana yeni bir görev atandı:</p>
+                <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                  <p><b>Görev Başlığı:</b> ${data.title}</p>
+                  <p><b>Öncelik:</b> ${data.priority}</p>
+                </div>
+                <p>CampusFlow panosuna giderek göreve başlayabilirsin.</p>
+              </div>
+            `
+          });
+        }
+      });
+    await Promise.all(notifyPromises);
+  } else {
+    // Sadece takıma "yeni görev eklendi" bildirimi gönder (e-posta yok)
+    const members = context.team.team_members?.filter(m => m.left_at === null && m.student_id !== context.userId) || [];
+    const sysPromises = members.map(m => createNotification({
+      userId: m.student_id,
+      title: 'Yeni Görev Eklendi',
+      content: `'${data.title}' adlı yeni bir görev oluşturuldu.`,
+      type: 'system',
+      entityType: 'task',
+      entityId: data.id,
+    }));
+    await Promise.all(sysPromises);
   }
 
   await revalidateKanban(input.options, context.team.course_id, input.teamId);
@@ -696,13 +807,59 @@ export async function updateTask(input: UpdateTaskInput): Promise<KanbanActionRe
   }
 
   if (input.assignees !== undefined) {
-    await context.supabase.from('task_members').delete().eq('task_id', input.taskId);
+    const supabaseAdmin = getAdminClient();
+    
+    // Mevcut atananları bul ki sadece "yeni" eklenenlere mail atalım
+    const { data: existingMembers } = await context.supabase
+      .from('task_members')
+      .select('student_id')
+      .eq('task_id', input.taskId);
+    const existingIds = new Set(existingMembers?.map(m => m.student_id) || []);
+
+    await supabaseAdmin.from('task_members').delete().eq('task_id', input.taskId);
+    
     if (input.assignees.length > 0) {
       const rows = input.assignees.map(studentId => ({
         task_id: input.taskId,
         student_id: studentId,
       }));
-      await context.supabase.from('task_members').insert(rows);
+      await supabaseAdmin.from('task_members').insert(rows);
+    }
+
+    // Sadece "yeni" eklenen üyelere mail ve bildirim gönder
+    const newlyAdded = input.assignees.filter(id => !existingIds.has(id) && id !== context.userId);
+    if (newlyAdded.length > 0) {
+      const contextTitle = `[${context.team.course?.code || 'Ders'} - ${context.team.name}]`;
+      const notifyPromises = newlyAdded.map(async (studentId) => {
+        await createNotification({
+          userId: studentId,
+          title: 'Görev Size Atandı',
+          content: `${contextTitle} '${data?.title || 'Bilinmeyen Görev'}' adlı görev size atandı.`,
+          type: 'task_assigned',
+          entityType: 'task',
+          entityId: input.taskId,
+        });
+
+        const { data: profile } = await context.supabase.from('profiles').select('email, full_name').eq('id', studentId).maybeSingle();
+        if (profile && profile.email) {
+          await sendEmail({
+            to: profile.email,
+            subject: `CampusFlow - Görev Ataması: ${contextTitle}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+                <h2 style="color: #4f46e5;">Görev Ataması</h2>
+                <p>Merhaba <b>${profile.full_name || 'Öğrenci'}</b>,</p>
+                <p>Seni mevcut bir göreve atadılar:</p>
+                <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                  <p><b>Görev Başlığı:</b> ${data?.title}</p>
+                </div>
+                <p>Panoyu kontrol edebilirsin.</p>
+              </div>
+            `
+          });
+        }
+      });
+      await Promise.all(notifyPromises);
     }
   }
 
@@ -727,10 +884,10 @@ export async function moveTask(input: MoveTaskInput): Promise<KanbanActionResult
 
   const { data: currentTask, error: fetchError } = await context.supabase
     .from('tasks')
-    .select('id, sprint_id, status')
+    .select('id, sprint_id, status, short_id, title')
     .eq('id', input.taskId)
     .eq('team_id', input.teamId)
-    .single<{ id: string; sprint_id: string | null; status: string }>();
+    .single<{ id: string; sprint_id: string | null; status: string; short_id: string; title: string }>();
 
   if (fetchError || !currentTask) {
     return buildError('Görev bulunamadı.', 'NOT_FOUND');
@@ -762,6 +919,21 @@ export async function moveTask(input: MoveTaskInput): Promise<KanbanActionResult
     return buildError('Görev sıralaması normalize edilemedi.', 'SUPABASE_ERROR');
   }
 
+  if (previousStatus !== targetStatus) {
+    const members = context.team.team_members?.filter(m => m.left_at === null && m.student_id !== context.userId) || [];
+    const contextTitle = `[${context.team.course?.code || 'Ders'} - ${context.team.name}]`;
+    for (const m of members) {
+      await createNotification({
+        userId: m.student_id,
+        title: 'Görev Durumu Güncellendi',
+        content: `${contextTitle} '${currentTask.short_id} ${currentTask.title}' görevinin durumu '${targetStatus}' oldu.`,
+        type: 'task_status',
+        entityType: 'task',
+        entityId: input.taskId,
+      });
+    }
+  }
+
   await revalidateKanban(input.options, context.team.course_id, input.teamId);
   return { data: null };
 }
@@ -784,13 +956,49 @@ export async function assignTaskMembers(input: AssignTaskMembersInput): Promise<
     student_id: studentId,
   }));
 
-  const { error } = await context.supabase
+  const supabaseAdmin = getAdminClient();
+  const { error } = await supabaseAdmin
     .from('task_members')
     .upsert(rows, { onConflict: 'task_id,student_id', ignoreDuplicates: true });
 
   if (error) {
     return buildError('Görev üyeleri atanamadı.', 'SUPABASE_ERROR');
   }
+
+  const { data: taskData } = await context.supabase.from('tasks').select('title').eq('id', input.taskId).maybeSingle();
+  const contextTitle = `[${context.team.course?.code || 'Ders'} - ${context.team.name}]`;
+  const notifyPromises = input.studentIds
+    .filter(studentId => studentId !== context.userId)
+    .map(async (studentId) => {
+      await createNotification({
+        userId: studentId,
+        title: 'Görev Size Atandı',
+        content: `${contextTitle} '${taskData?.title || 'Bilinmeyen Görev'}' adlı görev size atandı.`,
+        type: 'task_assigned',
+        entityType: 'task',
+        entityId: input.taskId,
+      });
+
+      const { data: profile } = await context.supabase.from('profiles').select('email, full_name').eq('id', studentId).maybeSingle();
+      if (profile && profile.email) {
+        await sendEmail({
+          to: profile.email,
+          subject: `CampusFlow - Görev Ataması: ${contextTitle}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+              <h2 style="color: #4f46e5;">Görev Ataması</h2>
+              <p>Merhaba <b>${profile.full_name || 'Öğrenci'}</b>,</p>
+              <p>Seni mevcut bir göreve atadılar:</p>
+              <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                <p><b>Görev Başlığı:</b> ${taskData?.title}</p>
+              </div>
+              <p>Panoyu kontrol edebilirsin.</p>
+            </div>
+          `
+        });
+      }
+    });
+  await Promise.all(notifyPromises);
 
   await revalidateKanban(input.options, context.team.course_id, input.teamId);
   return { data: null };
@@ -880,3 +1088,126 @@ export async function deleteTask(input: DeleteTaskInput): Promise<KanbanActionRe
   await revalidateKanban(input.options, context.team.course_id, input.teamId);
   return { data: null };
 }
+
+function detectAttachmentType(url: string): 'drive' | 'figma' | 'github' | 'link' {
+  const lowerUrl = url.toLowerCase();
+  if (lowerUrl.includes('drive.google.com') || lowerUrl.includes('docs.google.com')) return 'drive';
+  if (lowerUrl.includes('figma.com')) return 'figma';
+  if (lowerUrl.includes('github.com')) return 'github';
+  return 'link';
+}
+
+export async function addTaskAttachment(input: AddTaskAttachmentInput): Promise<KanbanActionResult<TaskAttachment[]>> {
+  const resolved = await resolveTeamAccess(input.teamId);
+  if (resolved.error) return resolved.error;
+  const context = resolved.context!;
+
+  const { data: task, error: fetchErr } = await context.supabase
+    .from('tasks')
+    .select('attachments')
+    .eq('id', input.taskId)
+    .single();
+  
+  if (fetchErr || !task) return buildError('Görev bulunamadı.', 'NOT_FOUND');
+
+  const attachments = Array.isArray(task.attachments) ? task.attachments : [];
+  const detectedType = detectAttachmentType(input.url);
+  const defaultTitle = 
+    detectedType === 'drive' ? 'Google Drive Bağlantısı' :
+    detectedType === 'figma' ? 'Figma Tasarımı' :
+    detectedType === 'github' ? 'GitHub Bağlantısı' : 'Dış Bağlantı';
+
+  const newAttachment: TaskAttachment = {
+    id: crypto.randomUUID(),
+    url: input.url,
+    type: detectedType,
+    title: input.title?.trim() || defaultTitle,
+    added_by: context.profile.id,
+    added_at: new Date().toISOString()
+  };
+
+  attachments.push(newAttachment);
+
+  const { error: updateErr } = await context.supabase
+    .from('tasks')
+    .update({ attachments })
+    .eq('id', input.taskId);
+
+  if (updateErr) return buildError('Eklenti kaydedilemedi.', 'SUPABASE_ERROR');
+
+  await revalidateKanban(input.options, context.team.course_id, input.teamId);
+  return { data: attachments };
+}
+
+export async function removeTaskAttachment(input: RemoveTaskAttachmentInput): Promise<KanbanActionResult<TaskAttachment[]>> {
+  const resolved = await resolveTeamAccess(input.teamId);
+  if (resolved.error) return resolved.error;
+  const context = resolved.context!;
+
+  const { data: task, error: fetchErr } = await context.supabase
+    .from('tasks')
+    .select('attachments')
+    .eq('id', input.taskId)
+    .single();
+  
+  if (fetchErr || !task) return buildError('Görev bulunamadı.', 'NOT_FOUND');
+
+  const attachments = Array.isArray(task.attachments) ? task.attachments : [];
+  const filtered = attachments.filter((a: any) => a.id !== input.attachmentId);
+
+  const { error: updateErr } = await context.supabase
+    .from('tasks')
+    .update({ attachments: filtered })
+    .eq('id', input.taskId);
+
+  if (updateErr) return buildError('Eklenti silinemedi.', 'SUPABASE_ERROR');
+
+  await revalidateKanban(input.options, context.team.course_id, input.teamId);
+  return { data: filtered };
+}
+
+export async function updateCourseSprintMode(courseId: string, teamId: string, mode: 'instructor' | 'team'): Promise<KanbanActionResult<null>> {
+  const resolved = await resolveTeamAccess(teamId);
+  if (resolved.error) return resolved.error;
+  const context = resolved.context!;
+
+  if (!context.isInstructor) {
+    return buildError('Bu işlemi sadece eğitmen yapabilir.', 'NOT_AUTHORIZED');
+  }
+
+  const { error } = await context.supabase
+    .from('courses')
+    .update({ sprint_mode: mode })
+    .eq('id', courseId);
+
+  if (error) {
+    return buildError('Sprint modu güncellenirken bir hata oluştu.', 'SUPABASE_ERROR');
+  }
+
+  revalidatePath(`/dashboard/instructor/courses/${courseId}`);
+  revalidatePath(`/dashboard/student/courses/${courseId}`);
+  return { data: null };
+}
+
+export async function updateTeamProjectDetails(teamId: string, projectName: string, projectDescription: string): Promise<KanbanActionResult<null>> {
+  const resolved = await resolveTeamAccess(teamId);
+  if (resolved.error) return resolved.error;
+  const context = resolved.context!;
+
+  if (!context.isInstructor && !context.isLeader) {
+    return buildError('Bu işlemi sadece eğitmen veya takım lideri yapabilir.', 'NOT_AUTHORIZED');
+  }
+
+  const { error } = await context.supabase
+    .from('teams')
+    .update({ project_name: projectName, project_description: projectDescription })
+    .eq('id', teamId);
+
+  if (error) {
+    return buildError('Proje detayları güncellenirken bir hata oluştu.', 'SUPABASE_ERROR');
+  }
+
+  await revalidateKanban(undefined, context.team.course_id, teamId);
+  return { data: null };
+}
+

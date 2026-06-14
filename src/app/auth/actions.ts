@@ -12,6 +12,21 @@ export async function loginWithPasswordAndOTP(formData: FormData) {
   }
 
   const supabase = await createClient();
+
+  const domain = email.split('@')[1];
+  if (email !== 'ogulcankacarr@gmail.com') {
+    const { data: domainInfo, error: domainError } = await supabase
+      .rpc('check_domain_status', { p_domain: domain })
+      .single<{ organization_status: string }>();
+
+    if (domainError || !domainInfo) {
+      return { error: `Okulunuz (${domain}) henüz CampusFlow sistemine kayıtlı değil.` };
+    }
+
+    if (domainInfo.organization_status === 'suspended') {
+      return { error: `Okulunuz (${domain}) sistem yöneticisi tarafından askıya alınmıştır. Sisteme giriş yapamazsınız.` };
+    }
+  }
   const { error } = await supabase.auth.signInWithPassword({
     email,
     password,

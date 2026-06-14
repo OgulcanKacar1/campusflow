@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Loader2, Plus, RefreshCw, Trash2, Info, Settings, ChevronDown, LayoutTemplate, GitBranch } from 'lucide-react';
+import { Loader2, Plus, RefreshCw, Trash2, Info, LayoutTemplate, GitBranch, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { SprintTemplateModal } from '@/components/dashboard/instructor/courses/SprintTemplateModal';
 import type { DropResult } from '@hello-pangea/dnd';
 import type { KanbanBoardSnapshot, KanbanSprint, KanbanTask, TaskPriority, TaskStatus, SprintStatus } from '@/types/kanban';
@@ -13,14 +13,18 @@ import { KanbanBoard } from './KanbanBoard';
 import { SprintDialog } from './SprintDialog';
 import { TaskDialog } from './TaskDialog';
 import { TaskDetailDialog } from './TaskDetailDialog';
+import { AiReportDialog } from './AiReportDialog';
 import { ConfirmDialog } from './ConfirmDialog';
-import { moveTask as moveTaskAction } from '../../shared/kanban-actions';
+import { moveTask as moveTaskAction, updateCourseSprintMode, updateTeamProjectDetails } from '../../shared/kanban-actions';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { checkGithubConnection, disconnectGithub } from '../../shared/github-actions';
+import { DashboardBreadcrumb } from '@/components/dashboard/DashboardBreadcrumb';
 
 interface TeamKanbanClientProps {
   teamId: string;
   teamName: string;
   courseName: string;
+  courseCode?: string;
   courseId?: string;
   courseTeams?: { id: string; name: string }[];
   initialSnapshot: KanbanBoardSnapshot;
@@ -33,13 +37,20 @@ export function TeamKanbanClient({
   teamId,
   teamName,
   courseName,
+  courseCode,
   courseId,
   courseTeams = [],
   initialSnapshot,
   initialError,
 }: TeamKanbanClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  
+  // ── AI Report UI State ───────────────────────────────────────────────
+  const [isAiReportOpen, setAiReportOpen] = useState(false);
+  const [aiReportSprint, setAiReportSprint] = useState<{ id: string, name: string } | null>(null);
+
   // ── Banner ──────────────────────────────────────────────────────────
   const [banner, setBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(
     initialError ? { type: 'error', text: initialError } : null,
@@ -50,6 +61,11 @@ export function TeamKanbanClient({
   const [isTaskDialogOpen, setTaskDialogOpen] = useState(false);
   const [isCreatingSprint, setCreatingSprint] = useState(false);
   const [isCreatingTask, setCreatingTask] = useState(false);
+
+  const [isProjectDetailsOpen, setProjectDetailsOpen] = useState(false);
+  const [projectNameForm, setProjectNameForm] = useState(initialSnapshot.projectName || '');
+  const [projectDescForm, setProjectDescForm] = useState(initialSnapshot.projectDescription || '');
+  const [isSavingProjectDetails, setIsSavingProjectDetails] = useState(false);
 
   // ── Task detail & update states ─────────────────────────────────────
   const [selectedTask, setSelectedTask] = useState<KanbanTask | null>(null);
@@ -107,9 +123,39 @@ export function TeamKanbanClient({
     };
   }, [teamId]);
 
+  // Auto-open AI Report if navigated from Reports Archive
+  useEffect(() => {
+    const openReport = searchParams.get('openReport');
+    const sprintIdParam = searchParams.get('sprint');
+    
+    if (openReport === 'true' && sprintIdParam && board.sprints) {
+      const sprint = board.sprints.find(s => s.id === sprintIdParam);
+      if (sprint) {
+        setAiReportSprint({ id: sprint.id, name: sprint.name });
+        setAiReportOpen(true);
+        
+        // Clean up the URL so it doesn't re-open on refresh
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, [board.sprints, searchParams]);
+
   const isBusy = isRefreshing || isMutating || githubState.loading || isDisconnectingGithub;
 
   // ── Handlers ────────────────────────────────────────────────────────
+  const handleSaveProjectDetails = async () => {
+    setIsSavingProjectDetails(true);
+    const res = await updateTeamProjectDetails(teamId, projectNameForm, projectDescForm);
+    setIsSavingProjectDetails(false);
+    if (res.error) {
+      handleError(res.error);
+    } else {
+      handleSuccess('Proje detayları başarıyla kaydedildi.');
+      setProjectDetailsOpen(false);
+      handleRefresh();
+    }
+  };
+
   const handleRefresh = useCallback(() => {
     setBanner(null);
     void actions.refresh();
@@ -146,6 +192,7 @@ export function TeamKanbanClient({
       sprintId,
       status,
       priority,
+      assignees,
     }: {
       title: string;
       description: string;
@@ -250,11 +297,21 @@ export function TeamKanbanClient({
       if (!destination) return;
       if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
-      const [sourceSprintIdStr, sourceStatus] = source.droppableId.split('::');
-      const [destSprintIdStr, destStatus] = destination.droppableId.split('::');
+      const sourceSprintIdStr = source.droppableId.split('::')[0];
+      const sourceStatus = source.droppableId.split('::')[1];
+      const destSprintIdStr = destination.droppableId.split('::')[0];
+      const destStatus = destination.droppableId.split('::')[1];
 
       const sourceSprintId = sourceSprintIdStr === 'backlog' ? null : sourceSprintIdStr;
       const targetSprintId = destSprintIdStr === 'backlog' ? null : destSprintIdStr;
+
+      const sourceSprint = sourceSprintId ? board.sprints.find(s => s.id === sourceSprintId) : null;
+      const targetSprint = targetSprintId ? board.sprints.find(s => s.id === targetSprintId) : null;
+
+      if (sourceSprint?.status === 'completed' || targetSprint?.status === 'completed') {
+        setBanner({ type: 'error', text: 'Tamamlanmış sprintlerde görevler taşınamaz.' });
+        return;
+      }
 
       // Optimistic update
       setLocalBoard((prev) => {
@@ -328,13 +385,16 @@ export function TeamKanbanClient({
   // ── Sprint header renderer ──────────────────────────────────────────
   const renderSprintHeader = useCallback(
     (sprint: KanbanSprint, defaultHeader: React.ReactNode) => {
-      if (!board.canManageSprints) return defaultHeader;
+      const canManageFully = board.canManageSprints;
+      const canComplete = canManageFully || board.isLeader;
+
+      if (!canManageFully && !canComplete) return defaultHeader;
 
       return (
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">{defaultHeader}</div>
           <div className="flex items-center gap-2 mt-0.5">
-            {sprint.status === 'planning' && (
+            {canManageFully && sprint.status === 'planning' && (
               <Button
                 variant="outline"
                 size="sm"
@@ -345,7 +405,27 @@ export function TeamKanbanClient({
                 Sprinti Başlat
               </Button>
             )}
-            {sprint.status === 'active' && (
+            {canManageFully && courseId && board.isInstructor && sprint.status === 'completed' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setAiReportSprint({ id: sprint.id, name: sprint.name });
+                  setAiReportOpen(true);
+                }}
+                disabled={isBusy}
+                className={`h-7 px-3 text-[11px] uppercase tracking-wider font-semibold gap-1.5 ${
+                  sprint.hasAiReport
+                    ? 'border-indigo-700/50 text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300'
+                    : 'border-amber-700/50 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300'
+                }`}
+                title={sprint.hasAiReport ? "Mevcut Raporu Görüntüle" : "Yapay Zeka ile Öğrenci Katkı Raporu Al"}
+              >
+                <Sparkles className="h-3 w-3" />
+                {sprint.hasAiReport ? 'Raporu Görüntüle' : 'Yeni Rapor Oluştur'}
+              </Button>
+            )}
+            {canComplete && sprint.status === 'active' && (
               <Button
                 variant="outline"
                 size="sm"
@@ -356,20 +436,22 @@ export function TeamKanbanClient({
                 Tamamla
               </Button>
             )}
-            <button
-              onClick={() => setSprintToDelete(sprint)}
-              disabled={isBusy}
-              aria-label={`${sprint.name} sprintini sil`}
-              title="Sprinti Sil"
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-600 transition hover:bg-red-500/10 hover:text-red-400 disabled:pointer-events-none disabled:opacity-30"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
+            {canManageFully && (
+              <button
+                onClick={() => setSprintToDelete(sprint)}
+                disabled={isBusy}
+                aria-label={`${sprint.name} sprintini sil`}
+                title="Sprinti Sil"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-600 transition hover:bg-red-500/10 hover:text-red-400 disabled:pointer-events-none disabled:opacity-30"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         </div>
       );
     },
-    [board.canManageSprints, isBusy, handleUpdateSprintStatus],
+    [board.canManageSprints, board.isInstructor, board.isLeader, courseId, isBusy, handleUpdateSprintStatus],
   );
 
   // ── Delete confirm dialog content ───────────────────────────────────
@@ -384,22 +466,27 @@ export function TeamKanbanClient({
   // ── Render ──────────────────────────────────────────────────────────
   const isInstructorManaged = !board.canManageSprints;
 
+  const breadcrumbItems = [
+    { label: 'Derslerim', href: '/dashboard/instructor/courses' },
+    { label: courseName, href: courseId ? `/dashboard/instructor/courses/${courseId}` : undefined },
+    { label: teamName }
+  ];
+
   return (
     <div className="flex flex-col gap-6 bg-[#050a19] px-6 py-8 min-h-screen">
       {/* Sticky, Glassmorphism Header */}
       <header className="sticky top-0 z-20 flex flex-col gap-3 rounded-2xl border border-slate-800/60 bg-slate-900/40 p-6 shadow-lg shadow-slate-950/40 backdrop-blur-md">
+        
+        <DashboardBreadcrumb items={breadcrumbItems} />
+
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-2">
-            <div className="flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-slate-500">
-              <span>{courseName}</span>
-              <span className="text-slate-700">•</span>
-              <span>Kanban</span>
-            </div>
-            
+            <div className="flex items-center gap-3">
               <h1 className="text-2xl font-semibold text-white sm:text-3xl">
                 {teamName}
               </h1>
             </div>
+          </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <Badge
@@ -409,8 +496,28 @@ export function TeamKanbanClient({
               {board.canManageTasks ? 'Görev yetkisi aktif' : 'Yalnızca görüntüleme'}
             </Badge>
 
-            {courseId && (
+            {courseId && board.isInstructor && (
               <>
+                <div className="flex items-center gap-2 border border-slate-700/50 bg-slate-900/50 rounded-md px-2 py-1">
+                  <span className="text-xs text-slate-400">Sprint Yön:</span>
+                  <select
+                    className="bg-transparent text-xs text-white outline-none cursor-pointer"
+                    value={board.sprintMode}
+                    onChange={async (e) => {
+                      const mode = e.target.value as 'instructor' | 'team';
+                      const res = await updateCourseSprintMode(courseId, teamId, mode);
+                      if (res.error) {
+                        alert(res.error);
+                      } else {
+                        window.location.reload();
+                      }
+                    }}
+                  >
+                    <option value="instructor" className="bg-slate-900">Eğitmen</option>
+                    <option value="team" className="bg-slate-900">Takım</option>
+                  </select>
+                </div>
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -420,34 +527,34 @@ export function TeamKanbanClient({
                   <LayoutTemplate className="h-4 w-4" />
                   Şablon Uygula
                 </Button>
-                
-                {!githubState.loading && (
-                  githubState.connected ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleDisconnectGithub}
-                      disabled={isDisconnectingGithub}
-                      className="gap-2 border-red-500/50 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Bağlantıyı Kes
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        window.location.href = `/api/github/auth?teamId=${teamId}&returnUrl=${encodeURIComponent(window.location.pathname)}`;
-                      }}
-                      className="gap-2 border-slate-700 bg-[#24292e]/80 text-white hover:bg-[#24292e] transition-colors"
-                    >
-                      <GitBranch className="h-4 w-4" />
-                      GitHub Bağla
-                    </Button>
-                  )
-                )}
               </>
+            )}
+            
+            {board.isLeader && !githubState.loading && (
+              githubState.connected ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDisconnectGithub}
+                  disabled={isDisconnectingGithub}
+                  className="gap-2 border-red-500/50 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Bağlantıyı Kes
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    window.location.href = `/api/github/auth?teamId=${teamId}&returnUrl=${encodeURIComponent(window.location.pathname)}`;
+                  }}
+                  className="gap-2 border-slate-700 bg-[#24292e]/80 text-white hover:bg-[#24292e] transition-colors"
+                >
+                  <GitBranch className="h-4 w-4" />
+                  GitHub Bağla
+                </Button>
+              )
             )}
 
             {board.canManageSprints && (
@@ -513,14 +620,14 @@ export function TeamKanbanClient({
         )}
       </header>
 
-
-
         {/* Instructor Managed Banner */}
         {isInstructorManaged && (
           <div className="mt-4 flex items-center gap-3 rounded-xl border border-blue-500/30 bg-blue-500/10 px-5 py-4 text-sm text-blue-200">
             <Info className="h-5 w-5 shrink-0 text-blue-400" />
-            <p>
-              Bu panoda sprint planlaması eğitmen tarafından yönetilmektedir. Takım üyesi olarak kendi görevlerinizi ekleyebilir ve durumlarını güncelleyebilirsiniz.
+            <p className="text-sm text-blue-200/70">
+              {board.sprintMode === 'instructor' 
+                ? 'Bu panoda sprint planlaması eğitmen tarafından yönetilmektedir. Takım üyesi olarak kendi görevlerinizi ekleyebilir ve durumlarını güncelleyebilirsiniz.'
+                : 'Bu panoda sprint planlaması takım lideri tarafından yönetilmektedir. Lütfen sprint planlaması için liderinizle iletişime geçin.'}
             </p>
           </div>
         )}
@@ -576,7 +683,7 @@ export function TeamKanbanClient({
         onOpenChange={setTaskDialogOpen}
         onSubmit={handleTaskSubmit}
         isSubmitting={isCreatingTask}
-        sprints={localBoard.sprints}
+        sprints={localBoard.sprints.filter(s => s.status !== 'completed')}
         teamMembers={localBoard.teamMembers || []}
       />
 
@@ -584,9 +691,9 @@ export function TeamKanbanClient({
         task={selectedTask}
         open={isTaskDetailOpen}
         onOpenChange={setTaskDetailOpen}
-        sprints={localBoard.sprints}
+        sprints={localBoard.sprints.filter(s => s.status !== 'completed' || s.id === selectedTask?.sprintId)}
         teamMembers={localBoard.teamMembers ?? []}
-        canManageTasks={board.canManageTasks}
+        canManageTasks={board.canManageTasks && (!selectedTask?.sprintId || localBoard.sprints.find(s => s.id === selectedTask.sprintId)?.status !== 'completed')}
         isSubmitting={isUpdatingTask}
         onSave={handleTaskUpdate}
         onDelete={handleTaskDelete}
@@ -615,6 +722,59 @@ export function TeamKanbanClient({
           }}
         />
       )}
+
+      <Dialog open={isProjectDetailsOpen} onOpenChange={setProjectDetailsOpen}>
+        <DialogContent className="sm:max-w-[500px] bg-slate-900 border-slate-800 text-slate-200">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-white">Proje Detayları</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Yapay zeka analizinin daha tutarlı olabilmesi için takımın üzerinde çalıştığı projenin konusunu ve amacını belirtin.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <label htmlFor="projectName" className="text-sm font-medium text-slate-300">Proje Adı</label>
+              <input
+                id="projectName"
+                value={projectNameForm}
+                onChange={(e) => setProjectNameForm(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Örn: E-Ticaret Platformu"
+              />
+            </div>
+            <div className="grid gap-2">
+              <label htmlFor="projectDesc" className="text-sm font-medium text-slate-300">Proje Açıklaması ve Amacı</label>
+              <textarea
+                id="projectDesc"
+                value={projectDescForm}
+                onChange={(e) => setProjectDescForm(e.target.value)}
+                className="flex min-h-[100px] w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Takımın genel amacı ve bu projenin neyi çözeceği..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProjectDetailsOpen(false)} className="border-slate-700 text-slate-300 hover:bg-slate-800">
+              İptal
+            </Button>
+            <Button onClick={handleSaveProjectDetails} disabled={isSavingProjectDetails} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+              {isSavingProjectDetails ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Kaydet
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AiReportDialog
+        isOpen={isAiReportOpen}
+        onOpenChange={setAiReportOpen}
+        teamId={teamId}
+        sprintId={aiReportSprint?.id || null}
+        sprintName={aiReportSprint?.name}
+        courseName={courseName}
+        courseCode={courseCode}
+        teamName={teamName}
+      />
     </div>
   );
 }

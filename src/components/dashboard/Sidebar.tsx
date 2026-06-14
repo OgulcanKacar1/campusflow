@@ -5,6 +5,7 @@ import { logout } from '@/app/auth/actions';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import NotificationBell from './NotificationBell';
 import {
   LayoutDashboard,
   Users,
@@ -17,6 +18,8 @@ import {
   Building2,
   GraduationCap,
   ClipboardList,
+  BarChart2,
+  Calendar,
 } from 'lucide-react';
 
 // --- Rol Bazlı Menü Tanımları ---
@@ -36,12 +39,15 @@ const menuByRole: Record<string, { label: string; href: string; icon: React.Elem
   instructor: [
     { label: 'Genel Bakış', href: '/dashboard/instructor', icon: LayoutDashboard },
     { label: 'Derslerim', href: '/dashboard/instructor/courses', icon: BookOpen },
+    { label: 'Takvim', href: '/dashboard/instructor/calendar', icon: Calendar },
+    { label: 'AI Raporları', href: '/dashboard/instructor/reports', icon: BarChart2 },
     { label: 'Ayarlar', href: '/dashboard/instructor/settings', icon: Settings },
   ],
   student: [
     { label: 'Genel Bakış', href: '/dashboard/student', icon: LayoutDashboard },
     { label: 'Derslerim', href: '/dashboard/student/courses', icon: GraduationCap },
     { label: 'Görevlerim', href: '/dashboard/student/tasks', icon: ClipboardList },
+    { label: 'Takvim', href: '/dashboard/student/calendar', icon: Calendar },
     { label: 'Ayarlar', href: '/dashboard/student/settings', icon: Settings },
   ],
 };
@@ -72,7 +78,7 @@ export default function Sidebar({ role, fullName, email, orgName }: SidebarProps
   return (
     <aside
       className={`
-        relative flex flex-col h-screen
+        relative z-[100] flex flex-col h-screen
         bg-[#0a0f1e]/95 backdrop-blur-xl
         border-r border-white/5
         transition-all duration-300 ease-in-out
@@ -115,8 +121,13 @@ export default function Sidebar({ role, fullName, email, orgName }: SidebarProps
         </div>
       )}
 
+      {/* Bildirimler */}
+      <div className="px-2 mt-4 mb-2 relative" style={{ zIndex: 9999 }}>
+        <NotificationBell collapsed={collapsed} />
+      </div>
+
       {/* Nav Menüsü */}
-      <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto relative" style={{ zIndex: 10 }}>
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
@@ -195,7 +206,7 @@ export default function Sidebar({ role, fullName, email, orgName }: SidebarProps
           flex items-center justify-center
           text-gray-400 hover:text-white
           transition-colors shadow-lg
-          z-10
+          z-[100]
         "
         aria-label={collapsed ? 'Menüyü Genişlet' : 'Menüyü Daralt'}
       >

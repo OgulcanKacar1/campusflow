@@ -1,6 +1,8 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import type { Team, TeamMember } from '@/types/team';
 import type { StudentCourse } from '@/types/course';
 
@@ -41,6 +43,9 @@ interface TeamRow {
   id: string;
   name: string;
   invite_code: string | null;
+  project_name?: string | null;
+  project_description?: string | null;
+  repo_url?: string | null;
   created_at: string;
   team_members: TeamMemberRow[] | null;
 }
@@ -166,6 +171,9 @@ export async function getStudentTeamsSnapshot(courseId: string) {
       id,
       name,
       invite_code,
+      project_name,
+      project_description,
+      repo_url,
       created_at,
       team_members (
         id,
@@ -204,6 +212,9 @@ export async function getStudentTeamsSnapshot(courseId: string) {
       id: team.id,
       courseId,
       name: team.name,
+      projectName: team.project_name,
+      projectDescription: team.project_description,
+      repoUrl: team.repo_url,
       inviteCode: team.invite_code,
       status: 'active',
       createdAt: team.created_at,
@@ -251,6 +262,45 @@ export async function joinCourseByCode(joinCode: string) {
   return { success: true };
 }
 
+export async function studentUpdateProjectDetails(
+  teamId: string,
+  projectName: string | null,
+  projectDescription: string | null,
+  repoUrl: string | null
+) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Oturum bulunamadı' };
+
+  // Kullanıcının takım lideri olduğunu doğrula
+  const { data: member } = await supabase
+    .from('team_members')
+    .select('role')
+    .eq('team_id', teamId)
+    .eq('student_id', user.id)
+    .single();
+
+  if (!member || member.role !== 'leader') {
+    return { error: 'Sadece takım lideri proje detaylarını güncelleyebilir.' };
+  }
+
+  const adminClient = createAdminClient();
+  const { error } = await adminClient
+    .from('teams')
+    .update({
+      project_name: projectName,
+      project_description: projectDescription,
+      repo_url: repoUrl
+    })
+    .eq('id', teamId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath('/dashboard', 'layout');
+
+  return { success: true };
+}
+
 export async function studentTransferLeadership(courseId: string, teamId: string, targetStudentId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -267,4 +317,22 @@ export async function studentTransferLeadership(courseId: string, teamId: string
 
   // Sadece öğrencinin ilgili kurs panosunu invalidate et (ör. courseId var ise)
   return { success: true };
+}
+
+export async function getGithubWebhookStatus(teamId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Oturum bulunamadı' };
+
+  const { createAdminClient } = await import('@/lib/supabase/admin');
+  const adminClient = createAdminClient();
+  
+  const { data: connection } = await adminClient
+    .from('github_connections')
+    .select('id, webhook_id')
+    .eq('team_id', teamId)
+    .single();
+
+  if (!connection) return { connected: false, webhookId: null };
+  return { connected: true, webhookId: connection.webhook_id };
 }

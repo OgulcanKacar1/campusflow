@@ -7,38 +7,31 @@ Kullanılacak metodoloji: Her yeni faza geçerken, o fazın detaylı teknik anal
 ---
 
 ## ✅ Tamamlanan Fazlar (Özet)
-- **Phase 1-3:** Temel altyapı, Yetkilendirme (OTP), RLS güvenlik kuralları, Multi-tenant (Çoklu okul) mimarisi.
-- **Phase 4:** Dinamik Takım oluşturma, Sprint planlaması ve Kanban Panosu (Görev sürükle-bırak).
-- **Phase 5-6:** Hoca paneli, ders açma, öğrenci kayıtları (Join Code / CSV).
-- **Phase 7:** GitHub Entegrasyonu V1 (Öğrenci commitleri ve PR açılışlarıyla Kanban kartlarının otomatik statü değiştirmesi).
+- [x] **Phase 1-3:** Temel altyapı, Yetkilendirme (OTP), RLS güvenlik kuralları, Multi-tenant (Çoklu okul) mimarisi.
+- [x] **Phase 4:** Dinamik Takım oluşturma, Sprint planlaması ve Kanban Panosu (Görev sürükle-bırak).
+- [x] **Phase 5-6:** Hoca paneli, ders açma, öğrenci kayıtları (Join Code / CSV).
+- [x] **Phase 7:** GitHub Entegrasyonu V1 (Öğrenci commitleri ve PR açılışlarıyla Kanban kartlarının otomatik statü değiştirmesi).
+- [x] **Phase 8:** Cloud Storage (Zero-File) Entegrasyonları (Drive/Figma linklerinin görevlere eklenebilmesi).
+- [x] **Phase 9:** Yapay Zeka Performans Analizi (Sadece commit sayılarını değil, GitHub Diff/Patch okuyarak derin kod analizi yapan ve sahte commitleri yakalayan sistem).
+- [x] **Phase 10:** In-App Takvim ve Toplantı Yönetimi, Takım toplantılarının/kararlarının Yapay Zeka Sprint Raporuna dahil edilmesi.
 
 ---
 
 ## 🚀 Kalan Fazlar ve Yapılacak Geliştirmeler
 
-### 📍 Phase 8: Cloud Storage (Zero-File) Entegrasyonları
-Veritabanını devasa dosya yüklemeleriyle şişirmemek adına, doküman yönetiminin "Zero-File" (Sunucuda dosya tutmama) mimarisiyle çözülmesi.
-- **Aksiyonlar:**
-  - Öğrenci/Takım tarafına "Google Drive / OneDrive Bağla" seçeneği sunulması.
-  - Kanban görevlerine tıklandığında, göreve doğrudan bir Drive dosyasının/klasörünün link olarak eklenebilmesi (Attachment).
-  - Takım kaynakları (Resources) klasörü oluşturup, takımın ana dosyalarının tek bir Cloud klasöründe eşzamanlanması.
-
-### 📍 Phase 9: Yapay Zeka (AI) Performans Analizi & Notlandırma (Digital Footprint)
-Uygulamanın en çarpıcı (vurucu) özelliği. Sistemin GitHub verilerini yapay zeka ile analiz edip "beleşçi" öğrencileri tespit etmesi.
-- **Aksiyonlar:**
-  - Sadece commit mesajlarını değil, arka planda GitHub API ile **kodun içeriğini (diff - değişen satırları)** okuyan bir servis yazılması.
-  - Yapay zekaya "Bu öğrenci projeye değer katan bir kod mu yazmış, yoksa boşluk/yorum satırı değiştirerek sistemi mi kandırmış?" analizinin yaptırılması.
-  - Takım üyeleri arası "Katkı Haritası" (Contribution Map) grafiği çizdirilmesi.
-  - Hoca için dönem sonu "AI Notlandırma Tavsiyesi" ekranı (Örn: "Tolga %80 çalıştı, Ege %20 çalıştı").
-
-### 📍 Phase 10: Gerçek Zamanlı Bildirimler (Real-Time Notifications)
+### 📍 Phase 11: Gerçek Zamanlı Bildirimler (Real-Time Notifications) (GÜNCEL FAZ)
 Kullanıcı deneyimini "canlı" hissettirecek iletişim altyapısı.
-- **Aksiyonlar:**
-  - Supabase Realtime (WebSockets) kullanılarak veritabanı değişikliklerinin anlık dinlenmesi.
-  - Arayüze "Zil (Bildirim)" ikonu eklenmesi.
-  - Birisi görevi tamamladığında, yeni görev atadığında veya GitHub'dan kod geldiğinde takım üyelerine anlık "Toast" (Sağ alttan çıkan uyarı) ve zil bildirimi gönderilmesi.
+- **Tamamlananlar:**
+  - [x] Supabase Realtime (WebSockets) kullanılarak veritabanı değişikliklerinin anlık dinlenmesi altyapısı.
+  - [x] Arayüze "Zil (Bildirim)" ikonu, okundu/okunmadı mantığı ve Dropdown Popover eklenmesi.
+  - [x] Görev tamamlandığında, yeni görev atandığında, takvime sınıf veya takım toplantısı eklendiğinde anlık "Toast" ve zil bildirimi gönderilmesi.
+  - [x] Bildirimlere bağlam (Ders Kodu, Takım Adı) eklenmesi ve Sidebar üzerindeki z-index/tasarım sorunlarının çözülmesi.
+  - [x] Görev Panosu ve Takım/Proje Detayları sekmelerinin (Tabs) düzenlenmesi.
+- **Tamamlanan Aksiyonlar (GitHub Webhook Entegrasyonu):**
+  - [x] GitHub'dan kod (Push) geldiğinde veya PR açıldığında takım üyelerine anlık bildirim (Toast/Zil) gönderilmesi.
+  - [x] İlgili Kanban görevlerinin durumlarının otomatik güncellenmesi ve bunun da bildirim sistemini tetiklemesi.
 
-### 📍 Phase 11: Otomasyon V2 & Üniversite LMS Çıktısı (Export)
+### 📍 Phase 12: Otomasyon V2 & Üniversite LMS Çıktısı (Export)
 Sistemin kullanıcı deneyimini (UX) zirveye taşıyıp, üniversite yönetimlerine uygun hale getirilmesi.
 - **Aksiyonlar:**
   - **GitHub V2:** Kullanıcıların manuel webhook adresi girmesi yerine, CampusFlow arayüzünden doğrudan repolarını listeleyip tek tıkla webhook kurdurmaları (Daha önce konuştuğumuz tam otomasyon).

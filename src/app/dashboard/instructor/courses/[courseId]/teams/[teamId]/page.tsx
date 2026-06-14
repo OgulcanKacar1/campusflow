@@ -15,6 +15,7 @@ interface TeamRecord {
   course_id: string;
   course: {
     id: string;
+    code: string;
     name: string;
   } | null;
 }
@@ -36,7 +37,7 @@ export default async function InstructorTeamKanbanPage({
 
   const { data: team, error: teamError } = await supabase
     .from('teams')
-    .select('id, name, course_id, course:course_id ( id, name )')
+    .select('id, name, course_id, course:course_id ( id, code, name )')
     .eq('id', teamId)
     .single<TeamRecord>();
 
@@ -69,6 +70,7 @@ export default async function InstructorTeamKanbanPage({
       teamId={teamId}
       teamName={team.name}
       courseId={courseId}
+      courseCode={team.course?.code ?? 'BILINMEYEN'}
       courseName={team.course?.name ?? 'Bilinmeyen Ders'}
       courseTeams={allTeams}
       initialSnapshot={initialSnapshot}

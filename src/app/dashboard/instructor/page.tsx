@@ -1,6 +1,7 @@
 import { getInstructorStats } from './actions';
 import Link from 'next/link';
 import { BookOpen, Users } from 'lucide-react';
+import { DashboardBreadcrumb } from '@/components/dashboard/DashboardBreadcrumb';
 
 export default async function InstructorDashboard() {
   const data = await getInstructorStats();
@@ -12,8 +13,11 @@ export default async function InstructorDashboard() {
   const stats = data?.stats || { activeCourses: 0, totalStudents: 0, upcomingTasks: 0 };
 
   return (
-    <div className="p-8">
-      <div className="max-w-5xl">
+    <div className="p-6 md:p-8">
+      <div className="max-w-7xl mx-auto flex flex-col gap-6">
+        <DashboardBreadcrumb items={[{ label: 'Genel Bakış' }]} />
+        
+        <div>
         <h1 className="text-3xl font-bold text-white mb-2">🎓 Hoca Paneli</h1>
         <p className="text-gray-400 mb-8">
           Verdiğiniz dersleri, kayıtlı öğrencileri ve takımları buradan yönetebilirsiniz.
@@ -32,7 +36,10 @@ export default async function InstructorDashboard() {
           ))}
         </div>
 
-        <h2 className="text-xl font-bold text-white mb-4 mt-12">Hızlı Eylemler</h2>
+        </div>
+
+        <div>
+          <h2 className="text-xl font-bold text-white mb-4 mt-8">Hızlı Eylemler</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Link href="/dashboard/instructor/courses" className="block group">
             <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5 hover:bg-gray-800/50 transition-colors h-full flex flex-col justify-center">
@@ -61,6 +68,7 @@ export default async function InstructorDashboard() {
               </p>
             </div>
           </Link>
+        </div>
         </div>
       </div>
     </div>
