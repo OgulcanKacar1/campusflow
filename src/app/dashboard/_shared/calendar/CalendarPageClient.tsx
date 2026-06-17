@@ -95,11 +95,11 @@ export const CalendarPageClient: React.FC<CalendarPageClientProps> = ({
       <div className="flex justify-between items-center mb-6 shrink-0">
         <div>
           <h1 className="text-2xl font-bold text-white mb-1">Global Takvim</h1>
-          <p className="text-sm text-white/60">Tüm derslerinizdeki sprintler ve toplantılar.</p>
+          <p className="text-sm text-muted-foreground">Tüm derslerinizdeki sprintler ve toplantılar.</p>
         </div>
         <button
           onClick={() => setCreateDialogOpen(true)}
-          className="flex items-center px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium rounded-lg transition-colors shadow-lg shadow-indigo-500/25"
+          className="flex items-center px-4 py-2 text-sm font-bold uppercase tracking-widest rounded-lg transition-all bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20"
         >
           <Plus size={16} className="mr-2" />
           Yeni Toplantı
@@ -109,8 +109,8 @@ export const CalendarPageClient: React.FC<CalendarPageClientProps> = ({
       {/* Takvim Görünümü */}
       <div className="flex-1 relative min-h-0">
         {loading ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-sm rounded-2xl z-10 border border-white/5">
-            <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+          <div className="absolute inset-0 flex items-center justify-center bg-card backdrop-blur-sm rounded-2xl z-10 border border-border">
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
           </div>
         ) : (
           <CalendarView

@@ -177,15 +177,17 @@ export function TaskDetailDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={isSubmitting ? undefined : onOpenChange}>
-        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto border-slate-800 bg-[#0a1120] text-slate-200">
+        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto border-border/40 bg-card/80 backdrop-blur-xl shadow-2xl shadow-black/40 text-foreground p-6">
           <form onSubmit={handleSave}>
             <DialogHeader className="mb-5">
-              <DialogTitle className="text-xl font-semibold text-white">Görev Detayı</DialogTitle>
+              <DialogTitle className="text-xl font-bold text-foreground drop-shadow-sm flex items-center gap-2">
+                Görev Detayı
+              </DialogTitle>
             </DialogHeader>
 
             <div className="space-y-5">
               <div className="space-y-1.5">
-                <Label htmlFor="detail-title" className="text-slate-400">Görev Başlığı</Label>
+                <Label htmlFor="detail-title" className="text-muted-foreground">Görev Başlığı</Label>
                 <Input
                   id="detail-title"
                   value={title}
@@ -193,12 +195,12 @@ export function TaskDetailDialog({
                   placeholder="örn. API Entegrasyonu"
                   required
                   disabled={!canManageTasks || isSubmitting}
-                  className="border-slate-700 bg-slate-900/50 text-white placeholder:text-slate-500"
+                  className="border-border/50 bg-background/40 text-foreground placeholder:text-muted-foreground focus-visible:ring-primary/40 transition-all"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="detail-description" className="text-slate-400">Açıklama</Label>
+                <Label htmlFor="detail-description" className="text-muted-foreground">Açıklama</Label>
                 <MarkdownEditor
                   value={description}
                   onChange={setDescription}
@@ -208,7 +210,7 @@ export function TaskDetailDialog({
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="detail-developer-note" className="text-slate-400">Geliştirici Notu / Durum Açıklaması</Label>
+                <Label htmlFor="detail-developer-note" className="text-muted-foreground">Geliştirici Notu / Durum Açıklaması</Label>
                 <MarkdownEditor
                   value={developerNote}
                   onChange={setDeveloperNote}
@@ -218,13 +220,13 @@ export function TaskDetailDialog({
               </div>
 
               <div className="space-y-3">
-                <Label className="text-slate-400">Eklentiler ve Bağlantılar</Label>
+                <Label className="text-muted-foreground">Eklentiler ve Bağlantılar</Label>
                 
                 {localAttachments.length > 0 && (
                   <div className="space-y-2 mb-3">
                     {localAttachments.map((att: any) => (
-                      <div key={att.id} className="flex items-center justify-between p-2 rounded-md bg-slate-900/60 border border-slate-700/50">
-                        <a href={att.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300 truncate max-w-[80%]">
+                      <div key={att.id} className="flex items-center justify-between p-2 rounded-md bg-card/60 border border-border/50">
+                        <a href={att.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-primary hover:text-indigo-300 truncate max-w-[80%]">
                           {att.type === 'drive' ? <FileIcon className="h-4 w-4 shrink-0" /> : <LinkIcon className="h-4 w-4 shrink-0" />}
                           <span className="truncate">{att.title}</span>
                         </a>
@@ -233,7 +235,7 @@ export function TaskDetailDialog({
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-slate-400 hover:text-red-400 hover:bg-red-400/10"
+                            className="h-7 w-7 text-muted-foreground hover:text-red-400 hover:bg-red-400/10"
                             onClick={() => handleRemoveAttachment(att.id)}
                             disabled={isRemovingAttachment === att.id}
                           >
@@ -251,14 +253,14 @@ export function TaskDetailDialog({
                       value={attachmentTitleInput}
                       onChange={e => setAttachmentTitleInput(e.target.value)}
                       placeholder="Adı (Opsiyonel)"
-                      className="bg-slate-900/60 border-slate-700 w-[140px] shrink-0"
+                      className="bg-card/60 border-border w-[140px] shrink-0"
                       disabled={isAttaching || isSubmitting}
                     />
                     <Input
                       value={attachmentUrl}
                       onChange={e => setAttachmentUrl(e.target.value)}
                       placeholder="Link yapıştırın..."
-                      className="bg-slate-900/60 border-slate-700 flex-1 min-w-0"
+                      className="bg-background/40 border-border/50 flex-1 min-w-0 focus-visible:ring-primary/40"
                       disabled={isAttaching || isSubmitting}
                     />
                     <Button 
@@ -266,14 +268,14 @@ export function TaskDetailDialog({
                       variant="secondary"
                       onClick={handleAddAttachment}
                       disabled={!attachmentUrl.trim() || isAttaching || isSubmitting}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white shrink-0"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground shrink-0 shadow-sm shadow-primary/20 transition-all"
                     >
                       {isAttaching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Ekle'}
                     </Button>
                   </div>
                 )}
                 {canManageTasks && (
-                  <p className="text-xs text-slate-500 italic mt-1">
+                  <p className="text-xs text-muted-foreground italic mt-1">
                     Not: Eklediğiniz bağlantıların "Bağlantıya sahip olan herkes görebilir" (Public) şeklinde ayarlandığından emin olun.
                   </p>
                 )}
@@ -281,12 +283,12 @@ export function TaskDetailDialog({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-slate-400">Durum</Label>
+                  <Label className="text-muted-foreground">Durum</Label>
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value as TaskStatus)}
                     disabled={!canManageTasks || isSubmitting}
-                    className="w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full rounded-md border border-border/50 bg-background/40 px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     {KANBAN_STATUS_DEFINITIONS.map(opt => (
                       <option key={opt.key} value={opt.key}>
@@ -297,12 +299,12 @@ export function TaskDetailDialog({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-slate-400">Öncelik</Label>
+                  <Label className="text-muted-foreground">Öncelik</Label>
                   <select
                     value={priority}
                     onChange={(e) => setPriority(e.target.value as TaskPriority)}
                     disabled={!canManageTasks || isSubmitting}
-                    className="w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full rounded-md border border-border/50 bg-background/40 px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     {KANBAN_PRIORITIES.map(key => (
                       <option key={key} value={key}>
@@ -313,10 +315,10 @@ export function TaskDetailDialog({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-slate-400">Sorumlu Üyeler</Label>
+                  <Label className="text-muted-foreground">Sorumlu Üyeler</Label>
                   <div className="flex flex-wrap gap-2 pt-1">
                     {teamMembers.length === 0 ? (
-                      <p className="text-xs text-slate-500 py-1">Takımda üye yok.</p>
+                      <p className="text-xs text-muted-foreground py-1">Takımda üye yok.</p>
                     ) : (
                       teamMembers.map((member) => {
                         const isSelected = assignees.includes(member.studentId);
@@ -326,14 +328,14 @@ export function TaskDetailDialog({
                             type="button"
                             onClick={() => toggleAssignee(member.studentId)}
                             disabled={!canManageTasks || isSubmitting}
-                            className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-all ${
+                            className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all ${
                               isSelected 
-                                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/50' 
-                                : 'bg-slate-800/50 text-slate-400 border border-slate-700/50 hover:bg-slate-700 hover:text-slate-300'
+                                ? 'bg-primary/20 text-primary border border-primary/50 shadow-sm shadow-primary/10' 
+                                : 'bg-secondary/40 text-muted-foreground border border-border/40 hover:bg-secondary/80 hover:text-foreground'
                             } disabled:opacity-50 disabled:cursor-not-allowed`}
                           >
-                            <div className={`flex h-4 w-4 items-center justify-center rounded-full ${isSelected ? 'bg-indigo-500/30' : 'bg-slate-700'}`}>
-                              {isSelected ? <Check className="h-2.5 w-2.5 text-indigo-300" /> : <User2 className="h-2.5 w-2.5 text-slate-400" />}
+                            <div className={`flex h-4 w-4 items-center justify-center rounded-full ${isSelected ? 'bg-primary/20' : 'bg-secondary/50'}`}>
+                              {isSelected ? <Check className="h-2.5 w-2.5 text-primary" /> : <User2 className="h-2.5 w-2.5 text-muted-foreground" />}
                             </div>
                             {member.fullName ?? member.email?.split('@')[0] ?? 'Bilinmeyen Üye'}
                           </button>
@@ -344,12 +346,12 @@ export function TaskDetailDialog({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-slate-400">Sprint</Label>
+                  <Label className="text-muted-foreground">Sprint</Label>
                   <select
                     value={sprintId ?? 'none'}
                     onChange={(e) => setSprintId(e.target.value === 'none' ? null : e.target.value)}
                     disabled={!canManageTasks || isSubmitting}
-                    className="w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full rounded-md border border-border/50 bg-background/40 px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     <option value="none">Backlog (Sprint Yok)</option>
                     {sprints.map(sprint => (
@@ -362,7 +364,7 @@ export function TaskDetailDialog({
               </div>
             </div>
 
-            <DialogFooter className="mt-8 border-t border-slate-800 pt-5 flex flex-col sm:flex-row sm:justify-between items-center gap-4 sm:gap-0 w-full">
+            <DialogFooter className="mt-8 border-t border-border pt-5 flex flex-col sm:flex-row sm:justify-between items-center gap-4 sm:gap-0 w-full">
               <div className="flex w-full sm:w-auto justify-start">
                 {canManageTasks && (
                   <Button
@@ -384,7 +386,7 @@ export function TaskDetailDialog({
                   variant="outline"
                   onClick={() => onOpenChange(false)}
                   disabled={isSubmitting}
-                  className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+                  className="border-border text-muted-foreground hover:bg-muted hover:text-foreground"
                 >
                   Kapat
                 </Button>
@@ -392,7 +394,7 @@ export function TaskDetailDialog({
                   <Button
                     type="submit"
                     disabled={isSubmitting || !title.trim()}
-                    className="bg-indigo-600 text-white hover:bg-indigo-500"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20 transition-all"
                   >
                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Değişiklikleri Kaydet

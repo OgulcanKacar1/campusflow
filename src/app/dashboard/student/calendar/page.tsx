@@ -39,7 +39,7 @@ export default async function StudentCalendarPage() {
   const teamIds = teamList.map(t => t.id);
 
   return (
-    <div className="min-h-screen bg-[#0a0f1e] overflow-x-hidden">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <div className="p-6 sm:p-8 max-w-[1600px] mx-auto h-screen flex flex-col">
         <DashboardBreadcrumb items={[{ label: 'Takvim' }]} />
         <div className="mt-4 flex-1">

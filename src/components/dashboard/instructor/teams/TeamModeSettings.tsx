@@ -113,7 +113,7 @@ export function TeamModeSettings({
   };
 
   return (
-    <Card className="bg-[#0f1523] border-gray-800">
+    <Card className="bg-card border-gray-800">
       <CardHeader>
         <CardTitle className="text-white text-lg">Takım Ayarları</CardTitle>
       </CardHeader>
@@ -226,8 +226,8 @@ export function TeamModeSettings({
 
         {/* Mod Değişikliği Uyarı Modal'ı */}
         {showConfirmModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-[#0f1523] border border-gray-800 rounded-lg p-6 max-w-md mx-4">
+          <div className="fixed inset-0 bg-card flex items-center justify-center z-50">
+            <div className="bg-card border border-gray-800 rounded-lg p-6 max-w-md mx-4">
               <h3 className="text-lg font-semibold text-white mb-2">Mod Değişikliği Uyarısı</h3>
               <p className="text-gray-400 text-sm mb-4">
                 Bu derste {existingTeamCount} adet mevcut takım var. Mod değişikliği mevcut

@@ -175,7 +175,7 @@ export function TeamsPageClient({
   return (
     <div className="min-h-screen bg-[#060b18]">
       {/* Header */}
-      <div className="border-b border-gray-800 bg-[#0a0f1e]">
+      <div className="border-b border-border/40 bg-background/40 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
@@ -222,7 +222,7 @@ export function TeamsPageClient({
               <h2 className="text-xl font-semibold text-white">
                 Takımlar ({teams.length})
               </h2>
-              {isRefreshing && <Loader2 className="h-4 w-4 animate-spin text-white/60" />}
+              {isRefreshing && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
             </div>
 
             <TeamsList

@@ -243,7 +243,6 @@ export async function joinCourseByCode(joinCode: string) {
     return { error: 'Geçersiz veya süresi dolmuş katılım kodu.' };
   }
 
-  // Zaten kayıtlı mı kontrol et
   const { data: existing } = await supabase
     .from('course_enrollments')
     .select('id')
@@ -259,7 +258,70 @@ export async function joinCourseByCode(joinCode: string) {
     .insert({ course_id: courseId, student_id: user.id, status: 'enrolled' });
 
   if (error) return { error: error.message };
+
+  revalidatePath('/dashboard/student/courses');
   return { success: true };
+}
+
+export interface StudentUpcomingTask {
+  id: string;
+  title: string;
+  status: string;
+  priority: string;
+  teamName: string;
+  courseCode: string;
+  courseId: string;
+  teamId: string;
+}
+
+export async function getStudentUpcomingTasks(): Promise<{ data: StudentUpcomingTask[]; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Oturum bulunamadı', data: [] };
+
+  const { createAdminClient } = await import('@/lib/supabase/admin');
+  const adminClient = createAdminClient();
+
+  const { data, error } = await adminClient
+    .from('tasks')
+    .select(`
+      id,
+      title,
+      status,
+      priority,
+      team_id,
+      task_members!inner(student_id),
+      teams (
+        name,
+        course_id,
+        course:course_id (
+          code
+        )
+      )
+    `)
+    .eq('task_members.student_id', user.id)
+    .neq('status', 'done')
+    .neq('status', 'archived')
+    .order('created_at', { ascending: false })
+    .limit(10);
+
+  if (error) {
+    console.error('[getStudentUpcomingTasks] Query Error:', error);
+    return { error: error.message, data: [] };
+  }
+
+  const tasks = (data ?? []).map((t: any) => ({
+    id: t.id,
+    title: t.title,
+    status: t.status,
+    priority: t.priority,
+    teamName: t.teams?.name ?? 'Bilinmeyen Takım',
+    courseCode: t.teams?.course?.code ?? '',
+    courseId: t.teams?.course_id ?? '',
+    teamId: t.team_id,
+  }));
+
+  return { data: tasks };
 }
 
 export async function studentUpdateProjectDetails(
@@ -335,4 +397,40 @@ export async function getGithubWebhookStatus(teamId: string) {
 
   if (!connection) return { connected: false, webhookId: null };
   return { connected: true, webhookId: connection.webhook_id };
+}
+
+export async function generateGithubWebhook(teamId: string, repoUrl: string, token: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Oturum bulunamadı' };
+
+  if (!repoUrl) return { error: 'Repository linki gereklidir' };
+  
+  // Extract owner/repo from https://github.com/owner/repo
+  let repoFullName = repoUrl;
+  try {
+    const url = new URL(repoUrl);
+    if (url.hostname === 'github.com') {
+      repoFullName = url.pathname.substring(1).replace(/\/$/, '');
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  const { createAdminClient } = await import('@/lib/supabase/admin');
+  const adminClient = createAdminClient();
+  
+  const webhookId = crypto.randomUUID();
+  
+  const { error } = await adminClient
+    .from('github_connections')
+    .upsert({
+      team_id: teamId,
+      repo_full_name: repoFullName,
+      access_token: token,
+      webhook_id: webhookId
+    }, { onConflict: 'team_id' });
+    
+  if (error) return { error: error.message };
+  return { success: true, webhookId };
 }

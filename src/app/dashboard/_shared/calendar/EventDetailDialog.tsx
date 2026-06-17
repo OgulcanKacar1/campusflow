@@ -138,27 +138,27 @@ export const EventDetailDialog: React.FC<EventDetailDialogProps> = ({
 
   // Renk ve Tip Ayarları
   let typeLabel = 'Etkinlik';
-  let badgeColor = 'bg-gray-500/20 text-gray-300 border-gray-500/30';
+  let badgeColor = 'bg-muted/50 text-muted-foreground border-border/50';
 
   if (event.type === 'meeting') {
     typeLabel = 'Toplantı';
-    badgeColor = 'bg-blue-500/20 text-blue-300 border-blue-500/30';
+    badgeColor = 'bg-blue-500/10 text-blue-400 border-blue-500/20';
   } else if (event.type === 'sprint') {
     typeLabel = 'Sprint Dönemi';
-    badgeColor = 'bg-orange-500/20 text-orange-300 border-orange-500/30';
+    badgeColor = 'bg-primary/10 text-primary border-primary/20';
   } else if (event.type === 'task') {
     typeLabel = 'Görev (Task)';
-    badgeColor = 'bg-green-500/20 text-green-300 border-green-500/30';
+    badgeColor = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleClose} />
       
-      <div className="relative bg-[#1a1f37] border border-white/10 shadow-2xl rounded-2xl w-full max-w-md p-6 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative bg-card border border-border shadow-2xl rounded-2xl w-full max-w-md p-6 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
         {/* Dekoratif Glow */}
-        <div className="absolute -top-32 -right-32 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] pointer-events-none" />
+        <div className="absolute -top-32 -right-32 w-64 h-64 bg-primary/10 rounded-full blur-[80px] pointer-events-none" />
         
         {toastMessage && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-sm font-medium px-4 py-2 rounded-lg shadow-lg z-50 animate-in fade-in slide-in-from-top-4">
@@ -175,7 +175,7 @@ export const EventDetailDialog: React.FC<EventDetailDialogProps> = ({
               <input
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
-                className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-xl font-bold text-white focus:outline-none focus:border-indigo-500/50"
+                className="w-full bg-card border border-border rounded-lg p-2 text-xl font-bold text-white focus:outline-none focus:border-primary/50"
                 placeholder="Toplantı Başlığı"
               />
             ) : (
@@ -184,7 +184,7 @@ export const EventDetailDialog: React.FC<EventDetailDialogProps> = ({
               </h2>
             )}
           </div>
-          <button onClick={handleClose} className="p-2 text-white/50 hover:text-white hover:bg-white/5 rounded-lg transition-colors shrink-0">
+          <button onClick={handleClose} className="p-2 text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-lg transition-colors shrink-0">
             <X size={20} />
           </button>
         </div>
@@ -192,30 +192,30 @@ export const EventDetailDialog: React.FC<EventDetailDialogProps> = ({
         <div className="space-y-3 relative z-10">
           
           {/* Bağlı olduğu Takım ve Ders Bilgisi */}
-          <div className="flex flex-col space-y-2 mb-4 bg-black/10 p-3.5 rounded-xl border border-white/5">
+          <div className="flex flex-col space-y-2 mb-4 bg-card p-3.5 rounded-xl border border-border">
             {course && (
-              <div className="flex items-center gap-2.5 text-sm text-white/80">
-                <BookOpen size={16} className="text-indigo-400 shrink-0" />
+              <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                <BookOpen size={16} className="text-primary shrink-0" />
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-semibold text-indigo-300">{course.code}</span>
-                  <span className="text-white/60 truncate">{course.name}</span>
-                  {!teamId && <span className="text-[10px] uppercase tracking-wider bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded border border-indigo-500/30">Tüm Sınıf</span>}
+                  <span className="font-semibold text-foreground">{course.code}</span>
+                  <span className="text-muted-foreground truncate">{course.name}</span>
+                  {!teamId && <span className="text-[10px] uppercase tracking-wider bg-primary/20 text-primary px-1.5 py-0.5 rounded border border-primary/30">Tüm Sınıf</span>}
                 </div>
               </div>
             )}
             {team && (
-              <div className="flex items-center gap-2.5 text-sm text-white/80">
-                <Users size={16} className="text-emerald-400 shrink-0" />
+              <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                <Users size={16} className="text-primary shrink-0" />
                 <div className="flex items-center gap-1.5">
-                  <span className="text-white/60">Takım:</span>
-                  <span className="font-medium text-emerald-300">{team.name}</span>
+                  <span className="text-muted-foreground">Takım:</span>
+                  <span className="font-medium text-foreground">{team.name}</span>
                 </div>
               </div>
             )}
           </div>
 
-          <div className="flex items-center gap-3 text-sm text-white/80 bg-black/20 p-3.5 rounded-xl border border-white/5">
-            <CalendarIcon size={18} className="text-indigo-400 shrink-0" />
+          <div className="flex items-center gap-3 text-sm text-muted-foreground bg-card p-3.5 rounded-xl border border-border">
+            <CalendarIcon size={18} className="text-primary shrink-0" />
             <div className="flex flex-col gap-2 w-full">
               {isEditingDetails ? (
                 <>
@@ -223,21 +223,21 @@ export const EventDetailDialog: React.FC<EventDetailDialogProps> = ({
                     type="date"
                     value={editDate}
                     onChange={(e) => setEditDate(e.target.value)}
-                    className="bg-black/40 border border-white/10 rounded p-1 text-white focus:outline-none"
+                    className="bg-card border border-border rounded p-1 text-white focus:outline-none"
                   />
                   <div className="flex items-center gap-2">
                     <input
                       type="time"
                       value={editStartTime}
                       onChange={(e) => setEditStartTime(e.target.value)}
-                      className="bg-black/40 border border-white/10 rounded p-1 text-white focus:outline-none"
+                      className="bg-card border border-border rounded p-1 text-white focus:outline-none"
                     />
                     <span>-</span>
                     <input
                       type="time"
                       value={editEndTime}
                       onChange={(e) => setEditEndTime(e.target.value)}
-                      className="bg-black/40 border border-white/10 rounded p-1 text-white focus:outline-none"
+                      className="bg-card border border-border rounded p-1 text-white focus:outline-none"
                     />
                   </div>
                 </>
@@ -245,7 +245,7 @@ export const EventDetailDialog: React.FC<EventDetailDialogProps> = ({
                 <>
                   <div className="font-medium">{format(new Date(event.start), 'd MMMM yyyy, EEEE', { locale: tr })}</div>
                   {event.type !== 'task' && (
-                    <div className="text-white/50 text-xs flex items-center gap-1.5">
+                    <div className="text-muted-foreground text-xs flex items-center gap-1.5">
                       <Clock size={12} />
                       <span>{format(new Date(event.start), 'HH:mm')} - {format(new Date(event.end), 'HH:mm')}</span>
                     </div>
@@ -256,13 +256,13 @@ export const EventDetailDialog: React.FC<EventDetailDialogProps> = ({
           </div>
 
           {(event.description || isEditingDetails) && (
-            <div className="flex items-start gap-3 text-sm text-white/80 bg-black/20 p-3.5 rounded-xl border border-white/5">
-              <AlignLeft size={18} className="text-indigo-400 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 text-sm text-muted-foreground bg-card p-3.5 rounded-xl border border-border">
+              <AlignLeft size={18} className="text-primary shrink-0 mt-0.5" />
               {isEditingDetails ? (
                 <textarea
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
-                  className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-white focus:outline-none h-20 resize-none"
+                  className="w-full bg-card border border-border rounded-lg p-2 text-white focus:outline-none h-20 resize-none"
                   placeholder="Açıklama"
                 />
               ) : (
@@ -272,13 +272,13 @@ export const EventDetailDialog: React.FC<EventDetailDialogProps> = ({
           )}
 
           {(event.type === 'meeting' && (event.link || isEditingDetails)) && (
-            <div className="flex items-center gap-3 text-sm text-white/80 bg-black/20 p-3.5 rounded-xl border border-white/5">
-              <Video size={18} className="text-blue-400 shrink-0" />
+            <div className="flex items-center gap-3 text-sm text-muted-foreground bg-card p-3.5 rounded-xl border border-border">
+              <Video size={18} className="text-primary shrink-0" />
               {isEditingDetails ? (
                 <input
                   value={editLink}
                   onChange={(e) => setEditLink(e.target.value)}
-                  className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-white focus:outline-none"
+                  className="w-full bg-card border border-border rounded-lg p-2 text-white focus:outline-none"
                   placeholder="Görüşme Linki (Zoom, Meet vs.)"
                 />
               ) : (
@@ -286,7 +286,7 @@ export const EventDetailDialog: React.FC<EventDetailDialogProps> = ({
                   href={event.link} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors truncate font-medium"
+                  className="text-primary hover:text-blue-300 underline underline-offset-2 transition-colors truncate font-medium"
                 >
                   Toplantıya Katıl
                 </a>
@@ -296,7 +296,7 @@ export const EventDetailDialog: React.FC<EventDetailDialogProps> = ({
 
           {/* Toplantı Kararları / Notları Alanı */}
           {event.type === 'meeting' && (
-            <div className="flex flex-col gap-2 bg-black/20 p-4 rounded-xl border border-white/5 mt-4">
+            <div className="flex flex-col gap-2 bg-card p-4 rounded-xl border border-border mt-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center text-sm font-semibold text-emerald-400">
                   <AlignLeft size={16} className="mr-2" />
@@ -305,7 +305,7 @@ export const EventDetailDialog: React.FC<EventDetailDialogProps> = ({
                 {!isEditingNotes && (
                   <button 
                     onClick={() => setIsEditingNotes(true)}
-                    className="text-xs text-white/50 hover:text-white transition-colors"
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {notes ? 'Düzenle' : 'Not Ekle'}
                   </button>
@@ -318,12 +318,12 @@ export const EventDetailDialog: React.FC<EventDetailDialogProps> = ({
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Toplantıda alınan kararları, tartışılan konuları buraya yazın..."
-                    className="w-full h-32 bg-black/40 border border-white/10 rounded-lg p-3 text-sm text-white/90 placeholder:text-white/30 focus:outline-none focus:border-emerald-500/50 resize-none"
+                    className="w-full h-32 bg-card border border-border rounded-lg p-3 text-sm text-muted-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50 resize-none"
                   />
                   <div className="flex justify-end gap-2">
                     <button 
                       onClick={() => setIsEditingNotes(false)}
-                      className="px-3 py-1.5 text-xs text-white/60 hover:text-white hover:bg-white/5 rounded-md transition-colors"
+                      className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-md transition-colors"
                       disabled={isSavingNotes}
                     >
                       İptal
@@ -348,8 +348,8 @@ export const EventDetailDialog: React.FC<EventDetailDialogProps> = ({
                   </div>
                 </div>
               ) : (
-                <div className="mt-1 text-sm text-white/70 leading-relaxed whitespace-pre-wrap">
-                  {notes ? notes : <span className="text-white/30 italic">Henüz not eklenmemiş.</span>}
+                <div className="mt-1 text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                  {notes ? notes : <span className="text-muted-foreground italic">Henüz not eklenmemiş.</span>}
                 </div>
               )}
             </div>
@@ -366,7 +366,7 @@ export const EventDetailDialog: React.FC<EventDetailDialogProps> = ({
               <div className="flex items-center justify-end gap-2">
                 <button
                   onClick={() => setIsConfirmingDelete(false)}
-                  className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/10 rounded-lg transition-colors"
                 >
                   Vazgeç
                 </button>
@@ -386,7 +386,7 @@ export const EventDetailDialog: React.FC<EventDetailDialogProps> = ({
                 {event.type === 'meeting' && (isInstructor || event.originalData?.created_by === currentUserId) && onDelete && (
                   <button
                     onClick={() => setIsConfirmingDelete(true)}
-                    className="px-4 py-2 text-sm font-medium text-red-400 hover:text-white bg-red-500/10 hover:bg-red-500 border border-red-500/20 rounded-lg transition-colors"
+                    className="px-4 py-2 text-sm font-medium text-red-400 hover:text-foreground bg-red-500/10 hover:bg-red-500 border border-red-500/20 rounded-lg transition-colors"
                   >
                     Toplantıyı İptal Et
                   </button>
@@ -397,7 +397,7 @@ export const EventDetailDialog: React.FC<EventDetailDialogProps> = ({
                 {canEdit && !isEditingDetails && !isEditingNotes && (
                   <button
                     onClick={() => setIsEditingDetails(true)}
-                    className="px-4 py-2 text-sm font-medium text-blue-400 hover:text-white bg-blue-500/10 hover:bg-blue-500 border border-blue-500/20 rounded-lg transition-colors"
+                    className="px-4 py-2 text-sm font-medium text-primary hover:text-foreground bg-primary/10 hover:bg-primary border border-primary/20 rounded-lg transition-colors"
                   >
                     Düzenle
                   </button>
@@ -413,7 +413,7 @@ export const EventDetailDialog: React.FC<EventDetailDialogProps> = ({
                 )}
                 <button
                   onClick={handleClose}
-                  className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-lg transition-colors"
                 >
                   Kapat
                 </button>
@@ -421,7 +421,7 @@ export const EventDetailDialog: React.FC<EventDetailDialogProps> = ({
                 {event.type !== 'meeting' && teamId && (
                   <button
                     onClick={handleNavigate}
-                    className="flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-500 hover:bg-indigo-600 rounded-lg shadow-lg shadow-indigo-500/20 transition-all hover:scale-105"
+                    className="flex items-center px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-indigo-600 rounded-lg shadow-lg shadow-indigo-500/20 transition-all hover:scale-105"
                   >
                     Panoya Git
                     <ArrowRight size={16} className="ml-2" />

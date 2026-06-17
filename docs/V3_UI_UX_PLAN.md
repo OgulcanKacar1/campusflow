@@ -20,10 +20,12 @@ Tailwind CSS yapısı, tamamen CSS Değişkenleri üzerinden çalışacak şekil
 - Durum renkleri: `success`, `destructive`, `warning`
 
 ## 3. Uygulama Adımları (Execution Plan)
-1. **Mimari Kurulum:** `globals.css` ve `tailwind.config.ts` dosyalarının yeni HSL variable mimarisine göre güncellenmesi.
-2. **Core Bileşen Güncellemesi:** Tüm UI bileşenlerinin (Button, Card, Input, Dialog vb.) yeni değişkenlerle ve border-radius ayarlarıyla uyumlu hale getirilmesi.
-3. **Hardcoded Temizliği:** Proje içindeki tüm `bg-slate-900`, `text-blue-500` gibi sabit Tailwind sınıflarının temizlenip anlamsal değişkenlere (`bg-background`, `text-primary` vb.) geçirilmesi.
-4. **Layout Optimizasyonu:** Sidebar, Header ve genel sayfa iskeletinin siyah zemin ve turuncu vurgu dinamiklerine göre optimize edilmesi.
+- [x] **1. Mimari Kurulum:** `globals.css` ve `tailwind.config.ts` dosyalarının yeni HSL variable mimarisine göre güncellenmesi. (Kiremit Turuncu ve Simsiyah Tema entegre edildi).
+- [x] **2. Core Bileşen Güncellemesi:** Tüm UI bileşenlerinin (Button, Card, Input, Dialog, Select vb.) yeni anlamsal değişkenlerle ve border-radius ayarlarıyla uyumlu hale getirilmesi.
+- [x] **3. Hardcoded Renk Temizliği (Öğrenci Paneli):** Öğrenci sayfalarındaki `bg-slate-900`, `text-blue-500` gibi sabit renklerin temizlenip `bg-background`, `text-primary` gibi değişkenlere bağlanması.
+- [x] **4. Hardcoded Renk Temizliği (Eğitmen Paneli):** Eğitmen sayfaları ve Kanban board üzerindeki sabit renklerin silinmesi.
+- [x] **5. Layout Optimizasyonu:** Sidebar, Header ve sayfa iskeletinin siyah zemin ve turuncu vurgu dinamiklerine göre optimize edilmesi.
+- [x] **6. Son Kontroller ve Test:** Tema geçişinin tüm sistemde zıtlık (contrast) oranlarına ve görsel bütünlüğe uyduğunun doğrulanması.
 
 ## 4. Doğrulama (Verification)
 - Yeni tema renkleri sisteme eklendiğinde tüm ekranların sorunsuz bir şekilde bu paletten beslendiği test edilecek.

@@ -101,17 +101,17 @@ export function RandomTeamsButton({
       <Button
         onClick={() => setOpen(true)}
         variant="outline"
-        className="border-purple-600 text-purple-400 hover:bg-purple-600/10"
+        className="border-purple-600 text-primary hover:bg-purple-600/10"
       >
         <Shuffle className="w-4 h-4 mr-2" />
         Rastgele Takımlar
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md bg-[#0f1523] border-gray-800 text-white">
+        <DialogContent className="sm:max-w-md bg-card border-gray-800 text-white">
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
-              <Shuffle className="w-5 h-5 text-purple-400" />
+              <Shuffle className="w-5 h-5 text-primary" />
               Rastgele Takımlar Oluştur
             </DialogTitle>
           </DialogHeader>
@@ -201,7 +201,7 @@ export function RandomTeamsButton({
 
       {/* Başarı Modal'ı */}
       <Dialog open={successOpen} onOpenChange={setSuccessOpen}>
-        <DialogContent className="sm:max-w-sm bg-[#0f1523] border-gray-800 text-white">
+        <DialogContent className="sm:max-w-sm bg-card border-gray-800 text-white">
           <DialogHeader>
             <div className="flex flex-col items-center text-center gap-3 py-4">
               <div className="flex items-center justify-center w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/20">

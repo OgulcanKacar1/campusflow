@@ -13,7 +13,6 @@ export async function POST(request: Request) {
 
     const supabase = await createClient();
     
-    // Yetki Kontrolü: Sadece eğitmen bu analizi çalıştırabilir
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -27,12 +26,13 @@ export async function POST(request: Request) {
        return NextResponse.json({ error: 'Sadece takımın eğitmeni bu raporu oluşturabilir' }, { status: 403 });
     }
 
-    // 1. Takım ve Üye Verilerini Çek
     const { data: teamData, error: teamError } = await supabase
       .from('teams')
       .select(`
         id, name, project_name, project_description, repo_url,
         members:team_members (
+          left_at,
+          student_id,
           profile:profiles ( id, full_name, role )
         )
       `)
@@ -43,7 +43,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Takım bulunamadı' }, { status: 404 });
     }
 
-    // 2. Sprint Verileri ve Eski Raporlar
+    if (teamData.members) {
+      teamData.members = teamData.members.filter((m: any) => m.left_at === null);
+    }
+
     const { data: sprints } = await supabase
       .from('sprints')
       .select(`
@@ -53,19 +56,23 @@ export async function POST(request: Request) {
       .eq('team_id', teamId)
       .order('start_date', { ascending: true });
 
-    // 3. Görev Verileri
     const { data: tasks } = await supabase
       .from('tasks')
-      .select('id, title, description, status, sprint_id, created_at, updated_at, assignee_id, points')
+      .select('id, title, description, status, sprint_id, created_at, updated_at, points')
       .eq('team_id', teamId);
 
-    // 4. Github Commitleri
+    const taskIds = tasks?.map(t => t.id) || [];
+
+    const { data: assignments } = await supabase
+      .from('task_members')
+      .select('task_id, student_id')
+      .in('task_id', taskIds.length > 0 ? taskIds : [null]);
+
     const { data: githubEvents } = await supabase
-      .from('github_events')
+      .from('task_github_events')
       .select('*')
-      .eq('team_id', teamId);
+      .in('task_id', taskIds.length > 0 ? taskIds : [null]);
 
-    // Verileri Prompt için hazırla
     const teamMembersText = teamData.members
       ?.map((m: any) => `- ${m.profile?.full_name} (ID: ${m.profile?.id})`)
       .join('\n') || 'Üye bulunamadı';
@@ -81,7 +88,12 @@ export async function POST(request: Request) {
     }).join('\n\n') || 'Sprint verisi yok';
 
     const tasksText = tasks?.map(t => {
-      const assigneeName = teamData.members?.find((m: any) => m.profile?.id === t.assignee_id)?.profile?.full_name || 'Atanmamış';
+      const taskAssignments = assignments?.filter(a => a.task_id === t.id) || [];
+      const assigneeNames = taskAssignments.map(a => {
+        const member = teamData.members?.find((m: any) => m.student_id === a.student_id);
+        return member?.profile?.full_name || 'Bilinmiyor';
+      });
+      const assigneeName = assigneeNames.length > 0 ? assigneeNames.join(', ') : 'Atanmamış';
       return `- [${t.status.toUpperCase()}] ${t.title} (${t.points || 0} puan) -> ${assigneeName}`;
     }).join('\n') || 'Görev verisi yok';
 
@@ -131,7 +143,7 @@ AŞAĞIDAKİ JSON FORMATINDA YANIT VER (başka hiçbir metin ekleme, doğrudan J
 
     // Gemini API'yi çağır
     const { object: reportContent } = await generateObject({
-      model: google('gemini-flash-latest'),
+      model: google('gemini-2.5-flash'),
       schema: z.object({
         overallScore: z.number(),
         executiveSummary: z.string(),

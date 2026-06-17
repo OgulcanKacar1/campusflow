@@ -27,13 +27,13 @@ export const MonthGrid: React.FC<MonthGridProps> = ({ currentDate, events, onEve
   };
 
   return (
-    <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
+    <div className="bg-card/60 backdrop-blur-xl rounded-2xl border border-border/40 overflow-hidden shadow-xl shadow-black/20">
       <div 
-        className="grid bg-black/20 border-b border-white/5" 
+        className="grid bg-background/40 border-b border-border/40" 
         style={{ gridTemplateColumns: 'repeat(7, minmax(0, 1fr))' }}
       >
         {weekDays.map(day => (
-          <div key={day} className="p-3 text-center text-sm font-semibold text-white/60">
+          <div key={day} className="p-3 text-center text-sm font-semibold text-muted-foreground">
             {day}
           </div>
         ))}
@@ -50,15 +50,16 @@ export const MonthGrid: React.FC<MonthGridProps> = ({ currentDate, events, onEve
           return (
             <div
               key={day.toString()}
-              className={`p-2 border-b border-r border-white/5 transition-colors hover:bg-white/5 ${
-                !isCurrentMonth ? 'opacity-30 bg-black/10' : ''
+              className={`p-2 border-b border-r border-border/40 transition-colors hover:bg-white/5 ${
+                !isCurrentMonth ? 'opacity-30 bg-background/20' : ''
               } ${idx % 7 === 6 ? 'border-r-0' : ''}`}
             >
               <div className="flex justify-between items-start mb-2">
                 <span
                   className={`text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full ${
-                    isToday ? 'bg-[#6366f1] text-white shadow-lg shadow-indigo-500/30' : 'text-white/80'
+                    isToday ? 'text-white shadow-sm' : 'text-muted-foreground'
                   }`}
+                  style={isToday ? { backgroundColor: '#ea580c' } : {}}
                 >
                   {format(day, 'd')}
                 </span>
@@ -66,31 +67,31 @@ export const MonthGrid: React.FC<MonthGridProps> = ({ currentDate, events, onEve
               
               <div className="space-y-1 overflow-y-auto max-h-[70px] pr-1 custom-scrollbar">
                 {dayEvents.map(event => {
-                  let bgColor = 'rgba(249, 115, 22, 0.2)'; // orange
-                  let borderColor = 'rgba(249, 115, 22, 0.3)';
-                  let textColor = '#fdba74';
-                  let dotColor = '#fb923c';
+                  let bgColor = 'rgba(234, 88, 12, 0.1)'; // orange for sprint
+                  let borderColor = 'rgba(234, 88, 12, 0.2)';
+                  let textColor = '#fb923c';
+                  let dotColor = '#ea580c';
                   
                   if (event.type === 'meeting') {
-                    bgColor = 'rgba(59, 130, 246, 0.2)'; // blue
-                    borderColor = 'rgba(59, 130, 246, 0.3)';
-                    textColor = '#93c5fd';
-                    dotColor = '#60a5fa';
+                    bgColor = 'rgba(59, 130, 246, 0.1)'; // blue for meeting
+                    borderColor = 'rgba(59, 130, 246, 0.2)';
+                    textColor = '#60a5fa';
+                    dotColor = '#3b82f6';
                   } else if (event.type === 'task') {
                     // Kendi görevini kontrol et
                     const isSelfAssigned = event.originalData?.assigned_to === currentUserId || 
                       event.originalData?.task_members?.some((m: any) => m.student_id === currentUserId);
                     
                     if (isSelfAssigned) {
-                      bgColor = 'rgba(139, 92, 246, 0.2)'; // purple
-                      borderColor = 'rgba(139, 92, 246, 0.3)';
-                      textColor = '#c4b5fd';
-                      dotColor = '#a78bfa';
+                      bgColor = 'rgba(139, 92, 246, 0.1)'; // purple
+                      borderColor = 'rgba(139, 92, 246, 0.2)';
+                      textColor = '#a78bfa';
+                      dotColor = '#8b5cf6';
                     } else {
-                      bgColor = 'rgba(34, 197, 94, 0.2)'; // green
-                      borderColor = 'rgba(34, 197, 94, 0.3)';
-                      textColor = '#86efac';
-                      dotColor = '#4ade80';
+                      bgColor = 'rgba(34, 197, 94, 0.1)'; // green
+                      borderColor = 'rgba(34, 197, 94, 0.2)';
+                      textColor = '#4ade80';
+                      dotColor = '#22c55e';
                     }
                   }
 

@@ -80,17 +80,17 @@ export function TaskDialog({ open, onOpenChange, onSubmit, isSubmitting, sprints
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-lg bg-[#0f1523] border-slate-800 text-white">
+      <DialogContent className="sm:max-w-2xl bg-card/40 backdrop-blur-xl border-border/60 text-white shadow-2xl">
         <form onSubmit={handleSubmit} className="space-y-5">
           <DialogHeader>
             <DialogTitle className="text-xl">Görev Oluştur</DialogTitle>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-muted-foreground">
               Görevi backlog&apos;a veya mevcut sprintlerden birine ekleyebilirsin.
             </p>
           </DialogHeader>
 
           <div className="space-y-2">
-            <Label htmlFor="task-title" className="text-xs uppercase tracking-widest text-slate-400">
+            <Label htmlFor="task-title" className="text-xs uppercase tracking-widest text-muted-foreground">
               Başlık
             </Label>
             <Input
@@ -98,14 +98,14 @@ export function TaskDialog({ open, onOpenChange, onSubmit, isSubmitting, sprints
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               placeholder="Örn. Kullanıcı girişi API"
-              className="bg-slate-900/60 border-slate-700 text-white"
+              className="bg-card/60 border-border text-white"
               maxLength={120}
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="task-description" className="text-xs uppercase tracking-widest text-slate-400">
+            <Label htmlFor="task-description" className="text-xs uppercase tracking-widest text-muted-foreground">
               Açıklama
             </Label>
             <MarkdownEditor
@@ -117,14 +117,14 @@ export function TaskDialog({ open, onOpenChange, onSubmit, isSubmitting, sprints
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="task-sprint" className="text-xs uppercase tracking-widest text-slate-400">
+              <Label htmlFor="task-sprint" className="text-xs uppercase tracking-widest text-muted-foreground">
                 Sprint
               </Label>
               <select
                 id="task-sprint"
                 value={selectedSprint}
                 onChange={(event) => setSelectedSprint(event.target.value)}
-                className="w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                className="w-full rounded-md border border-border bg-card/60 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/40"
               >
                 <option value="">Backlog</option>
                 {sprints.map((sprint) => (
@@ -136,14 +136,14 @@ export function TaskDialog({ open, onOpenChange, onSubmit, isSubmitting, sprints
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="task-status" className="text-xs uppercase tracking-widest text-slate-400">
+              <Label htmlFor="task-status" className="text-xs uppercase tracking-widest text-muted-foreground">
                 Durum
               </Label>
               <select
                 id="task-status"
                 value={status}
                 onChange={(event) => setStatus(event.target.value as TaskStatus)}
-                className="w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                className="w-full rounded-md border border-border bg-card/60 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/40"
               >
                 {KANBAN_STATUS_DEFINITIONS.map(({ key, title }) => (
                   <option key={key} value={key}>
@@ -156,14 +156,14 @@ export function TaskDialog({ open, onOpenChange, onSubmit, isSubmitting, sprints
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="task-priority" className="text-xs uppercase tracking-widest text-slate-400">
+              <Label htmlFor="task-priority" className="text-xs uppercase tracking-widest text-muted-foreground">
                 Öncelik
               </Label>
               <select
                 id="task-priority"
                 value={priority}
                 onChange={(event) => setPriority(event.target.value as TaskPriority)}
-                className="w-full rounded-md border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                className="w-full rounded-md border border-border bg-card/60 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/40"
               >
                 {KANBAN_PRIORITIES.map((value) => (
                   <option key={value} value={value}>
@@ -174,12 +174,12 @@ export function TaskDialog({ open, onOpenChange, onSubmit, isSubmitting, sprints
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-widest text-slate-400">
+              <Label className="text-xs uppercase tracking-widest text-muted-foreground">
                 Sorumlu Üyeler
               </Label>
               <div className="flex flex-wrap gap-2 pt-1">
                 {teamMembers.length === 0 ? (
-                  <p className="text-xs text-slate-500 py-1">Takımda üye yok.</p>
+                  <p className="text-xs text-muted-foreground py-1">Takımda üye yok.</p>
                 ) : (
                   teamMembers.map((member) => {
                     const isSelected = assignees.includes(member.studentId);
@@ -190,12 +190,12 @@ export function TaskDialog({ open, onOpenChange, onSubmit, isSubmitting, sprints
                         onClick={() => toggleAssignee(member.studentId)}
                         className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-all ${
                           isSelected 
-                            ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/50' 
-                            : 'bg-slate-800/50 text-slate-400 border border-slate-700/50 hover:bg-slate-700 hover:text-slate-300'
+                            ? 'bg-primary/20 text-primary border border-primary/50' 
+                            : 'bg-muted/50 text-muted-foreground border border-border/50 hover:bg-secondary hover:text-muted-foreground'
                         }`}
                       >
-                        <div className={`flex h-4 w-4 items-center justify-center rounded-full ${isSelected ? 'bg-indigo-500/30' : 'bg-slate-700'}`}>
-                          {isSelected ? <Check className="h-2.5 w-2.5 text-indigo-300" /> : <User2 className="h-2.5 w-2.5 text-slate-400" />}
+                        <div className={`flex h-4 w-4 items-center justify-center rounded-full ${isSelected ? 'bg-primary/30' : 'bg-secondary'}`}>
+                          {isSelected ? <Check className="h-2.5 w-2.5 text-primary" /> : <User2 className="h-2.5 w-2.5 text-muted-foreground" />}
                         </div>
                         {member.fullName ?? member.email?.split('@')[0] ?? 'Bilinmeyen Üye'}
                       </button>
@@ -216,14 +216,14 @@ export function TaskDialog({ open, onOpenChange, onSubmit, isSubmitting, sprints
             <Button
               type="button"
               variant="ghost"
-              className="text-slate-300 hover:text-white"
+              className="text-muted-foreground hover:text-foreground"
               onClick={() => handleOpenChange(false)}
             >
               İptal
             </Button>
             <Button
               type="submit"
-              className="bg-indigo-600 hover:bg-indigo-500"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Oluşturuluyor…' : 'Görev Oluştur'}

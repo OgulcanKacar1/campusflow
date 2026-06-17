@@ -329,7 +329,7 @@ export default function CourseDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0f1e] p-6 md:p-8">
+    <div className="min-h-screen bg-background p-6 md:p-8">
       {/* Toast Notification */}
       {toast && (
         <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg transition-all ${
@@ -382,16 +382,19 @@ export default function CourseDetailPage() {
           </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card className="bg-[#0f1523] border-gray-800">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-500/10 rounded-lg">
-                  <Users className="w-5 h-5 text-blue-400" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card className="bg-card/40 border-border/50 shadow-sm transition-colors group relative overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+            <CardContent className="p-6">
+              <div className="absolute -right-4 -top-4 p-4 pointer-events-none transition-opacity" style={{ opacity: 0.05 }}>
+                <Users className="w-24 h-24 text-emerald-500" />
+              </div>
+              <div className="flex items-center gap-3 relative z-10">
+                <div className="p-2.5 bg-emerald-500/10 rounded-xl">
+                  <Users className="w-5 h-5 text-emerald-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Öğrenci</p>
-                  <p className="text-2xl font-bold text-white">
+                  <p className="text-sm font-medium text-muted-foreground">Kayıtlı Öğrenci</p>
+                  <p className="text-2xl font-bold text-foreground tracking-tight">
                     {studentsLoading ? '…' : students.length || course?.studentCount || 0}
                   </p>
                 </div>
@@ -399,15 +402,18 @@ export default function CourseDetailPage() {
             </CardContent>
           </Card>
           
-          <Card className="bg-[#0f1523] border-gray-800">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-500/10 rounded-lg">
-                  <Users className="w-5 h-5 text-purple-400" />
+          <Card className="bg-card/40 border-border/50 shadow-sm transition-colors group relative overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+            <CardContent className="p-6">
+              <div className="absolute -right-4 -top-4 p-4 pointer-events-none transition-opacity" style={{ opacity: 0.05 }}>
+                <Users className="w-24 h-24 text-blue-500" />
+              </div>
+              <div className="flex items-center gap-3 relative z-10">
+                <div className="p-2.5 bg-blue-500/10 rounded-xl">
+                  <Users className="w-5 h-5 text-blue-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Takım</p>
-                  <p className="text-2xl font-bold text-white">
+                  <p className="text-sm font-medium text-muted-foreground">Proje Takımı</p>
+                  <p className="text-2xl font-bold text-foreground tracking-tight">
                     {teamsLoading ? '…' : teams.length}
                   </p>
                 </div>
@@ -415,15 +421,18 @@ export default function CourseDetailPage() {
             </CardContent>
           </Card>
           
-          <Card className="bg-[#0f1523] border-gray-800">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-500/10 rounded-lg">
-                  <BookOpen className="w-5 h-5 text-emerald-400" />
+          <Card className="bg-card/40 border-border/50 shadow-sm transition-colors group relative overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+            <CardContent className="p-6">
+              <div className="absolute -right-4 -top-4 p-4 pointer-events-none transition-opacity" style={{ opacity: 0.05 }}>
+                <BookOpen className="w-24 h-24 text-[#ea580c]" />
+              </div>
+              <div className="flex items-center gap-3 relative z-10">
+                <div className="p-2.5 rounded-xl bg-[#ea580c]/10">
+                  <BookOpen className="w-5 h-5 text-[#ea580c]" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Katılım Kodu</p>
-                  <p className="text-lg font-mono font-semibold text-purple-400">
+                  <p className="text-sm font-medium text-muted-foreground">Katılım Kodu</p>
+                  <p className="text-lg font-mono font-bold text-[#ea580c] tracking-wider">
                     {course?.joinCode || '—'}
                   </p>
                 </div>
@@ -434,37 +443,31 @@ export default function CourseDetailPage() {
 
         {/* Tabs */}
         <Tabs defaultValue="teams" className="w-full">
-          <TabsList className="mb-8 bg-[#0a0f1e] border border-gray-800/50 p-1.5 rounded-xl h-auto">
+          <TabsList className="mb-8 bg-muted/50 p-1.5 h-auto rounded-xl inline-flex">
             <TabsTrigger 
               value="teams" 
-              className="relative px-6 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-200 transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-blue-500/25"
+              className="rounded-lg px-6 py-2 transition-all font-medium text-muted-foreground data-[state=active]:!bg-background data-[state=active]:!text-foreground data-[state=active]:shadow-sm data-active:!bg-background data-active:!text-foreground data-active:shadow-sm hover:text-foreground"
             >
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 rounded-md bg-blue-500/10 data-[state=active]:bg-white/20">
-                  <Users className="w-4 h-4" />
-                </div>
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
                 <span>Takımlar</span>
               </div>
             </TabsTrigger>
             <TabsTrigger 
               value="students" 
-              className="relative px-6 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-200 transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-blue-500/25"
+              className="rounded-lg px-6 py-2 transition-all font-medium text-muted-foreground data-[state=active]:!bg-background data-[state=active]:!text-foreground data-[state=active]:shadow-sm data-active:!bg-background data-active:!text-foreground data-active:shadow-sm hover:text-foreground"
             >
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 rounded-md bg-blue-500/10 data-[state=active]:bg-white/20">
-                  <BookOpen className="w-4 h-4" />
-                </div>
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4" />
                 <span>Öğrenciler</span>
               </div>
             </TabsTrigger>
             <TabsTrigger 
               value="settings" 
-              className="relative px-6 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-200 transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-blue-500/25"
+              className="rounded-lg px-6 py-2 transition-all font-medium text-muted-foreground data-[state=active]:!bg-background data-[state=active]:!text-foreground data-[state=active]:shadow-sm data-active:!bg-background data-active:!text-foreground data-active:shadow-sm hover:text-foreground"
             >
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 rounded-md bg-blue-500/10 data-[state=active]:bg-white/20">
-                  <Settings className="w-4 h-4" />
-                </div>
+              <div className="flex items-center gap-2">
+                <Settings className="w-4 h-4" />
                 <span>Ayarlar</span>
               </div>
             </TabsTrigger>
@@ -495,7 +498,7 @@ export default function CourseDetailPage() {
                       <p className="text-gray-400 text-sm">Öğrenciler kendi takımlarını seçebilir</p>
                     )}
                   </div>
-                  <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20">
+                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
                     Mod: {teamMode === 'instructor' ? 'Eğitmen' : teamMode === 'random' ? 'Rastgele' : 'Öğrenci'}
                   </Badge>
                 </div>
@@ -517,23 +520,23 @@ export default function CourseDetailPage() {
           </TabsContent>
 
           <TabsContent value="students">
-            <Card className="bg-[#0f1523] border-gray-800">
-              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <Card className="bg-card/40 border-border/50 shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/50">
                 <div>
-                  <CardTitle className="text-white">Kayıtlı Öğrenciler</CardTitle>
-                  <p className="text-gray-400 text-sm mt-1">Derse kayıtlı tüm öğrenciler</p>
+                  <CardTitle className="text-foreground">Kayıtlı Öğrenciler</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">Derse kayıtlı tüm öğrenciler</p>
                 </div>
-                <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="flex gap-2">
                   <form onSubmit={handleAddStudent} className="flex gap-2">
                     <input
                       type="email"
-                      placeholder="Öğrenci E-posta..."
                       value={newStudentEmail}
-                      onChange={e => setNewStudentEmail(e.target.value)}
-                      className="bg-[#161b22] border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500 w-full sm:w-48"
+                      onChange={(e) => setNewStudentEmail(e.target.value)}
+                      placeholder="Öğrenci E-posta..."
+                      className="bg-background border border-border/50 rounded-lg px-3 py-1.5 text-sm text-foreground focus:outline-none focus:border-primary w-full sm:w-48 transition-colors"
                       disabled={isAddingStudent}
                     />
-                    <Button type="submit" disabled={isAddingStudent || !newStudentEmail.trim()} className="bg-blue-600 hover:bg-blue-700 text-white h-9">
+                    <Button type="submit" disabled={isAddingStudent || !newStudentEmail.trim()} style={{ backgroundColor: '#ea580c', color: 'white' }} className="h-9 hover:opacity-90 transition-opacity">
                       {isAddingStudent ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Ekle'}
                     </Button>
                   </form>
@@ -548,25 +551,49 @@ export default function CourseDetailPage() {
                   )}
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0 overflow-x-auto">
                 {studentsLoading ? (
                   <div className="flex justify-center items-center h-32">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
                 ) : students.length === 0 ? (
-                  <p className="text-gray-400 text-center py-8">Henüz kayıtlı öğrenci yok</p>
+                  <p className="text-muted-foreground text-center py-8">Henüz kayıtlı öğrenci yok</p>
                 ) : (
-                  <div className="rounded-lg border border-gray-800 overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead className="bg-[#161b22]">
-                        <tr>
-                          <th className="p-3 w-10 border-b border-gray-800">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-muted/30 border-b border-border/50 text-muted-foreground font-medium">
+                      <tr>
+                        <th className="px-4 py-3 w-12">
+                          <label className="flex items-center cursor-pointer relative">
+                            <input 
+                              type="checkbox" 
+                              checked={students.length > 0 && selectedStudents.length === students.length}
+                              onChange={toggleAllStudents}
+                              className="peer h-4 w-4 cursor-pointer transition-all appearance-none rounded shadow-sm border border-border bg-background checked:bg-[#ea580c] checked:border-[#ea580c] focus:outline-none focus:ring-2 focus:ring-[#ea580c]/30"
+                            />
+                            <span className="absolute text-white opacity-0 peer-checked:opacity-100 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" stroke="currentColor" strokeWidth="1">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"></path>
+                              </svg>
+                            </span>
+                          </label>
+                        </th>
+                        <th className="px-4 py-3">Öğrenci</th>
+                        <th className="px-4 py-3">Email</th>
+                        <th className="px-4 py-3">Takım</th>
+                        <th className="px-4 py-3">Katılım Tarihi</th>
+                        <th className="px-4 py-3 text-right">İşlemler</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/50 text-foreground">
+                      {students.map((student) => (
+                        <tr key={student.id} className="hover:bg-muted/20 transition-colors">
+                          <td className="px-4 py-3">
                             <label className="flex items-center cursor-pointer relative">
                               <input 
-                                type="checkbox" 
-                                checked={students.length > 0 && selectedStudents.length === students.length}
-                                onChange={toggleAllStudents}
-                                className="peer h-4 w-4 cursor-pointer transition-all appearance-none rounded shadow hover:shadow-md border border-gray-600 bg-[#161b22] checked:bg-blue-600 checked:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                                type="checkbox"
+                                checked={selectedStudents.includes(student.id)}
+                                onChange={() => toggleStudentSelection(student.id)}
+                                className="peer h-4 w-4 cursor-pointer transition-all appearance-none rounded shadow-sm border border-border bg-background checked:bg-[#ea580c] checked:border-[#ea580c] focus:outline-none focus:ring-2 focus:ring-[#ea580c]/30"
                               />
                               <span className="absolute text-white opacity-0 peer-checked:opacity-100 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" stroke="currentColor" strokeWidth="1">
@@ -574,66 +601,46 @@ export default function CourseDetailPage() {
                                 </svg>
                               </span>
                             </label>
-                          </th>
-                          <th className="text-left p-3 text-gray-400 font-medium">Öğrenci</th>
-                          <th className="text-left p-3 text-gray-400 font-medium">Email</th>
-                          <th className="text-left p-3 text-gray-400 font-medium">Takım</th>
-                          <th className="text-left p-3 text-gray-400 font-medium">Katılım Tarihi</th>
-                          <th className="text-right p-3 text-gray-400 font-medium">İşlemler</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-800">
-                        {students.map((student) => (
-                          <tr key={student.id} className="hover:bg-[#161b22]/50">
-                            <td className="p-3 border-b border-gray-800/50">
-                              <label className="flex items-center cursor-pointer relative">
-                                <input 
-                                  type="checkbox"
-                                  checked={selectedStudents.includes(student.id)}
-                                  onChange={() => toggleStudentSelection(student.id)}
-                                  className="peer h-4 w-4 cursor-pointer transition-all appearance-none rounded shadow hover:shadow-md border border-gray-600 bg-[#161b22] checked:bg-blue-600 checked:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                                />
-                                <span className="absolute text-white opacity-0 peer-checked:opacity-100 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" stroke="currentColor" strokeWidth="1">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"></path>
-                                  </svg>
-                                </span>
-                              </label>
-                            </td>
-                            <td className="p-3 text-white font-medium">{student.name}</td>
-                            <td className="p-3 text-gray-400">{student.email}</td>
-                            <td className="p-3">
-                              <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20">
+                          </td>
+                          <td className="px-4 py-3 font-medium">{student.name}</td>
+                          <td className="px-4 py-3 text-muted-foreground">{student.email}</td>
+                          <td className="px-4 py-3">
+                            {student.team ? (
+                              <Badge variant="outline" className="bg-[#ea580c]/10 text-[#ea580c] border-[#ea580c]/20">
                                 {student.team}
                               </Badge>
-                            </td>
-                            <td className="p-3 text-gray-400">{student.date}</td>
-                            <td className="p-3 text-right">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => {
-                                  setSelectedStudents([student.id]);
-                                  setIsRemoveStudentsModalOpen(true);
-                                }}
-                                disabled={isRemovingStudents}
-                                className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                              >
-                                Çıkar
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                            ) : (
+                              <Badge variant="outline" className="bg-muted text-muted-foreground border-border/50">
+                                -
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">{student.date}</td>
+                          <td className="px-4 py-3 text-right">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => {
+                                setSelectedStudents([student.id]);
+                                setIsRemoveStudentsModalOpen(true);
+                              }}
+                              disabled={isRemovingStudents}
+                              className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                            >
+                              Çıkar
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 )}
               </CardContent>
             </Card>
 
             {/* Modal for Removing Students */}
             <Dialog open={isRemoveStudentsModalOpen} onOpenChange={setIsRemoveStudentsModalOpen}>
-              <DialogContent className="sm:max-w-md bg-[#0f1523] border-gray-800 text-white">
+              <DialogContent className="sm:max-w-md bg-card border-gray-800 text-white">
                 <DialogHeader>
                   <DialogTitle className="text-white">Öğrencileri Dersten Çıkar</DialogTitle>
                 </DialogHeader>
@@ -643,7 +650,7 @@ export default function CourseDetailPage() {
                   </p>
                 </div>
                 <div className="flex justify-end gap-3">
-                  <Button variant="ghost" onClick={() => setIsRemoveStudentsModalOpen(false)} disabled={isRemovingStudents} className="text-gray-400 hover:text-white">
+                  <Button variant="ghost" onClick={() => setIsRemoveStudentsModalOpen(false)} disabled={isRemovingStudents} className="text-gray-400 hover:text-foreground">
                     İptal
                   </Button>
                   <Button variant="destructive" onClick={handleRemoveStudents} disabled={isRemovingStudents}>
@@ -658,42 +665,42 @@ export default function CourseDetailPage() {
           <TabsContent value="settings">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Genel Ayarlar */}
-              <Card className="bg-[#0f1523] border-gray-800">
-                <CardHeader>
-                  <CardTitle className="text-white">Genel Ayarlar</CardTitle>
+              <Card className="bg-card/40 border-border/50 shadow-sm">
+                <CardHeader className="border-b border-border/50 pb-4 mb-4">
+                  <CardTitle className="text-foreground">Genel Ayarlar</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-5">
                   <div>
-                    <label className="text-sm text-gray-400 mb-2 block">Ders Adı</label>
+                    <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Ders Adı</label>
                     <input 
                       type="text" 
                       value={courseForm?.name ?? ''}
                       onChange={(e) => setCourseForm(prev => ({...prev, name: e.target.value}))}
-                      className="w-full bg-[#161b22] border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500"
+                      className="w-full bg-background border border-border/50 rounded-lg p-2.5 text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm text-gray-400 mb-2 block">Ders Kodu</label>
+                      <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Ders Kodu</label>
                       <input 
                         type="text" 
                         value={courseForm?.code ?? ''}
                         onChange={(e) => setCourseForm(prev => ({...prev, code: e.target.value}))}
-                        className="w-full bg-[#161b22] border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500"
+                        className="w-full bg-background border border-border/50 rounded-lg p-2.5 text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
                       />
                     </div>
                     <div>
-                      <label className="text-sm text-gray-400 mb-2 block">Şube</label>
+                      <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Şube</label>
                       <input 
                         type="text" 
                         value={courseForm?.section ?? ''}
                         onChange={(e) => setCourseForm(prev => ({...prev, section: e.target.value}))}
-                        className="w-full bg-[#161b22] border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500"
+                        className="w-full bg-background border border-border/50 rounded-lg p-2.5 text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
                       />
                     </div>
                   </div>
-                  <div className="pt-4 flex justify-end">
-                    <Button onClick={handleSaveCourse} variant="outline" size="sm" className="border-emerald-600 text-emerald-500 hover:bg-emerald-600/10">
+                  <div className="pt-2 flex justify-end">
+                    <Button onClick={handleSaveCourse} className="bg-emerald-600 hover:bg-emerald-700 text-white transition-colors">
                       Kaydet
                     </Button>
                   </div>
@@ -701,17 +708,17 @@ export default function CourseDetailPage() {
               </Card>
 
               {/* Takım Ayarları */}
-              <Card className="bg-[#0f1523] border-gray-800">
-                <CardHeader>
-                  <CardTitle className="text-white">Takım Ayarları</CardTitle>
+              <Card className="bg-card/40 border-border/50 shadow-sm">
+                <CardHeader className="border-b border-border/50 pb-4 mb-4">
+                  <CardTitle className="text-foreground">Takım Ayarları</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-5">
                   <div>
-                    <label className="text-sm text-gray-400 mb-2 block">Takım Oluşturma Modu</label>
+                    <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Takım Oluşturma Modu</label>
                     <select 
                       value={teamMode ?? 'instructor'}
                       onChange={(e) => setTeamMode(e.target.value as 'instructor' | 'random' | 'student')}
-                      className="w-full bg-[#161b22] border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500"
+                      className="w-full bg-background border border-border/50 rounded-lg p-2.5 text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
                     >
                       <option value="instructor">Eğitmen Oluşturur (Manuel)</option>
                       <option value="random">Rastgele Dağıtım</option>
@@ -720,26 +727,26 @@ export default function CourseDetailPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm text-gray-400 mb-2 block">Min. Takım Boyutu</label>
+                      <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Min. Takım Boyutu</label>
                       <input 
                         type="number" 
                         value={teamSettings?.minSize ?? 3}
                         onChange={(e) => setTeamSettings(prev => ({...prev, minSize: parseInt(e.target.value) || 1}))}
-                        className="w-full bg-[#161b22] border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500"
+                        className="w-full bg-background border border-border/50 rounded-lg p-2.5 text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
                       />
                     </div>
                     <div>
-                      <label className="text-sm text-gray-400 mb-2 block">Max. Takım Boyutu</label>
+                      <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Max. Takım Boyutu</label>
                       <input 
                         type="number" 
                         value={teamSettings?.maxSize ?? 5}
                         onChange={(e) => setTeamSettings(prev => ({...prev, maxSize: parseInt(e.target.value) || 1}))}
-                        className="w-full bg-[#161b22] border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500"
+                        className="w-full bg-background border border-border/50 rounded-lg p-2.5 text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
                       />
                     </div>
                   </div>
-                  <div className="pt-4 flex justify-end">
-                    <Button onClick={handleSaveTeamSettings} variant="outline" size="sm" className="border-emerald-600 text-emerald-500 hover:bg-emerald-600/10">
+                  <div className="pt-2 flex justify-end">
+                    <Button onClick={handleSaveTeamSettings} className="bg-emerald-600 hover:bg-emerald-700 text-white transition-colors">
                       Kaydet
                     </Button>
                   </div>
@@ -747,27 +754,35 @@ export default function CourseDetailPage() {
               </Card>
 
               {/* Tehlikeli Bölge */}
-              <Card className="bg-[#0f1523] border-red-900/50">
-                <CardHeader>
-                  <CardTitle className="text-red-400">Tehlikeli Bölge</CardTitle>
+              <Card className="bg-destructive/5 border-destructive/20 shadow-sm col-span-1 lg:col-span-2">
+                <CardHeader className="border-b border-destructive/10 pb-4 mb-4">
+                  <CardTitle className="text-destructive">Tehlikeli Bölge</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
+                <CardContent className="space-y-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
-                      <p className="text-white font-medium">Dersi Arşivle</p>
-                      <p className="text-sm text-gray-400">Dersi arşive taşı, öğrenciler erişemez</p>
+                      <p className="text-foreground font-medium">Dersi Arşivle</p>
+                      <p className="text-sm text-muted-foreground mt-1">Dersi arşive taşı, öğrenciler erişemez</p>
                     </div>
-                    <Button onClick={() => setIsArchiveModalOpen(true)} disabled={course?.status === 'archived'} variant="outline" className="border-yellow-600 text-yellow-500 hover:bg-yellow-600/10">
+                    <Button 
+                      onClick={() => setIsArchiveModalOpen(true)} 
+                      disabled={course?.status === 'archived'} 
+                      className="bg-amber-600 hover:bg-amber-700 text-white w-full sm:w-auto"
+                    >
                       {course?.status === 'archived' ? 'Arşivlendi' : 'Arşivle'}
                     </Button>
                   </div>
-                  <div className="border-t border-gray-800 pt-4">
-                    <div className="flex items-center justify-between">
+                  <div className="border-t border-destructive/10 pt-6">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div>
-                        <p className="text-red-400 font-medium">Dersi Sil</p>
-                        <p className="text-sm text-gray-400">Bu işlem geri alınamaz</p>
+                        <p className="text-destructive font-medium">Dersi Sil</p>
+                        <p className="text-sm text-muted-foreground mt-1">Bu işlem geri alınamaz</p>
                       </div>
-                      <Button onClick={() => setIsDeleteCourseModalOpen(true)} variant="outline" className="border-red-600 text-red-500 hover:bg-red-600/10">
+                      <Button 
+                        onClick={() => setIsDeleteCourseModalOpen(true)} 
+                        variant="destructive"
+                        className="w-full sm:w-auto"
+                      >
                         Sil
                       </Button>
                     </div>
@@ -812,7 +827,7 @@ export default function CourseDetailPage() {
 
       {/* Course Action Modals */}
       <Dialog open={isArchiveModalOpen} onOpenChange={setIsArchiveModalOpen}>
-        <DialogContent className="sm:max-w-md bg-[#0f1523] border-gray-800 text-white">
+        <DialogContent className="sm:max-w-md bg-card border-gray-800 text-white">
           <DialogHeader>
             <DialogTitle className="text-white">Dersi Arşivle</DialogTitle>
           </DialogHeader>
@@ -822,7 +837,7 @@ export default function CourseDetailPage() {
             </p>
           </div>
           <div className="flex justify-end gap-3">
-            <Button variant="ghost" onClick={() => setIsArchiveModalOpen(false)} disabled={isProcessingAction} className="text-gray-400 hover:text-white">
+            <Button variant="ghost" onClick={() => setIsArchiveModalOpen(false)} disabled={isProcessingAction} className="text-gray-400 hover:text-foreground">
               İptal
             </Button>
             <Button variant="outline" className="border-yellow-600 text-yellow-500 hover:bg-yellow-600/10" onClick={confirmArchiveCourse} disabled={isProcessingAction}>
@@ -834,7 +849,7 @@ export default function CourseDetailPage() {
       </Dialog>
 
       <Dialog open={isDeleteCourseModalOpen} onOpenChange={setIsDeleteCourseModalOpen}>
-        <DialogContent className="sm:max-w-md bg-[#0f1523] border-gray-800 text-white">
+        <DialogContent className="sm:max-w-md bg-card border-gray-800 text-white">
           <DialogHeader>
             <DialogTitle className="text-red-500">Dersi Kalıcı Olarak Sil</DialogTitle>
           </DialogHeader>
@@ -846,7 +861,7 @@ export default function CourseDetailPage() {
             </p>
           </div>
           <div className="flex justify-end gap-3">
-            <Button variant="ghost" onClick={() => setIsDeleteCourseModalOpen(false)} disabled={isProcessingAction} className="text-gray-400 hover:text-white">
+            <Button variant="ghost" onClick={() => setIsDeleteCourseModalOpen(false)} disabled={isProcessingAction} className="text-gray-400 hover:text-foreground">
               İptal
             </Button>
             <Button variant="destructive" onClick={confirmDeleteCourse} disabled={isProcessingAction}>
@@ -863,7 +878,7 @@ export default function CourseDetailPage() {
           router.push('/dashboard/instructor/courses');
         }
       }}>
-        <DialogContent className="sm:max-w-md bg-[#0f1523] border-gray-800 text-white">
+        <DialogContent className="sm:max-w-md bg-card border-gray-800 text-white">
           <DialogHeader>
             <DialogTitle className="text-emerald-500">Başarılı</DialogTitle>
           </DialogHeader>

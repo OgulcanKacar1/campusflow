@@ -116,3 +116,52 @@ export async function logout() {
   await supabase.auth.signOut();
   redirect('/login');
 }
+
+export async function sendPasswordResetEmail() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.email) return { error: 'Kullanıcı bulunamadı.' };
+
+  const origin = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+    redirectTo: `${origin}/auth/callback?next=/auth/update-password`,
+  });
+  
+  if (error) return { error: error.message };
+  return { success: true };
+}
+
+export async function updateProfile(fullName: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({
+    data: { full_name: fullName }
+  });
+  
+  if (error) return { error: error.message };
+  return { success: true };
+}
+
+export async function updateUserPassword(password: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({
+    password
+  });
+  
+  if (error) return { error: error.message };
+  return { success: true };
+}
+
+export async function forgotPassword(formData: FormData) {
+  const email = formData.get('email') as string;
+  if (!email) return { error: 'E-posta adresi gereklidir.' };
+
+  const supabase = await createClient();
+  const origin = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/auth/callback?next=/auth/update-password`,
+  });
+  
+  if (error) return { error: error.message };
+  return { success: true };
+}

@@ -27,8 +27,6 @@ const menuByRole: Record<string, { label: string; href: string; icon: React.Elem
   super_admin: [
     { label: 'Genel Bakış', href: '/dashboard/super-admin', icon: LayoutDashboard },
     { label: 'Üniversiteler', href: '/dashboard/super-admin/organizations', icon: Building2 },
-    { label: 'Tüm Kullanıcılar', href: '/dashboard/super-admin/users', icon: Users },
-    { label: 'Sistem Ayarları', href: '/dashboard/super-admin/settings', icon: Settings },
   ],
   admin: [
     { label: 'Genel Bakış', href: '/dashboard/admin', icon: LayoutDashboard },
@@ -46,7 +44,6 @@ const menuByRole: Record<string, { label: string; href: string; icon: React.Elem
   student: [
     { label: 'Genel Bakış', href: '/dashboard/student', icon: LayoutDashboard },
     { label: 'Derslerim', href: '/dashboard/student/courses', icon: GraduationCap },
-    { label: 'Görevlerim', href: '/dashboard/student/tasks', icon: ClipboardList },
     { label: 'Takvim', href: '/dashboard/student/calendar', icon: Calendar },
     { label: 'Ayarlar', href: '/dashboard/student/settings', icon: Settings },
   ],
@@ -54,10 +51,10 @@ const menuByRole: Record<string, { label: string; href: string; icon: React.Elem
 
 // --- Rol Renk ve İkon Bilgileri ---
 const roleConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  super_admin: { label: 'Süper Admin', color: 'text-purple-400', icon: Shield },
-  admin: { label: 'Okul Admini', color: 'text-blue-400', icon: Building2 },
-  instructor: { label: 'Hoca', color: 'text-green-400', icon: GraduationCap },
-  student: { label: 'Öğrenci', color: 'text-yellow-400', icon: GraduationCap },
+  super_admin: { label: 'Süper Admin', color: 'text-[#ea580c]', icon: Shield },
+  admin: { label: 'Okul Admini', color: 'text-[#ea580c]', icon: Building2 },
+  instructor: { label: 'Hoca', color: 'text-indigo-400', icon: GraduationCap },
+  student: { label: 'Öğrenci', color: 'text-emerald-400', icon: GraduationCap },
 };
 
 interface SidebarProps {
@@ -79,20 +76,20 @@ export default function Sidebar({ role, fullName, email, orgName }: SidebarProps
     <aside
       className={`
         relative z-[100] flex flex-col h-screen
-        bg-[#0a0f1e]/95 backdrop-blur-xl
-        border-r border-white/5
+        bg-background/95 backdrop-blur-xl
+        border-r border-border
         transition-all duration-300 ease-in-out
         ${collapsed ? 'w-[72px]' : 'w-[240px]'}
       `}
     >
       {/* Gradient Glow */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-purple-500/5 to-transparent" />
+        <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-primary/5 to-transparent" />
       </div>
 
       {/* Logo */}
-      <div className={`flex items-center h-16 px-4 border-b border-white/5 ${collapsed ? 'justify-center' : 'gap-3'}`}>
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-purple-500/20">
+      <div className={`flex items-center h-16 px-4 border-b border-border ${collapsed ? 'justify-center' : 'gap-3'}`}>
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg" style={{ backgroundColor: '#ea580c', boxShadow: '0 4px 14px 0 rgba(234, 88, 12, 0.39)' }}>
           <span className="text-white font-bold text-sm">CF</span>
         </div>
         {!collapsed && (
@@ -108,11 +105,11 @@ export default function Sidebar({ role, fullName, email, orgName }: SidebarProps
               {orgName}
             </div>
           ) : (
-            <div className="px-2 text-xs font-semibold text-purple-300 truncate">
+            <div className="px-2 text-xs font-semibold truncate" style={{ color: '#ea580c' }}>
               Sistem Yöneticisi
             </div>
           )}
-          <div className="px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.06]">
+          <div className="px-3 py-2 rounded-lg bg-card border border-white/[0.06]">
             <div className={`flex items-center gap-2 text-xs font-semibold ${config.color}`}>
               <RoleIcon size={13} />
               <span>{config.label}</span>
@@ -138,10 +135,10 @@ export default function Sidebar({ role, fullName, email, orgName }: SidebarProps
               href={item.href}
               className={`
                 group flex items-center gap-3 px-3 py-2.5 rounded-lg
-                transition-all duration-150 relative
+                transition-all duration-200 relative font-medium
                 ${isActive
                   ? 'bg-white/10 text-white'
-                  : 'text-gray-400 hover:bg-white/[0.06] hover:text-white'
+                  : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200'
                 }
                 ${collapsed ? 'justify-center' : ''}
               `}
@@ -149,9 +146,9 @@ export default function Sidebar({ role, fullName, email, orgName }: SidebarProps
             >
               {/* Aktif Göstergesi */}
               {isActive && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-purple-400 rounded-full" />
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full" style={{ backgroundColor: '#ea580c' }} />
               )}
-              <Icon size={18} className={isActive ? 'text-purple-400' : 'group-hover:text-white'} />
+              <Icon size={18} className={isActive ? 'text-white' : 'group-hover:text-gray-200 transition-colors'} />
               {!collapsed && (
                 <span className="text-sm font-medium">{item.label}</span>
               )}
@@ -161,15 +158,15 @@ export default function Sidebar({ role, fullName, email, orgName }: SidebarProps
       </nav>
 
       {/* Alt: Kullanıcı Profili */}
-      <div className="p-2 border-t border-white/5">
+      <div className="p-2 border-t border-border">
         {!collapsed ? (
           <form action={logout}>
             <button
               type="submit"
-              className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer group"
+              className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-card transition-colors cursor-pointer group"
             >
               {/* Avatar */}
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#ea580c' }}>
                 <span className="text-white text-xs font-bold">
                   {fullName?.charAt(0)?.toUpperCase() ?? 'U'}
                 </span>
@@ -186,7 +183,7 @@ export default function Sidebar({ role, fullName, email, orgName }: SidebarProps
             <button
               type="submit"
               title="Çıkış Yap"
-              className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center hover:opacity-80 transition-opacity"
+              className="w-8 h-8 rounded-full bg-primary flex items-center justify-center hover:opacity-80 transition-opacity"
             >
               <span className="text-white text-xs font-bold">
                 {fullName?.charAt(0)?.toUpperCase() ?? 'U'}
@@ -202,9 +199,9 @@ export default function Sidebar({ role, fullName, email, orgName }: SidebarProps
         className="
           absolute -right-3 top-[72px]
           w-6 h-6 rounded-full
-          bg-[#0a0f1e] border border-white/10
+          bg-background border border-border
           flex items-center justify-center
-          text-gray-400 hover:text-white
+          text-gray-400 hover:text-foreground
           transition-colors shadow-lg
           z-[100]
         "

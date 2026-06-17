@@ -48,7 +48,7 @@ export function TeamsList({
 
   if (teams.length === 0) {
     return (
-      <Card className="bg-[#0f1523] border-gray-800">
+      <Card className="bg-card border-gray-800">
         <CardContent className="py-12 text-center">
           <Users className="w-12 h-12 text-gray-600 mx-auto mb-4" />
           <p className="text-gray-400">Henüz takım oluşturulmadı</p>
@@ -67,17 +67,18 @@ export function TeamsList({
       {teams.map((team) => (
         <Card 
           key={team.id} 
-          className="bg-[#0f1523] border-gray-800 transition-all"
+          className="bg-card/40 border-border/50 hover:bg-muted/30 transition-all duration-300 group"
+          style={{ borderColor: 'var(--border)' }}
           onDragOver={(e) => {
             e.preventDefault();
-            e.currentTarget.classList.add('border-blue-500', 'border-2');
+            e.currentTarget.classList.add('border-primary', 'border-2');
           }}
           onDragLeave={(e) => {
-            e.currentTarget.classList.remove('border-blue-500', 'border-2');
+            e.currentTarget.classList.remove('border-primary', 'border-2');
           }}
           onDrop={(e) => {
             e.preventDefault();
-            e.currentTarget.classList.remove('border-blue-500', 'border-2');
+            e.currentTarget.classList.remove('border-primary', 'border-2');
             const data = e.dataTransfer.getData('application/json');
             if (data && onMoveMember) {
               const { studentId, fromTeamId } = JSON.parse(data);
@@ -90,17 +91,17 @@ export function TeamsList({
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between">
               <div>
-                <CardTitle className="text-white text-lg flex items-center gap-2">
+                <CardTitle className="text-foreground text-lg flex items-center gap-2 group-hover:text-indigo-400 transition-colors">
                   {team.name}
                   {team.status === 'inactive' && (
-                    <Badge variant="secondary" className="bg-gray-700 text-gray-300">
+                    <Badge variant="secondary" className="bg-muted text-muted-foreground border-border/50">
                       Pasif
                     </Badge>
                   )}
                 </CardTitle>
-                <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
-                  <span className="flex items-center gap-1">
-                    <Users className="w-4 h-4" />
+                <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground font-medium">
+                  <span className="flex items-center gap-1.5">
+                    <Users className="w-4 h-4 text-blue-400" />
                     {team.memberCount || team.members?.length || 0} üye
                   </span>
                   {team.repoUrl && (
@@ -108,7 +109,7 @@ export function TeamsList({
                       href={team.repoUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-blue-400 hover:text-blue-300"
+                      className="flex items-center gap-1.5 text-blue-400 hover:text-blue-300 transition-colors"
                     >
                       <ExternalLink className="w-4 h-4" />
                       Repo
@@ -117,10 +118,10 @@ export function TeamsList({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <Link
                   href={`/dashboard/instructor/courses/${courseId}/teams/${team.id}`}
-                  className="inline-flex items-center rounded-md border border-indigo-500/40 bg-indigo-500/10 px-3 py-1.5 text-sm text-indigo-200 transition hover:border-indigo-400 hover:bg-indigo-500/20"
+                  className="inline-flex items-center rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/10"
                 >
                   Pano
                 </Link>
@@ -128,7 +129,7 @@ export function TeamsList({
                   variant="ghost"
                   size="sm"
                   onClick={() => onAddMember(team)}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-400 hover:text-foreground"
                 >
                   <UserPlus className="w-4 h-4" />
                 </Button>
@@ -136,7 +137,7 @@ export function TeamsList({
                   variant="ghost"
                   size="sm"
                   onClick={() => onEdit(team)}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-400 hover:text-foreground"
                 >
                   Düzenle
                 </Button>
@@ -155,7 +156,7 @@ export function TeamsList({
             {teamMode === 'student' && (
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className="text-sm text-gray-500">Davet Kodu:</span>
-                <code className="px-2 py-1 bg-[#1a1f2e] rounded text-sm font-mono text-blue-400">
+                <code className="px-2 py-1 bg-[#1a1f2e] rounded text-sm font-mono text-primary">
                   {team.inviteCode ?? '—'}
                 </code>
                 {team.inviteCode ? (
@@ -163,7 +164,7 @@ export function TeamsList({
                     variant="ghost"
                     size="sm"
                     onClick={() => handleCopyCode(team.inviteCode!)}
-                    className="h-6 px-2 text-gray-400 hover:text-white"
+                    className="h-6 px-2 text-gray-400 hover:text-foreground"
                   >
                     {copiedCode === team.inviteCode ? (
                       <Check className="w-4 h-4 text-green-400" />
@@ -176,7 +177,7 @@ export function TeamsList({
                   variant="ghost"
                   size="sm"
                   onClick={() => onRegenerateInviteCode?.(team)}
-                  className="h-6 px-2 text-gray-400 hover:text-white"
+                  className="h-6 px-2 text-gray-400 hover:text-foreground"
                 >
                   Kod Yenile
                 </Button>
@@ -201,16 +202,16 @@ export function TeamsList({
                         }));
                       }}
                       onClick={() => setSelectedMember({ member, team })}
-                      className="group inline-flex items-center gap-2 pl-1 pr-3 py-1.5 rounded-xl bg-[#161b22] hover:bg-[#1e2535] border border-gray-700/50 hover:border-blue-500/50 transition-all duration-200 cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md"
+                      className="group inline-flex items-center gap-2 pl-1 pr-3 py-1.5 rounded-full bg-card hover:bg-muted/50 border border-border/50 hover:border-border transition-all duration-200 cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md"
                       title="Başka takıma sürükle"
                     >
                       {/* Avatar Circle */}
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/30 flex items-center justify-center text-xs font-semibold text-blue-300 group-hover:scale-105 transition-transform">
+                      <div className="w-7 h-7 rounded-full bg-muted border border-border flex items-center justify-center text-xs font-semibold text-foreground group-hover:scale-105 transition-transform">
                         {member.studentName?.charAt(0).toUpperCase() || '?'}
                       </div>
                       
                       {/* Name */}
-                      <span className="text-sm font-medium text-gray-200 group-hover:text-white">
+                      <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                         {member.studentName || 'İsimsiz'}
                       </span>
                       
@@ -239,11 +240,11 @@ export function TeamsList({
 
       {/* Üye Detay Modal'ı */}
       <Dialog open={!!selectedMember} onOpenChange={() => setSelectedMember(null)}>
-        <DialogContent className="sm:max-w-sm bg-[#0f1523] border-gray-800 text-white">
+        <DialogContent className="sm:max-w-sm bg-card border-gray-800 text-white">
           <DialogHeader>
             <div className="flex flex-col items-center text-center gap-3 py-4">
-              <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-500/10 border border-blue-500/20">
-                <Mail className="w-8 h-8 text-blue-400" />
+              <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 border border-primary/20">
+                <Mail className="w-8 h-8 text-primary" />
               </div>
               <div>
                 <DialogTitle className="text-lg font-semibold text-white">

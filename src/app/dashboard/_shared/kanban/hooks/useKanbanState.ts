@@ -100,7 +100,7 @@ export function useKanbanState({ teamId, initialSnapshot, onError }: UseKanbanSt
     const supabase = createClient();
     
     const channel = supabase
-      .channel(`kanban_updates_${teamId}`)
+      .channel(`kanban_updates_${teamId}_${Math.random().toString(36).substring(2, 9)}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'tasks', filter: `team_id=eq.${teamId}` },

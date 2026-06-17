@@ -54,14 +54,15 @@ export function CreateTeamButton({ courseId, onSuccess }: CreateTeamButtonProps)
     <>
       <Button
         onClick={() => setOpen(true)}
-        className="bg-blue-600 hover:bg-blue-700 text-white"
+        style={{ backgroundColor: '#ea580c', color: 'white' }}
+        className="hover:opacity-90 transition-opacity"
       >
         <Plus className="w-4 h-4 mr-2" />
         Takım Oluştur
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md bg-[#0f1523] border-gray-800 text-white">
+        <DialogContent className="sm:max-w-md bg-card border-gray-800 text-white">
           <DialogHeader>
             <DialogTitle className="text-white">Yeni Takım Oluştur</DialogTitle>
           </DialogHeader>
@@ -114,7 +115,8 @@ export function CreateTeamButton({ courseId, onSuccess }: CreateTeamButtonProps)
               <Button
                 type="submit"
                 disabled={isSubmitting || !name.trim()}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                style={{ backgroundColor: '#ea580c', color: 'white' }}
+                className="hover:opacity-90 transition-opacity"
               >
                 {isSubmitting ? (
                   <>
@@ -132,7 +134,7 @@ export function CreateTeamButton({ courseId, onSuccess }: CreateTeamButtonProps)
 
       {/* Başarı Modal'ı */}
       <Dialog open={successOpen} onOpenChange={setSuccessOpen}>
-        <DialogContent className="sm:max-w-sm bg-[#0f1523] border-gray-800 text-white">
+        <DialogContent className="sm:max-w-sm bg-card border-gray-800 text-white">
           <DialogHeader>
             <div className="flex flex-col items-center text-center gap-3 py-4">
               <div className="flex items-center justify-center w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/20">
@@ -151,7 +153,8 @@ export function CreateTeamButton({ courseId, onSuccess }: CreateTeamButtonProps)
           <div className="flex justify-center mt-2">
             <Button
               onClick={() => setSuccessOpen(false)}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              style={{ backgroundColor: '#ea580c', color: 'white' }}
+              className="hover:opacity-90 transition-opacity"
             >
               Tamam
             </Button>

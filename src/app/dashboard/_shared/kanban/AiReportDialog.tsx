@@ -105,20 +105,20 @@ export function AiReportDialog({ isOpen, onOpenChange, teamId, sprintId, sprintN
   return (
     <>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] sm:max-w-[800px] md:max-w-4xl max-h-[85vh] overflow-y-auto bg-[#050a14] border-indigo-900/50 text-slate-200 p-6 md:p-8">
+      <DialogContent className="w-[95vw] sm:max-w-[800px] md:max-w-4xl max-h-[85vh] overflow-y-auto bg-card border-border/50 text-foreground p-6 md:p-8">
         <DialogHeader className="flex flex-row items-start justify-between pr-8">
           <div>
-            <DialogTitle className="text-2xl font-bold flex items-center gap-2 text-indigo-400">
+            <DialogTitle className="text-2xl font-bold flex items-center gap-2 text-primary">
               <Sparkles className="h-6 w-6 text-amber-400" />
               {sprintName ? `${sprintName} - AI Analizi` : 'Sprint AI Analizi'}
             </DialogTitle>
-            <DialogDescription className="text-slate-400 mt-2">
+            <DialogDescription className="text-muted-foreground mt-2">
               Yapay zeka bu sprintteki görev atamalarını, commitleri ve paylaşılan dökümanları analiz etti.
             </DialogDescription>
           </div>
           {report && !loading && (
             <div className="flex items-center gap-2 shrink-0">
-              <Button variant="outline" size="sm" onClick={handleDownloadPdf} disabled={isGeneratingPdf} className="text-slate-300 border-slate-700 hover:bg-slate-800 gap-2">
+              <Button variant="outline" size="sm" onClick={handleDownloadPdf} disabled={isGeneratingPdf} className="text-muted-foreground border-border hover:bg-muted gap-2">
                 {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 {isGeneratingPdf ? 'Hazırlanıyor...' : 'PDF İndir'}
               </Button>
@@ -133,12 +133,12 @@ export function AiReportDialog({ isOpen, onOpenChange, teamId, sprintId, sprintN
         {loading && (
           <div className="flex flex-col items-center justify-center py-24 space-y-6">
             <div className="relative">
-              <div className="absolute inset-0 bg-indigo-500 blur-[30px] opacity-20 rounded-full h-16 w-16"></div>
-              <Loader2 className="h-16 w-16 text-indigo-400 animate-spin relative z-10" />
+              <div className="absolute inset-0 bg-primary blur-[30px] opacity-20 rounded-full h-16 w-16"></div>
+              <Loader2 className="h-16 w-16 text-primary animate-spin relative z-10" />
             </div>
             <div className="space-y-2 text-center">
               <p className="text-indigo-300 font-medium text-lg animate-pulse">Yapay zeka verileri inceliyor...</p>
-              <p className="text-sm text-slate-500">Görevler, GitHub commitleri ve döküman bağlantıları analiz ediliyor.</p>
+              <p className="text-sm text-muted-foreground">Görevler, GitHub commitleri ve döküman bağlantıları analiz ediliyor.</p>
             </div>
           </div>
         )}
@@ -157,17 +157,17 @@ export function AiReportDialog({ isOpen, onOpenChange, teamId, sprintId, sprintN
           <div className="space-y-8 py-4">
             {/* Score & Summary */}
             <div className="flex flex-col md:flex-row gap-6 items-stretch">
-              <div className="flex-shrink-0 flex flex-col items-center justify-center w-full md:w-48 p-8 rounded-2xl bg-gradient-to-br from-indigo-950 to-slate-900 border border-indigo-500/20 shadow-[0_0_30px_-5px_rgba(99,102,241,0.15)]">
+              <div className="flex-shrink-0 flex flex-col items-center justify-center w-full md:w-48 p-8 rounded-2xl bg-gradient-to-br from-indigo-950 to-slate-900 border border-primary/20 shadow-[0_0_30px_-5px_rgba(99,102,241,0.15)]">
                 <span className="text-5xl font-black bg-clip-text text-transparent bg-gradient-to-br from-indigo-300 to-purple-400">
                   {report.overallScore}
                 </span>
-                <span className="text-[10px] font-bold text-indigo-400/80 mt-2 uppercase tracking-[0.2em]">Takım Skoru</span>
+                <span className="text-[10px] font-bold text-primary/80 mt-2 uppercase tracking-[0.2em]">Takım Skoru</span>
               </div>
-              <div className="flex-1 space-y-3 bg-slate-900/40 p-6 rounded-2xl border border-slate-800/60">
+              <div className="flex-1 space-y-3 bg-card/40 p-6 rounded-2xl border border-border/60">
                 <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-indigo-400" /> Genel Değerlendirme
+                  <TrendingUp className="h-5 w-5 text-primary" /> Genel Değerlendirme
                 </h3>
-                <p className="text-slate-300/90 leading-relaxed text-sm md:text-base">
+                <p className="text-muted-foreground/90 leading-relaxed text-sm md:text-base">
                   {report.summary}
                 </p>
               </div>
@@ -176,34 +176,34 @@ export function AiReportDialog({ isOpen, onOpenChange, teamId, sprintId, sprintN
             {/* Student Contributions */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                <Users className="h-5 w-5 text-purple-400" /> Bireysel Katkı Analizi
+                <Users className="h-5 w-5 text-primary" /> Bireysel Katkı Analizi
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {report.studentContributions?.map((student) => (
-                  <Card key={student.studentId} className="bg-slate-900/60 border-slate-800/80 p-5 space-y-5 transition-colors hover:bg-slate-800/40">
+                  <Card key={student.studentId} className="bg-card/60 border-border/80 p-5 space-y-5 transition-colors hover:bg-muted/40">
                     <div className="flex justify-between items-start gap-4">
                       <div className="min-w-0">
-                        <p className="font-semibold text-slate-100 truncate">{student.fullName}</p>
-                        <div className="flex flex-wrap items-center gap-3 mt-2 text-[11px] font-medium tracking-wide text-slate-400 uppercase">
+                        <p className="font-semibold text-foreground truncate">{student.fullName}</p>
+                        <div className="flex flex-wrap items-center gap-3 mt-2 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
                           <span className="flex items-center gap-1.5" title="Tamamlanan Görevler"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> {student.completedTasks} Görev</span>
-                          <span className="flex items-center gap-1.5" title="Satır Kod veya Commit Skoru"><GitCommit className="h-3.5 w-3.5 text-indigo-400" /> Skor: {student.linesOfCode}</span>
+                          <span className="flex items-center gap-1.5" title="Satır Kod veya Commit Skoru"><GitCommit className="h-3.5 w-3.5 text-primary" /> Skor: {student.linesOfCode}</span>
                           <span className="flex items-center gap-1.5" title="Drive/Figma Bağlantıları"><LinkIcon className="h-3.5 w-3.5 text-amber-500" /> {student.attachmentsAdded} Dosya</span>
                         </div>
                       </div>
-                      <Badge variant="outline" className="border-indigo-500/30 text-indigo-300 bg-indigo-500/10 px-2 py-0.5 whitespace-nowrap">
+                      <Badge variant="outline" className="border-primary/30 text-indigo-300 bg-primary/10 px-2 py-0.5 whitespace-nowrap">
                         %{student.contributionPercentage} Katkı
                       </Badge>
                     </div>
                     
-                    <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-800/50">
+                    <div className="h-2 w-full bg-background rounded-full overflow-hidden border border-border/50">
                       <div 
                         className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full transition-all duration-1000 ease-out" 
                         style={{ width: `${student.contributionPercentage}%` }}
                       />
                     </div>
                     
-                    <div className="text-sm text-slate-300 leading-relaxed bg-slate-950/40 p-4 rounded-xl border border-slate-800/60 shadow-inner">
-                      <span className="text-indigo-400 font-semibold mr-2 block mb-1">AI Notu:</span>
+                    <div className="text-sm text-muted-foreground leading-relaxed bg-background/40 p-4 rounded-xl border border-border/60 shadow-inner">
+                      <span className="text-primary font-semibold mr-2 block mb-1">AI Notu:</span>
                       {student.feedback}
                     </div>
                   </Card>
@@ -234,13 +234,13 @@ export function AiReportDialog({ isOpen, onOpenChange, teamId, sprintId, sprintN
             {report.meetingInsights && report.meetingInsights.length > 0 && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                  <Video className="h-5 w-5 text-blue-400" /> Toplantı Çıkarımları & Kararlar
+                  <Video className="h-5 w-5 text-primary" /> Toplantı Çıkarımları & Kararlar
                 </h3>
                 <div className="bg-blue-950/10 border border-blue-900/30 rounded-2xl p-5">
                   <ul className="space-y-4">
                     {report.meetingInsights.map((insight: string, idx: number) => (
                       <li key={idx} className="flex items-start gap-3">
-                        <div className="mt-0.5 bg-blue-500/20 rounded-full p-1 text-blue-400 shrink-0 shadow-[0_0_10px_-2px_rgba(59,130,246,0.3)]">
+                        <div className="mt-0.5 bg-primary/20 rounded-full p-1 text-primary shrink-0 shadow-[0_0_10px_-2px_rgba(59,130,246,0.3)]">
                           <CheckCircle2 className="h-4 w-4" />
                         </div>
                         <span className="text-sm md:text-base text-blue-100/90 leading-relaxed">{insight}</span>
@@ -257,18 +257,18 @@ export function AiReportDialog({ isOpen, onOpenChange, teamId, sprintId, sprintN
     </Dialog>
 
     <Dialog open={showConfirmDelete} onOpenChange={setShowConfirmDelete}>
-      <DialogContent className="sm:max-w-md bg-[#050a14] border-red-900/50 text-slate-200">
+      <DialogContent className="sm:max-w-md bg-card border-red-900/50 text-foreground">
         <DialogHeader>
           <DialogTitle className="text-red-400 flex items-center gap-2">
             <AlertCircle className="h-5 w-5" />
             Yeniden Oluştur
           </DialogTitle>
-          <DialogDescription className="text-slate-400 mt-2">
+          <DialogDescription className="text-muted-foreground mt-2">
             Mevcut AI raporu silinecek ve yeni verilere göre baştan üretilecektir. Onaylıyor musunuz?
           </DialogDescription>
         </DialogHeader>
         <div className="flex justify-end gap-3 mt-4">
-          <Button variant="outline" onClick={() => setShowConfirmDelete(false)} className="border-slate-700 hover:bg-slate-800 text-slate-300">
+          <Button variant="outline" onClick={() => setShowConfirmDelete(false)} className="border-border hover:bg-muted text-muted-foreground">
             İptal
           </Button>
           <Button variant="destructive" onClick={confirmDelete} className="bg-red-600 hover:bg-red-500 text-white">

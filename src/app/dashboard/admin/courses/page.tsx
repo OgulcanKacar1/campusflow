@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Search, ArrowLeft } from 'lucide-react';
+import { Loader2, Search, ArrowLeft, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import { getOrgCourses } from '../actions';
 import type { AdminCourse as Course } from '@/types/course';
@@ -68,7 +68,7 @@ export default function AdminCoursesPage() {
     <div className="p-8">
       <div className="max-w-6xl">
         <div className="mb-6">
-          <Link href="/dashboard/admin" className="text-gray-400 hover:text-white flex items-center text-sm w-fit mb-4 transition-colors">
+          <Link href="/dashboard/admin" className="text-gray-400 hover:text-foreground flex items-center text-sm w-fit mb-4 transition-colors">
             <ArrowLeft className="w-4 h-4 mr-1" />
             Admin Paneline Dön
           </Link>
@@ -103,16 +103,15 @@ export default function AdminCoursesPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border border-border">
+            <div className="rounded-xl border border-border/50 overflow-hidden bg-background/40 shadow-sm">
               <Table>
-                <TableHeader className="bg-muted/50">
-                  <TableRow>
-                    <TableHead>Ders Kodu</TableHead>
-                    <TableHead>Ders Adı</TableHead>
-                    <TableHead>Dersi Veren</TableHead>
-                    <TableHead>Dönem/Yıl</TableHead>
-                    <TableHead className="text-center">Öğrenci Sayısı</TableHead>
-                    <TableHead className="text-right">Durum</TableHead>
+                <TableHeader className="bg-muted/30 border-b border-border/50">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider h-11">Ders Kodu & Adı</TableHead>
+                    <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider h-11">Dersi Veren</TableHead>
+                    <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider h-11">Dönem/Yıl</TableHead>
+                    <TableHead className="text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider h-11">Öğrenci Sayısı</TableHead>
+                    <TableHead className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider h-11">Durum</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -130,17 +129,26 @@ export default function AdminCoursesPage() {
                     </TableRow>
                   ) : (
                     filteredCourses.map(course => (
-                      <TableRow key={course.id}>
-                        <TableCell className="font-semibold text-foreground">{course.code}</TableCell>
-                        <TableCell className="text-foreground">{course.name}</TableCell>
-                        <TableCell className="text-muted-foreground">{course.instructorName}</TableCell>
+                      <TableRow key={course.id} className="border-border/40 hover:bg-muted/30 transition-colors">
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+                              <BookOpen className="w-5 h-5 text-primary" />
+                            </div>
+                            <div>
+                              <div className="font-semibold text-foreground/90">{course.code}</div>
+                              <div className="text-xs text-muted-foreground mt-0.5">{course.name}</div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground font-medium">{course.instructorName}</TableCell>
                         <TableCell className="text-muted-foreground">
                           {course.year} - {translateTerm(course.term)}
                         </TableCell>
                         <TableCell className="text-center font-medium">
-                          <span className="bg-white/5 px-2 py-1 rounded text-sm text-gray-300">
+                          <Badge variant="outline" className="font-mono bg-background border-border/60 text-muted-foreground">
                             {course.studentCount}
-                          </span>
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <Badge

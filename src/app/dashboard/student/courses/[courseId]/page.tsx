@@ -178,45 +178,47 @@ export default async function CourseDetailPage({
         ]} />
 
         {/* Course Hero */}
-        <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-transparent p-8 mb-2">
+        <div className="rounded-2xl border border-border/40 bg-gradient-to-br from-card to-card/50 backdrop-blur-xl p-8 mb-2 shadow-xl shadow-black/40">
           <div className="flex items-start justify-between flex-wrap gap-4">
             <div>
-              <p className="text-xs font-mono text-white/40 tracking-widest uppercase mb-1">{course.code}</p>
+              <p className="text-xs font-mono text-muted-foreground tracking-widest uppercase mb-1">{course.code}</p>
               <h1 className="text-4xl font-bold text-white mb-3">{course.name}</h1>
               <div className="flex items-center gap-3 flex-wrap">
-                <Badge className="bg-white/10 text-white/70 border-white/10 font-normal text-sm">
-                  <Calendar className="w-3.5 h-3.5 mr-1.5" />
+                <Badge className="bg-secondary/40 text-muted-foreground border-border/40 font-medium text-sm px-3 py-1">
+                  <Calendar className="w-3.5 h-3.5 mr-1.5 opacity-70" />
                   {termLabels[course.term] || course.term} {course.year}
                 </Badge>
                 {course.section && (
-                  <Badge className="bg-white/10 text-white/70 border-white/10 font-normal text-sm">
+                  <Badge className="bg-secondary/40 text-muted-foreground border-border/40 font-medium text-sm px-3 py-1">
                     Şube {course.section}
                   </Badge>
                 )}
-                <Badge className={`font-normal text-sm ${course.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'}`}>
+                <Badge className={`font-bold tracking-widest uppercase text-[10px] px-3 py-1 ${course.status === 'active' ? 'bg-primary/10 text-primary border-primary/20 shadow-sm shadow-primary/10' : 'bg-secondary/30 text-muted-foreground border-secondary/30'}`}>
                   {course.status === 'active' ? 'Aktif' : 'Arşiv'}
                 </Badge>
               </div>
             </div>
 
             {/* Instructor */}
-            <div className="flex items-center gap-3 bg-white/5 rounded-xl px-4 py-3 border border-white/10">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white font-bold">
+            <div className="flex items-center gap-3 bg-secondary/30 rounded-xl px-4 py-3 border border-border/40 backdrop-blur-sm">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/80 to-primary flex items-center justify-center text-primary-foreground font-bold shadow-md shadow-primary/20">
                 {course.instructor_name?.charAt(0)?.toUpperCase() || '?'}
               </div>
               <div>
-                <p className="text-xs text-white/40">Hoca</p>
-                <p className="text-sm font-semibold text-white">{course.instructor_name}</p>
+                <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Eğitmen</p>
+                <p className="text-sm font-bold text-foreground drop-shadow-sm">{course.instructor_name}</p>
               </div>
             </div>
           </div>
 
           {/* Join Code */}
           {course.join_code && (
-            <div className="mt-6 pt-6 border-t border-white/10 flex items-center gap-3">
-              <KeyRound className="w-4 h-4 text-yellow-400" />
-              <span className="text-sm text-white/50">Katılım Kodu:</span>
-              <span className="font-mono font-bold tracking-widest text-yellow-400 bg-yellow-500/10 px-3 py-1 rounded border border-yellow-500/20">
+            <div className="mt-6 pt-6 border-t border-border/30 flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <KeyRound className="w-4 h-4 text-primary" />
+              </div>
+              <span className="text-sm font-medium text-muted-foreground">Katılım Kodu:</span>
+              <span className="font-mono font-bold tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-md border border-primary/20 shadow-sm shadow-primary/5">
                 {course.join_code}
               </span>
             </div>
@@ -227,16 +229,16 @@ export default async function CourseDetailPage({
         {myTeam ? (
           <Tabs defaultValue="kanban" className="w-full">
             <div className="mb-6 overflow-x-auto custom-scrollbar pb-2">
-              <TabsList className="bg-[#1a1f36] border border-white/5 h-12">
-                <TabsTrigger value="kanban" className="data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-400 gap-2 h-9 px-4">
+              <TabsList className="bg-card/60 backdrop-blur-xl border border-border/40 p-1.5 h-auto rounded-xl inline-flex gap-1 shadow-lg shadow-black/20">
+                <TabsTrigger value="kanban" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-lg gap-2 h-10 px-5 transition-all">
                   <ClipboardList className="w-4 h-4" />
                   Görev Panosu
                 </TabsTrigger>
-                <TabsTrigger value="team" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400 gap-2 h-9 px-4">
+                <TabsTrigger value="team" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-lg gap-2 h-10 px-5 transition-all">
                   <Users className="w-4 h-4" />
                   Takım Detayları
                 </TabsTrigger>
-                <TabsTrigger value="project" className="data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-400 gap-2 h-9 px-4">
+                <TabsTrigger value="project" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-lg gap-2 h-10 px-5 transition-all">
                   <ClipboardList className="w-4 h-4" />
                   Proje Bilgileri
                 </TabsTrigger>
@@ -254,16 +256,16 @@ export default async function CourseDetailPage({
                   initialError={kanbanError}
                 />
               ) : (
-                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 max-w-3xl">
+                <div className="rounded-2xl border border-border bg-card p-6 max-w-3xl">
                   <div className="flex items-center gap-2 mb-5">
-                    <div className="p-2 bg-blue-500/10 rounded-lg">
-                      <ClipboardList className="w-5 h-5 text-blue-400" />
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <ClipboardList className="w-5 h-5 text-primary" />
                     </div>
                     <h2 className="text-lg font-semibold text-white">Görevler</h2>
                   </div>
                   <div className="flex flex-col items-center justify-center h-32 text-center">
-                    <p className="text-white/30 text-sm">Henüz görev eklenmedi</p>
-                    <p className="text-white/20 text-xs mt-1">Hocan görev oluşturduğunda burada görünecek.</p>
+                    <p className="text-muted-foreground text-sm">Henüz görev eklenmedi</p>
+                    <p className="text-muted-foreground text-xs mt-1">Hocan görev oluşturduğunda burada görünecek.</p>
                   </div>
                 </div>
               )}

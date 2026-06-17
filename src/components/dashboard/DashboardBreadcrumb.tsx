@@ -16,8 +16,8 @@ interface DashboardBreadcrumbProps {
 
 export function DashboardBreadcrumb({ items }: DashboardBreadcrumbProps) {
   return (
-    <nav className="flex items-center text-sm text-slate-400 mb-4 overflow-x-auto whitespace-nowrap scrollbar-hide">
-      <Link href="/dashboard" className="hover:text-indigo-400 transition-colors flex items-center gap-1">
+    <nav className="flex items-center text-sm text-muted-foreground mb-4 overflow-x-auto whitespace-nowrap scrollbar-hide">
+      <Link href="/dashboard" className="hover:text-primary transition-colors flex items-center gap-1">
         <Home className="h-4 w-4" />
       </Link>
       
@@ -26,18 +26,18 @@ export function DashboardBreadcrumb({ items }: DashboardBreadcrumbProps) {
         
         return (
           <div key={index} className="flex items-center">
-            <ChevronRight className="h-4 w-4 mx-2 text-slate-600 shrink-0" />
+            <ChevronRight className="h-4 w-4 mx-2 text-muted-foreground shrink-0" />
             {isLast || !item.href ? (
-              <span className="text-slate-200 font-medium flex items-center gap-1.5">
-                {item.icon && <span className="text-indigo-400">{item.icon}</span>}
+              <span className="text-foreground font-medium flex items-center gap-1.5">
+                {item.icon && <span className="text-primary">{item.icon}</span>}
                 {item.label}
               </span>
             ) : (
               <Link 
                 href={item.href}
-                className="hover:text-indigo-400 transition-colors flex items-center gap-1.5"
+                className="hover:text-primary transition-colors flex items-center gap-1.5"
               >
-                {item.icon && <span className="text-slate-500">{item.icon}</span>}
+                {item.icon && <span className="text-muted-foreground">{item.icon}</span>}
                 {item.label}
               </Link>
             )}

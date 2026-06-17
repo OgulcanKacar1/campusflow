@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShieldAlert, CheckCircle2, Play, Pause, Loader2, Search } from 'lucide-react';
+import { ShieldAlert, CheckCircle2, Play, Pause, Loader2, Search, Building2, Users, Settings } from 'lucide-react';
 import type { Organization } from '@/types/organization';
 import { CreateOrganizationModal } from '@/components/dashboard/super-admin/CreateOrganizationModal';
 import { EditOrganizationModal } from '@/components/dashboard/super-admin/EditOrganizationModal';
@@ -92,15 +92,15 @@ export default function OrganizationList({ organizations }: Props) {
             />
           </div>
         </div>
-        <div className="rounded-md border border-border">
+        <div className="rounded-xl border border-border/50 overflow-hidden bg-background/40 shadow-sm">
           <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow>
-                <TableHead>Organizasyon</TableHead>
-                <TableHead>Alan Adları</TableHead>
-                <TableHead>Plan</TableHead>
-                <TableHead>Durum</TableHead>
-                <TableHead className="text-right">İşlemler</TableHead>
+            <TableHeader className="bg-muted/30 border-b border-border/50">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider h-11">Organizasyon</TableHead>
+                <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider h-11">Alan Adları</TableHead>
+                <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider h-11">Plan</TableHead>
+                <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider h-11">Durum</TableHead>
+                <TableHead className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider h-11">İşlemler</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -112,10 +112,17 @@ export default function OrganizationList({ organizations }: Props) {
                 </TableRow>
               ) : (
                 filteredOrganizations.map((org) => (
-                  <TableRow key={org.id}>
+                  <TableRow key={org.id} className="border-border/40 hover:bg-muted/30 transition-colors">
                     <TableCell>
-                      <div className="font-medium text-foreground">{org.name}</div>
-                      <div className="text-xs text-muted-foreground">Max Öğrenci: {org.max_students ?? 'Sınırsız'}</div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-muted/50 border border-border/50 flex items-center justify-center flex-shrink-0">
+                          <Building2 className="w-5 h-5 text-muted-foreground/70" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-foreground/90">{org.name}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">Max Öğrenci: <span className="text-foreground/70">{org.max_students ?? 'Sınırsız'}</span></div>
+                        </div>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
@@ -127,7 +134,7 @@ export default function OrganizationList({ organizations }: Props) {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary" className="capitalize">{org.plan}</Badge>
+                      <Badge variant="outline" className="capitalize bg-muted/30 border-border/60 text-muted-foreground">{org.plan}</Badge>
                     </TableCell>
                     <TableCell>
                       {org.status === 'active' ? (
@@ -139,43 +146,45 @@ export default function OrganizationList({ organizations }: Props) {
                           <ShieldAlert className="w-3 h-3 mr-1" /> Askıda
                         </Badge>
                       ) : (
-                        <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 font-normal">
+                        <Badge className="bg-secondary/20 text-secondary-foreground border-border font-normal">
                           <Loader2 className="w-3 h-3 mr-1" /> Deneme
                         </Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-right whitespace-nowrap">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => { setUsersOrg(org); setIsUsersOpen(true); }}
-                        className="mr-1 text-blue-400 hover:text-blue-300"
-                      >
-                        Kullanıcılar
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => {
-                          setEditingOrg(org);
-                          setIsEditOpen(true);
-                        }}
-                        className="mr-1"
-                      >
-                        Düzenle
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => { setStatusOrg(org); setIsStatusOpen(true); }}
-                        className={org.status === 'active' ? 'text-red-400 hover:text-red-300' : 'text-emerald-400 hover:text-emerald-300'}
-                      >
-                        {org.status === 'active' ? (
-                          <><Pause className="w-4 h-4 mr-1" /> Askıya Al</>
-                        ) : (
-                          <><Play className="w-4 h-4 mr-1" /> Aktif Et</>
-                        )}
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => { setUsersOrg(org); setIsUsersOpen(true); }}
+                          className="h-8 border-border/60 bg-background/50 hover:bg-muted/50 hover:text-foreground text-muted-foreground transition-colors"
+                        >
+                          <Users className="w-3.5 h-3.5 mr-1.5" /> Kullanıcılar
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => {
+                            setEditingOrg(org);
+                            setIsEditOpen(true);
+                          }}
+                          className="h-8 border-border/60 bg-background/50 hover:bg-muted/50 hover:text-foreground text-muted-foreground transition-colors"
+                        >
+                          <Settings className="w-3.5 h-3.5 mr-1.5" /> Düzenle
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => { setStatusOrg(org); setIsStatusOpen(true); }}
+                          className={`h-8 border-border/60 bg-background/50 hover:bg-muted/50 transition-colors ${org.status === 'active' ? 'text-red-400/80 hover:text-red-400' : 'text-emerald-400/80 hover:text-emerald-400'}`}
+                        >
+                          {org.status === 'active' ? (
+                            <><Pause className="w-3.5 h-3.5 mr-1.5" /> Askıya Al</>
+                          ) : (
+                            <><Play className="w-3.5 h-3.5 mr-1.5" /> Aktif Et</>
+                          )}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

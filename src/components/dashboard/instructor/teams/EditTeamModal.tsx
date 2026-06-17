@@ -79,7 +79,7 @@ export function EditTeamModal({ team, open, onOpenChange, onSuccess }: EditTeamM
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md bg-[#0f1523] border-gray-800 text-white">
+      <DialogContent className="sm:max-w-md bg-card border-gray-800 text-white">
         <DialogHeader>
           <DialogTitle className="text-white">Takımı Düzenle</DialogTitle>
         </DialogHeader>

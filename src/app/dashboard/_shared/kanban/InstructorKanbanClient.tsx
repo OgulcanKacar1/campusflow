@@ -416,7 +416,7 @@ export function TeamKanbanClient({
                 disabled={isBusy}
                 className={`h-7 px-3 text-[11px] uppercase tracking-wider font-semibold gap-1.5 ${
                   sprint.hasAiReport
-                    ? 'border-indigo-700/50 text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300'
+                    ? 'border-primary/50 text-primary hover:bg-primary/10'
                     : 'border-amber-700/50 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300'
                 }`}
                 title={sprint.hasAiReport ? "Mevcut Raporu Görüntüle" : "Yapay Zeka ile Öğrenci Katkı Raporu Al"}
@@ -431,7 +431,7 @@ export function TeamKanbanClient({
                 size="sm"
                 onClick={() => handleUpdateSprintStatus(sprint, 'completed')}
                 disabled={isBusy}
-                className="h-7 px-3 text-[11px] uppercase tracking-wider font-semibold border-blue-700/50 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300"
+                className="h-7 px-3 text-[11px] uppercase tracking-wider font-semibold border-primary/50 text-primary hover:bg-primary/10"
               >
                 Tamamla
               </Button>
@@ -442,7 +442,7 @@ export function TeamKanbanClient({
                 disabled={isBusy}
                 aria-label={`${sprint.name} sprintini sil`}
                 title="Sprinti Sil"
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-600 transition hover:bg-red-500/10 hover:text-red-400 disabled:pointer-events-none disabled:opacity-30"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-red-500/10 hover:text-red-400 disabled:pointer-events-none disabled:opacity-30"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
@@ -473,9 +473,9 @@ export function TeamKanbanClient({
   ];
 
   return (
-    <div className="flex flex-col gap-6 bg-[#050a19] px-6 py-8 min-h-screen">
+    <div className="flex flex-col gap-6 px-6 py-8 min-h-screen">
       {/* Sticky, Glassmorphism Header */}
-      <header className="sticky top-0 z-20 flex flex-col gap-3 rounded-2xl border border-slate-800/60 bg-slate-900/40 p-6 shadow-lg shadow-slate-950/40 backdrop-blur-md">
+      <header className="sticky top-0 z-20 flex flex-col gap-3 rounded-2xl border border-border/60 bg-card/40 p-6 shadow-xl shadow-black/40 backdrop-blur-md">
         
         <DashboardBreadcrumb items={breadcrumbItems} />
 
@@ -498,8 +498,8 @@ export function TeamKanbanClient({
 
             {courseId && board.isInstructor && (
               <>
-                <div className="flex items-center gap-2 border border-slate-700/50 bg-slate-900/50 rounded-md px-2 py-1">
-                  <span className="text-xs text-slate-400">Sprint Yön:</span>
+                <div className="flex items-center gap-2 border border-border/50 bg-card/50 rounded-md px-2 py-1">
+                  <span className="text-xs text-muted-foreground">Sprint Yön:</span>
                   <select
                     className="bg-transparent text-xs text-white outline-none cursor-pointer"
                     value={board.sprintMode}
@@ -513,8 +513,8 @@ export function TeamKanbanClient({
                       }
                     }}
                   >
-                    <option value="instructor" className="bg-slate-900">Eğitmen</option>
-                    <option value="team" className="bg-slate-900">Takım</option>
+                    <option value="instructor" className="bg-card">Eğitmen</option>
+                    <option value="team" className="bg-card">Takım</option>
                   </select>
                 </div>
 
@@ -522,46 +522,20 @@ export function TeamKanbanClient({
                   variant="outline"
                   size="sm"
                   onClick={() => setIsTemplateModalOpen(true)}
-                  className="gap-2 border-indigo-600/50 bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600/20 hover:text-indigo-300 transition-colors"
+                  className="gap-2 border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
                 >
                   <LayoutTemplate className="h-4 w-4" />
                   Şablon Uygula
                 </Button>
               </>
             )}
-            
-            {board.isLeader && !githubState.loading && (
-              githubState.connected ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDisconnectGithub}
-                  disabled={isDisconnectingGithub}
-                  className="gap-2 border-red-500/50 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Bağlantıyı Kes
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    window.location.href = `/api/github/auth?teamId=${teamId}&returnUrl=${encodeURIComponent(window.location.pathname)}`;
-                  }}
-                  className="gap-2 border-slate-700 bg-[#24292e]/80 text-white hover:bg-[#24292e] transition-colors"
-                >
-                  <GitBranch className="h-4 w-4" />
-                  GitHub Bağla
-                </Button>
-              )
-            )}
+
 
             {board.canManageSprints && (
                 <Button
                   size="sm"
                   onClick={() => setSprintDialogOpen(true)}
-                  className="gap-2 bg-indigo-600 hover:bg-indigo-500 text-white"
+                  className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   <Plus className="h-4 w-4" />
                   Sprint Oluştur
@@ -573,7 +547,7 @@ export function TeamKanbanClient({
                   size="sm"
                   variant="outline"
                   onClick={() => setTaskDialogOpen(true)}
-                  className="gap-2 border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white"
+                  className="gap-2 border-border bg-muted text-foreground hover:bg-secondary hover:text-foreground"
                 >
                   <Plus className="h-4 w-4" />
                   Görev Oluştur
@@ -585,7 +559,7 @@ export function TeamKanbanClient({
               variant="outline"
               onClick={handleRefresh}
               disabled={isBusy}
-              className="gap-2 border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white"
+              className="gap-2 border-border bg-muted text-foreground hover:bg-secondary hover:text-foreground"
             >
               <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Yenile</span>
@@ -608,8 +582,8 @@ export function TeamKanbanClient({
                   }}
                   className={`flex-shrink-0 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
                     isActive
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-900/20 ring-1 ring-indigo-500'
-                      : 'bg-slate-900/50 text-slate-400 border border-slate-800 hover:bg-slate-800 hover:text-slate-200'
+                      ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20 ring-1 ring-primary/50'
+                      : 'bg-card/50 text-muted-foreground border border-border hover:bg-muted hover:text-foreground'
                   }`}
                 >
                   {t.name}
@@ -622,8 +596,8 @@ export function TeamKanbanClient({
 
         {/* Instructor Managed Banner */}
         {isInstructorManaged && (
-          <div className="mt-4 flex items-center gap-3 rounded-xl border border-blue-500/30 bg-blue-500/10 px-5 py-4 text-sm text-blue-200">
-            <Info className="h-5 w-5 shrink-0 text-blue-400" />
+          <div className="mt-4 flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 px-5 py-4 text-sm text-blue-200">
+            <Info className="h-5 w-5 shrink-0 text-primary" />
             <p className="text-sm text-blue-200/70">
               {board.sprintMode === 'instructor' 
                 ? 'Bu panoda sprint planlaması eğitmen tarafından yönetilmektedir. Takım üyesi olarak kendi görevlerinizi ekleyebilir ve durumlarını güncelleyebilirsiniz.'
@@ -661,7 +635,7 @@ export function TeamKanbanClient({
               size="sm"
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="gap-2 text-slate-400 hover:text-white"
+              className="gap-2 text-muted-foreground hover:text-foreground"
             >
               {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               Yenile
@@ -724,37 +698,37 @@ export function TeamKanbanClient({
       )}
 
       <Dialog open={isProjectDetailsOpen} onOpenChange={setProjectDetailsOpen}>
-        <DialogContent className="sm:max-w-[500px] bg-slate-900 border-slate-800 text-slate-200">
+        <DialogContent className="sm:max-w-[500px] bg-card border-border text-foreground">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-white">Proje Detayları</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-muted-foreground">
               Yapay zeka analizinin daha tutarlı olabilmesi için takımın üzerinde çalıştığı projenin konusunu ve amacını belirtin.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <label htmlFor="projectName" className="text-sm font-medium text-slate-300">Proje Adı</label>
+              <label htmlFor="projectName" className="text-sm font-medium text-muted-foreground">Proje Adı</label>
               <input
                 id="projectName"
                 value={projectNameForm}
                 onChange={(e) => setProjectNameForm(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="flex h-10 w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 placeholder="Örn: E-Ticaret Platformu"
               />
             </div>
             <div className="grid gap-2">
-              <label htmlFor="projectDesc" className="text-sm font-medium text-slate-300">Proje Açıklaması ve Amacı</label>
+              <label htmlFor="projectDesc" className="text-sm font-medium text-muted-foreground">Proje Açıklaması ve Amacı</label>
               <textarea
                 id="projectDesc"
                 value={projectDescForm}
                 onChange={(e) => setProjectDescForm(e.target.value)}
-                className="flex min-h-[100px] w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="flex min-h-[100px] w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 placeholder="Takımın genel amacı ve bu projenin neyi çözeceği..."
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setProjectDetailsOpen(false)} className="border-slate-700 text-slate-300 hover:bg-slate-800">
+            <Button variant="outline" onClick={() => setProjectDetailsOpen(false)} className="border-border text-muted-foreground hover:bg-muted">
               İptal
             </Button>
             <Button onClick={handleSaveProjectDetails} disabled={isSavingProjectDetails} className="bg-indigo-600 hover:bg-indigo-700 text-white">

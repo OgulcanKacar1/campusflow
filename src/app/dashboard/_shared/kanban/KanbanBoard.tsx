@@ -44,9 +44,9 @@ function formatDateRange(startAt: string, endAt: string): string {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  planning: 'bg-slate-500/15 text-slate-300 border-slate-600/40',
+  planning: 'bg-slate-500/15 text-muted-foreground border-border/40',
   active: 'bg-emerald-500/15 text-emerald-300 border-emerald-600/40',
-  completed: 'bg-blue-500/15 text-blue-300 border-blue-600/40',
+  completed: 'bg-primary/15 text-primary border-primary/40',
   archived: 'bg-zinc-500/15 text-zinc-400 border-zinc-600/40',
 };
 
@@ -120,16 +120,16 @@ export function KanbanBoard({
     const backlogCount = backlogColumns.reduce((total, column) => total + column.tasks.length, 0);
 
     return (
-      <section className="rounded-2xl border border-slate-800/60 bg-slate-950/40 p-5">
+      <section className="rounded-2xl border border-border/60 bg-background/40 p-5">
         {/* Backlog header */}
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <span className="text-sm font-semibold text-slate-100">{backlogTitle}</span>
-            <p className="mt-0.5 text-xs text-slate-500">Sprint'e atanmamış görevler</p>
+            <span className="text-sm font-semibold text-foreground">{backlogTitle}</span>
+            <p className="mt-0.5 text-xs text-muted-foreground">Sprint'e atanmamış görevler</p>
           </div>
           <Badge
             variant="outline"
-            className="border-slate-700/60 px-2 text-xs text-slate-300"
+            className="border-border/60 px-2 text-xs text-muted-foreground"
             aria-live="polite"
           >
             {backlogCount} görev
@@ -142,11 +142,11 @@ export function KanbanBoard({
             <KanbanColumn
               key={`backlog-${column.status}`}
               column={column}
-              className="bg-slate-900/40 w-[300px] shrink-0 snap-start"
+              className="bg-card/30 backdrop-blur-sm w-[300px] shrink-0 snap-start"
               onTaskClick={onTaskClick}
               canMoveTasks={canMoveTasks}
               emptyState={
-                <div className="rounded-lg border border-dashed border-slate-700/60 bg-slate-900/50 p-4 text-center text-xs text-slate-500">
+                <div className="rounded-lg border border-dashed border-border/60 bg-card/50 p-4 text-center text-xs text-muted-foreground">
                   Boş
                 </div>
               }
@@ -158,7 +158,7 @@ export function KanbanBoard({
   }, [board.backlogColumns, backlogTitle, onTaskClick]);
 
   if (!mounted) {
-    return <div className={`min-h-[500px] animate-pulse rounded-2xl bg-slate-900/50 ${className ?? ''}`} />;
+    return <div className={`min-h-[500px] animate-pulse rounded-2xl bg-card/50 ${className ?? ''}`} />;
   }
 
   return (
@@ -167,9 +167,9 @@ export function KanbanBoard({
       {/* Header bar */}
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
-          <h2 className="text-lg font-semibold text-slate-100">Sprint & Kanban</h2>
+          <h2 className="text-lg font-semibold text-foreground">Sprint & Kanban</h2>
           {error && <span className="text-sm text-rose-400">{error}</span>}
-          {isLoading && <span className="text-sm text-slate-400">Güncelleniyor…</span>}
+          {isLoading && <span className="text-sm text-muted-foreground">Güncelleniyor…</span>}
         </div>
         {headerExtra}
       </div>
@@ -179,9 +179,9 @@ export function KanbanBoard({
 
       {/* Sprintler — alt alta */}
       {board.sprints.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-800 p-10 text-center">
-          <p className="text-sm text-slate-500">Henüz sprint yok.</p>
-          <p className="mt-1 text-xs text-slate-600">Sprint oluşturarak görevleri organize edin.</p>
+        <div className="rounded-2xl border border-dashed border-border p-10 text-center">
+          <p className="text-sm text-muted-foreground">Henüz sprint yok.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Sprint oluşturarak görevleri organize edin.</p>
         </div>
       ) : (
         board.sprints.map(sprint => {
@@ -195,13 +195,13 @@ export function KanbanBoard({
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2 cursor-pointer" onClick={() => toggleSprint(sprint.id)}>
-                  {isExpanded ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronRight className="w-5 h-5 text-slate-400" />}
-                  <h3 className="text-base font-semibold text-slate-100 select-none hover:text-white transition-colors">{sprint.name}</h3>
+                  {isExpanded ? <ChevronDown className="w-5 h-5 text-muted-foreground" /> : <ChevronRight className="w-5 h-5 text-muted-foreground" />}
+                  <h3 className="text-base font-semibold text-foreground select-none hover:text-foreground transition-colors">{sprint.name}</h3>
                   <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusColor}`}>
                     {statusLabel}
                   </span>
                 </div>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   {formatDateRange(sprint.startAt, sprint.endAt)}
                   <span className="mx-1.5 text-slate-700">·</span>
                   {totalTasks} görev
@@ -213,7 +213,7 @@ export function KanbanBoard({
           return (
             <section
               key={sprint.id}
-              className="rounded-2xl border border-slate-800/60 bg-slate-950/40 p-5"
+              className="rounded-2xl border border-border/50 bg-card/20 shadow-lg shadow-black/20 p-5"
             >
               {/* Sprint header (override edilebilir) */}
               {renderSprintHeader ? renderSprintHeader(sprint, defaultHeader) : defaultHeader}

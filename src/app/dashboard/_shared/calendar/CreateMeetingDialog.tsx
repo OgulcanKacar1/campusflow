@@ -108,19 +108,19 @@ export const CreateMeetingDialog: React.FC<CreateMeetingDialogProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       
-      <div className="relative bg-[#1a1f37] border border-white/10 shadow-2xl rounded-2xl w-full max-w-lg p-6 sm:p-8 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative bg-card/60 backdrop-blur-3xl border border-border/40 shadow-2xl shadow-black/50 rounded-2xl w-full max-w-lg p-6 sm:p-8 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
         {/* Dekoratif Glow */}
-        <div className="absolute -top-32 -right-32 w-64 h-64 bg-indigo-500/20 rounded-full blur-[80px] pointer-events-none" />
+        <div className="absolute -top-32 -right-32 w-64 h-64 bg-primary/20 rounded-full blur-[80px] pointer-events-none" />
         
         <div className="flex justify-between items-center mb-6 relative z-10">
           <h2 className="text-xl font-bold text-white flex items-center">
-            <CalendarIcon className="mr-2 text-indigo-400" />
+            <CalendarIcon className="mr-2 text-primary" />
             Yeni Toplantı Planla
           </h2>
-          <button onClick={onClose} className="p-2 text-white/50 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+          <button onClick={onClose} className="p-2 text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-lg transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -130,7 +130,7 @@ export const CreateMeetingDialog: React.FC<CreateMeetingDialogProps> = ({
           {/* Ders ve Takım Seçimi */}
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <label className="block text-xs font-medium text-white/60 mb-1.5 flex items-center">
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5 flex items-center">
                 <CheckCircle2 size={14} className="mr-1" /> Ders
               </label>
               <select
@@ -144,10 +144,10 @@ export const CreateMeetingDialog: React.FC<CreateMeetingDialogProps> = ({
                   const teamsForNewCourse = teams.filter(t => t.course_id === newCourseId);
                   setSelectedTeam(isInstructor ? 'all' : (teamsForNewCourse[0]?.id || 'all'));
                 }}
-                className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2.5 text-white/90 text-sm focus:outline-none focus:border-indigo-500/50"
+                className="w-full bg-background/40 border border-border/50 rounded-lg px-4 py-2.5 text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all"
               >
                 {courses.map(c => (
-                  <option key={c.id} value={c.id} className="bg-[#1a1f37]">{c.name}</option>
+                  <option key={c.id} value={c.id} className="bg-card">{c.name}</option>
                 ))}
               </select>
             </div>
@@ -160,7 +160,7 @@ export const CreateMeetingDialog: React.FC<CreateMeetingDialogProps> = ({
                 <select
                   value={selectedTeam}
                   onChange={(e) => setSelectedTeam(e.target.value)}
-                  className="w-full bg-black/20 border border-emerald-500/20 text-white text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 appearance-none"
+                  className="w-full bg-background/40 border border-emerald-500/20 text-foreground text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 appearance-none transition-all"
                 >
                   {isInstructor && <option value="all">Tüm Sınıf (Genel Duyuru)</option>}
                   {availableTeams.map(t => (
@@ -171,7 +171,7 @@ export const CreateMeetingDialog: React.FC<CreateMeetingDialogProps> = ({
                   )}
                 </select>
                 {/* Custom arrow for select */}
-                <div className="absolute right-4 bottom-3.5 pointer-events-none text-white/50">
+                <div className="absolute right-4 bottom-3.5 pointer-events-none text-muted-foreground">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                 </div>
               </div>
@@ -185,7 +185,7 @@ export const CreateMeetingDialog: React.FC<CreateMeetingDialogProps> = ({
                 <select
                   value={selectedSprint}
                   onChange={(e) => setSelectedSprint(e.target.value)}
-                  className="w-full bg-black/20 border border-amber-500/20 text-white text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500/50 appearance-none"
+                  className="w-full bg-background/40 border border-amber-500/20 text-foreground text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-amber-500/50 appearance-none transition-all"
                 >
                   <option value="none">Sprint'e Bağlama (Sadece Toplantı)</option>
                   {availableSprints.map(s => {
@@ -195,14 +195,14 @@ export const CreateMeetingDialog: React.FC<CreateMeetingDialogProps> = ({
                     );
                   })}
                 </select>
-                <div className="absolute right-4 bottom-3.5 pointer-events-none text-white/50">
+                <div className="absolute right-4 bottom-3.5 pointer-events-none text-muted-foreground">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                 </div>
               </div>
             </div>
 
           <div>
-            <label className="block text-xs font-medium text-white/60 mb-1.5 flex items-center">
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5 flex items-center">
               <Type size={14} className="mr-1" /> Toplantı Başlığı
             </label>
             <input
@@ -210,13 +210,13 @@ export const CreateMeetingDialog: React.FC<CreateMeetingDialogProps> = ({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Örn: Sprint 1 Değerlendirmesi"
-              className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2.5 text-white/90 text-sm placeholder:text-white/30 focus:outline-none focus:border-indigo-500/50"
+              className="w-full bg-background/40 border border-border/50 rounded-lg px-4 py-2.5 text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all"
             />
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div className="col-span-1">
-              <label className="block text-xs font-medium text-white/60 mb-1.5 flex items-center">
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5 flex items-center">
                 <CalendarIcon size={14} className="mr-1" /> Tarih
               </label>
               <input
@@ -224,11 +224,11 @@ export const CreateMeetingDialog: React.FC<CreateMeetingDialogProps> = ({
                 required
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2.5 text-white/90 text-sm focus:outline-none focus:border-indigo-500/50"
+                className="w-full bg-background/40 border border-border/50 rounded-lg px-3 py-2.5 text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all"
               />
             </div>
             <div className="col-span-1">
-              <label className="block text-xs font-medium text-white/60 mb-1.5 flex items-center">
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5 flex items-center">
                 <Clock size={14} className="mr-1" /> Başlangıç
               </label>
               <input
@@ -236,11 +236,11 @@ export const CreateMeetingDialog: React.FC<CreateMeetingDialogProps> = ({
                 required
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
-                className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2.5 text-white/90 text-sm focus:outline-none focus:border-indigo-500/50"
+                className="w-full bg-background/40 border border-border/50 rounded-lg px-3 py-2.5 text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all"
               />
             </div>
             <div className="col-span-1">
-              <label className="block text-xs font-medium text-white/60 mb-1.5 flex items-center">
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5 flex items-center">
                 <Clock size={14} className="mr-1" /> Bitiş
               </label>
               <input
@@ -248,13 +248,13 @@ export const CreateMeetingDialog: React.FC<CreateMeetingDialogProps> = ({
                 required
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
-                className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2.5 text-white/90 text-sm focus:outline-none focus:border-indigo-500/50"
+                className="w-full bg-background/40 border border-border/50 rounded-lg px-3 py-2.5 text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-white/60 mb-1.5 flex items-center">
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5 flex items-center">
               <LinkIcon size={14} className="mr-1" /> Görüşme Linki (Zoom, Meet, Teams vb.)
             </label>
             <input
@@ -262,12 +262,12 @@ export const CreateMeetingDialog: React.FC<CreateMeetingDialogProps> = ({
               value={link}
               onChange={(e) => setLink(e.target.value)}
               placeholder="https://meet.google.com/..."
-              className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2.5 text-white/90 text-sm placeholder:text-white/30 focus:outline-none focus:border-indigo-500/50"
+              className="w-full bg-background/40 border border-border/50 rounded-lg px-4 py-2.5 text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-white/60 mb-1.5 flex items-center">
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5 flex items-center">
               <AlignLeft size={14} className="mr-1" /> Açıklama (Opsiyonel)
             </label>
             <textarea
@@ -275,7 +275,7 @@ export const CreateMeetingDialog: React.FC<CreateMeetingDialogProps> = ({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Toplantı gündemi vb."
               rows={3}
-              className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2.5 text-white/90 text-sm placeholder:text-white/30 focus:outline-none focus:border-indigo-500/50 resize-none"
+              className="w-full bg-background/40 border border-border/50 rounded-lg px-4 py-2.5 text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40 resize-none transition-all"
             />
           </div>
 
@@ -284,14 +284,14 @@ export const CreateMeetingDialog: React.FC<CreateMeetingDialogProps> = ({
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-5 py-2.5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+              className="px-5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-lg transition-colors"
             >
               İptal
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2.5 text-sm font-medium bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors shadow-lg shadow-indigo-500/25 disabled:opacity-50 flex items-center"
+              className="px-5 py-2.5 text-[11px] uppercase tracking-widest font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-all shadow-md shadow-primary/20 disabled:opacity-50 flex items-center"
             >
               {loading ? 'Planlanıyor...' : 'Toplantıyı Planla'}
             </button>
