@@ -89,14 +89,18 @@ export default function StudentCoursesPage() {
 
             <Dialog open={joinOpen} onOpenChange={(v) => { setJoinOpen(v); if (!v) { setJoinCode(''); setJoinResult(null); } }}>
               <DialogTrigger render={
-                <Button className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold shadow-lg shadow-yellow-500/20">
+                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold uppercase tracking-widest text-[11px] px-5 py-2.5 shadow-md shadow-primary/20 transition-all">
                   <KeyRound className="w-4 h-4 mr-2" /> Katılım Koduyla Katıl
                 </Button>
               } />
-              <DialogContent className="sm:max-w-sm bg-[#0f1523] border border-gray-800 text-white">
-                <DialogHeader>
-                  <DialogTitle>Derse Katıl</DialogTitle>
-                  <DialogDescription>Hocanın sana verdiği 6 haneli katılım kodunu gir.</DialogDescription>
+              <DialogContent className="sm:max-w-sm bg-card/60 backdrop-blur-3xl border border-border/40 shadow-2xl shadow-black/50 text-foreground overflow-hidden">
+                {/* Decorative Glow */}
+                <div className="absolute -top-32 -right-32 w-64 h-64 bg-primary/20 rounded-full blur-[80px] pointer-events-none" />
+                <DialogHeader className="relative z-10">
+                  <DialogTitle className="text-xl font-bold text-foreground drop-shadow-sm flex items-center gap-2">
+                    <KeyRound className="text-primary w-5 h-5" /> Derse Katıl
+                  </DialogTitle>
+                  <DialogDescription className="text-muted-foreground">Hocanın sana verdiği 6 haneli katılım kodunu gir.</DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleJoin} className="space-y-4 py-4">
                   {joinResult?.error && (
@@ -110,12 +114,12 @@ export default function StudentCoursesPage() {
                     onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                     placeholder="A7B9X2"
                     maxLength={6}
-                    className="text-center text-2xl tracking-[0.4em] font-mono uppercase bg-background h-14"
+                    className="text-center text-2xl tracking-[0.4em] font-mono uppercase bg-background/40 border-border/50 focus:ring-1 focus:ring-primary/40 h-14 transition-all relative z-10"
                     required
                   />
-                  <DialogFooter className="border-none bg-transparent p-0">
-                    <DialogClose render={<Button type="button" variant="ghost">İptal</Button>} />
-                    <Button type="submit" disabled={joining || joinCode.length < 6} className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold">
+                  <DialogFooter className="border-none bg-transparent p-0 relative z-10">
+                    <DialogClose render={<Button type="button" variant="ghost" className="hover:bg-white/5 text-muted-foreground">İptal</Button>} />
+                    <Button type="submit" disabled={joining || joinCode.length < 6} className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold uppercase tracking-widest text-[11px] px-5 py-2.5 shadow-md shadow-primary/20 transition-all">
                       {joining && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Katıl
                     </Button>
@@ -140,15 +144,15 @@ export default function StudentCoursesPage() {
               <p className="text-white font-semibold text-lg">Henüz hiçbir derse kayıtlı değilsin</p>
               <p className="text-gray-500 text-sm mt-1">Hocanın sana verdiği katılım koduyla derse katılabilirsin.</p>
             </div>
-            <Button onClick={() => setJoinOpen(true)} className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold mt-2">
+            <Button onClick={() => setJoinOpen(true)} className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold uppercase tracking-widest text-[11px] px-5 py-2.5 shadow-md shadow-primary/20 mt-2 transition-all">
               <KeyRound className="w-4 h-4 mr-2" /> Katılım Koduyla Katıl
             </Button>
           </div>
         ) : (
           <Tabs defaultValue="active" className="w-full mt-2">
-            <TabsList className="mb-6 bg-[#0f1523] border border-gray-800">
-              <TabsTrigger value="active" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">Aktif Dersler</TabsTrigger>
-              <TabsTrigger value="archived" className="data-[state=active]:bg-yellow-600 data-[state=active]:text-white">Arşivlenen Dersler</TabsTrigger>
+            <TabsList className="mb-8 bg-background/40 backdrop-blur-sm border border-border/40 p-1 rounded-xl inline-flex h-auto">
+              <TabsTrigger value="active" className="rounded-lg px-6 py-2.5 text-sm font-bold uppercase tracking-widest text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all">Aktif Dersler</TabsTrigger>
+              <TabsTrigger value="archived" className="rounded-lg px-6 py-2.5 text-sm font-bold uppercase tracking-widest text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all">Arşivlenen Dersler</TabsTrigger>
             </TabsList>
             
             {['active', 'archived'].map(status => {
@@ -174,35 +178,35 @@ export default function StudentCoursesPage() {
                   ) : (
                     sortedYears.map(([year, yearCourses]) => (
                       <div key={year} className="mb-10">
-                        <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                          <span className="bg-white/10 px-3 py-1 rounded-md text-sm">{year}</span>
+                        <h2 className="text-xl font-bold text-foreground drop-shadow-sm mb-5 flex items-center gap-3">
+                          <span className="bg-primary/20 text-primary ring-1 ring-primary/30 px-3 py-1 rounded-lg text-sm">{year}</span>
                           Dönemi Dersleri
                         </h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                           {yearCourses.map(course => (
                             <Link key={course.enrollmentId} href={`/dashboard/student/courses/${course.id}`}>
-                              <div className={`group relative rounded-2xl border bg-gradient-to-br ${termColors[course.term] || 'from-purple-500/20 to-purple-600/5 border-purple-500/20'} p-6 hover:scale-[1.02] transition-all duration-200 cursor-pointer h-full flex flex-col justify-between min-h-[200px] ${status === 'archived' ? 'opacity-80' : ''}`}>
+                              <div className={`group relative rounded-2xl border bg-card/40 backdrop-blur-xl border-border/40 shadow-xl shadow-black/20 p-6 hover:shadow-2xl hover:shadow-primary/20 hover:border-primary/50 hover:-translate-y-1 transition-all duration-300 cursor-pointer h-full flex flex-col justify-between min-h-[200px] ${status === 'archived' ? 'opacity-80' : ''}`}>
                                 <div>
                                   <div className="flex items-start justify-between mb-3">
                                     <div>
-                                      <span className="text-xs font-bold tracking-widest text-white/40 uppercase">{termLabels[course.term] || course.term} {course.year}</span>
-                                      {course.section && <span className="ml-2 text-xs text-white/30">Şube {course.section}</span>}
+                                      <span className="text-[10px] font-bold tracking-widest text-primary uppercase bg-primary/10 px-2 py-1 rounded-md ring-1 ring-primary/20">{termLabels[course.term] || course.term} {course.year}</span>
+                                      {course.section && <span className="ml-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Şube {course.section}</span>}
                                     </div>
-                                    <Badge className={`text-xs font-normal ${course.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'}`}>
+                                    <Badge className={`text-[10px] uppercase tracking-widest font-bold ${course.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-secondary/30 text-muted-foreground border-secondary/30'}`}>
                                       {course.status === 'active' ? 'Aktif' : 'Arşiv'}
                                     </Badge>
                                   </div>
-                                  <p className="text-sm font-mono text-white/50 mb-1">{course.code}</p>
-                                  <h2 className={`text-xl font-bold text-white leading-tight transition-colors ${status === 'active' ? 'group-hover:text-yellow-300' : 'group-hover:text-yellow-400'}`}>{course.name}</h2>
+                                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1 mt-4">{course.code}</p>
+                                  <h2 className={`text-xl font-bold text-foreground leading-tight drop-shadow-sm transition-colors group-hover:text-primary`}>{course.name}</h2>
                                 </div>
-                                <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between">
+                                <div className="mt-5 pt-4 border-t border-border/40 flex items-center justify-between">
                                   <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-white">
+                                    <div className="w-8 h-8 rounded-full bg-primary/10 ring-1 ring-primary/30 flex items-center justify-center text-xs font-bold text-primary">
                                       {course.instructorName?.charAt(0)?.toUpperCase() || '?'}
                                     </div>
-                                    <span className="text-sm text-white/50 truncate max-w-[120px]">{course.instructorName}</span>
+                                    <span className="text-sm font-medium text-muted-foreground truncate max-w-[120px]">{course.instructorName}</span>
                                   </div>
-                                  <div className="flex items-center gap-3 text-white/30 text-xs">
+                                  <div className="flex items-center gap-3 text-muted-foreground text-xs">
                                     <span className="flex items-center gap-1"><Users className="w-3 h-3" /> Takımlar</span>
                                     <span className="flex items-center gap-1"><ClipboardList className="w-3 h-3" /> Görevler</span>
                                     <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

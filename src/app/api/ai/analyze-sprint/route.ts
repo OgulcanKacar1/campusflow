@@ -51,7 +51,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ data: existingReport.report_content });
     }
 
-    // 1. Sprint Görevlerini Çek
     const { data: tasks, error: tasksError } = await supabase
       .from('tasks')
       .select(`
@@ -66,32 +65,28 @@ export async function POST(req: Request) {
 
     if (tasksError) throw tasksError;
 
-    // 1.5 Sprint Toplantılarını ve Notlarını Çek
     const { data: sprintMeetings } = await supabase
       .from('meetings')
       .select('title, start_time, meeting_notes')
       .eq('sprint_id', sprintId);
 
-    // 2. Görev Atamalarını Çek
     const taskIds = tasks.map(t => t.id);
     const { data: assignments } = await supabase
-      .from('task_assignments')
+      .from('task_members')
       .select('task_id, student_id')
       .in('task_id', taskIds.length > 0 ? taskIds : [null]);
 
-    // 3. Takım Üyelerini Çek
     const { data: members } = await supabase
       .from('team_members')
       .select('student_id, profile:profiles(full_name, email)')
-      .eq('team_id', teamId);
+      .eq('team_id', teamId)
+      .is('left_at', null);
 
-    // 4. GitHub Etkinliklerini (Commitler) Çek
     const { data: githubEvents } = await supabase
       .from('task_github_events')
       .select('task_id, event_type, commit_hash, message, author_name, created_at')
       .in('task_id', taskIds.length > 0 ? taskIds : [null]);
 
-    // 5. GitHub Token Çek ve Diff'leri (Değişen Kodları) Fetch Et
     const { data: githubConnection } = await supabase
       .from('github_connections')
       .select('access_token, repo_full_name')
@@ -123,7 +118,6 @@ export async function POST(req: Request) {
           });
           if (res.ok) {
             let diff = await res.text();
-            // Yapay zeka token limitini korumak için çok uzun diff'leri kırp
             if (diff.length > 2500) {
               diff = diff.substring(0, 2500) + '\n... [Diff çok uzun olduğu için kırpıldı]';
             }
@@ -137,7 +131,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // Verileri AI için formatla
     const studentsData = members?.map(m => {
       const profile = Array.isArray(m.profile) ? m.profile[0] : m.profile;
       return {
@@ -210,9 +203,8 @@ ${JSON.stringify(formattedTasks, null, 2)}
 6. 'meetingInsights' alanında takım toplantılarından çıkarılan anahtar kararları listele. Eğer bir toplantı planlanmış/yapılmış ancak 'meeting_notes' boş (null) bırakılmışsa, bunu bir eksiklik olarak belirterek "Şu isimli toplantı planlanmış ancak toplantı kararları/notları sisteme girilmemiştir." şeklinde uyar. Hiç toplantı yoksa bu diziyi boş bırak.
 `;
 
-    // Vercel AI SDK ile garantili JSON üretimi
     const { object } = await generateObject({
-      model: google('gemini-flash-latest'),
+      model: google('gemini-2.5-flash'),
       schema: z.object({
         summary: z.string().describe('Sprintin genel durumunu anlatan 2-3 cümlelik özet.'),
         overallScore: z.number().min(0).max(100).describe('Takımın genel başarısı (0-100 arası).'),

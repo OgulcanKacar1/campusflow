@@ -35,7 +35,7 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen bg-[#060b18] overflow-hidden">
+    <div className="flex h-screen bg-background overflow-hidden">
       {/* Sidebar */}
       <Sidebar
         role={profile.role}

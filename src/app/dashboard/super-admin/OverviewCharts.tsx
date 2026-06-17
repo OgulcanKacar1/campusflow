@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Building2 } from 'lucide-react';
 
 export type TrendData = {
   date: string;
@@ -49,12 +50,12 @@ export default function OverviewCharts({ trendData, topOrgs }: Props) {
                 />
                 <YAxis stroke="#888" fontSize={12} allowDecimals={false} />
                 <Tooltip 
-                  cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                  contentStyle={{ backgroundColor: '#111827', borderColor: '#374151', color: '#fff', borderRadius: '8px' }}
+                  cursor={{ fill: 'var(--muted)', opacity: 0.2 }}
+                  contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)' }}
                 />
                 <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                <Bar dataKey="student_count" name="Öğrenci" fill="#a855f7" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="instructor_count" name="Hoca" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="student_count" name="Öğrenci" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="instructor_count" name="Hoca" fill="var(--muted-foreground)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -68,12 +69,12 @@ export default function OverviewCharts({ trendData, topOrgs }: Props) {
           <CardDescription>En çok aktif öğrenciye sahip kurumlar</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border border-border overflow-hidden">
+          <div className="rounded-xl border border-border/50 overflow-hidden bg-background/40">
             <Table>
-              <TableHeader className="bg-muted/50">
-                <TableRow>
-                  <TableHead>Üniversite</TableHead>
-                  <TableHead className="text-right">Öğrenci</TableHead>
+              <TableHeader className="bg-muted/30 border-b border-border/50">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Üniversite</TableHead>
+                  <TableHead className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">Öğrenci</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -85,15 +86,22 @@ export default function OverviewCharts({ trendData, topOrgs }: Props) {
                   </TableRow>
                 ) : (
                   topOrgs.map((org, i) => (
-                    <TableRow key={i}>
+                    <TableRow key={i} className="border-border/40 hover:bg-muted/30 transition-colors">
                       <TableCell>
-                        <div className="font-medium text-sm text-foreground truncate max-w-[150px]">
-                          {org.organization_name}
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-muted/50 border border-border/50 flex items-center justify-center flex-shrink-0">
+                            <Building2 className="w-4 h-4 text-muted-foreground/70" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-sm text-foreground/90 truncate max-w-[150px]">
+                              {org.organization_name}
+                            </div>
+                            <div className="text-xs text-muted-foreground">@{org.domain}</div>
+                          </div>
                         </div>
-                        <div className="text-xs text-muted-foreground">@{org.domain}</div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Badge variant="secondary" className="font-mono">
+                        <Badge variant="outline" className="font-mono bg-background border-border/60 text-muted-foreground">
                           {org.student_count}
                         </Badge>
                       </TableCell>

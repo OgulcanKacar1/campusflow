@@ -515,7 +515,7 @@ export async function getCourseStudents(courseId: string): Promise<ActionResult<
       profiles:student_id (id, full_name, email)
     `)
     .eq('course_id', courseId)
-    .eq('status', 'enrolled');
+    .in('status', ['enrolled', 'active']);
 
   if (error) {
     return { error: error.message };

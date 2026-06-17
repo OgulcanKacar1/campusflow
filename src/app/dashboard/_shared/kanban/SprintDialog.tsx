@@ -59,17 +59,17 @@ export function SprintDialog({ open, onOpenChange, onSubmit, isSubmitting }: Spr
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md bg-[#0f1523] border-slate-800 text-white">
+      <DialogContent className="max-w-md bg-card border-border text-white">
         <form onSubmit={handleSubmit} className="space-y-5">
           <DialogHeader>
             <DialogTitle className="text-xl">Sprint Oluştur</DialogTitle>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-muted-foreground">
               Takımın için yeni bir sprint planla. Tarihler daha sonra güncellenebilir.
             </p>
           </DialogHeader>
 
           <div className="space-y-2">
-            <Label htmlFor="sprint-name" className="text-xs uppercase tracking-widest text-slate-400">
+            <Label htmlFor="sprint-name" className="text-xs uppercase tracking-widest text-muted-foreground">
               Sprint Adı
             </Label>
             <Input
@@ -77,7 +77,7 @@ export function SprintDialog({ open, onOpenChange, onSubmit, isSubmitting }: Spr
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Örn. Sprint 1"
-              className="bg-slate-900/60 border-slate-700 text-white"
+              className="bg-card/60 border-border text-white"
               maxLength={60}
               required
             />
@@ -85,7 +85,7 @@ export function SprintDialog({ open, onOpenChange, onSubmit, isSubmitting }: Spr
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="sprint-start" className="text-xs uppercase tracking-widest text-slate-400">
+              <Label htmlFor="sprint-start" className="text-xs uppercase tracking-widest text-muted-foreground">
                 Başlangıç Tarihi
               </Label>
               <Input
@@ -93,12 +93,12 @@ export function SprintDialog({ open, onOpenChange, onSubmit, isSubmitting }: Spr
                 type="date"
                 value={startDate}
                 onChange={(event) => setStartDate(event.target.value)}
-                className="bg-slate-900/60 border-slate-700 text-white"
+                className="bg-card/60 border-border text-white"
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="sprint-end" className="text-xs uppercase tracking-widest text-slate-400">
+              <Label htmlFor="sprint-end" className="text-xs uppercase tracking-widest text-muted-foreground">
                 Bitiş Tarihi
               </Label>
               <Input
@@ -106,7 +106,7 @@ export function SprintDialog({ open, onOpenChange, onSubmit, isSubmitting }: Spr
                 type="date"
                 value={endDate}
                 onChange={(event) => setEndDate(event.target.value)}
-                className="bg-slate-900/60 border-slate-700 text-white"
+                className="bg-card/60 border-border text-white"
                 required
               />
             </div>
@@ -122,14 +122,14 @@ export function SprintDialog({ open, onOpenChange, onSubmit, isSubmitting }: Spr
             <Button
               type="button"
               variant="ghost"
-              className="text-slate-300 hover:text-white"
+              className="text-muted-foreground hover:text-foreground"
               onClick={() => handleOpenChange(false)}
             >
               İptal
             </Button>
             <Button
               type="submit"
-              className="bg-indigo-600 hover:bg-indigo-500"
+              className="bg-indigo-600 hover:bg-primary"
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Oluşturuluyor…' : 'Sprint Oluştur'}

@@ -21,17 +21,17 @@ export function KanbanColumn({ column, sprint, className, onTaskClick, headerExt
   const hasTasks = tasks.length > 0;
 
   return (
-    <div className={`flex min-h-[320px] min-w-[280px] flex-1 flex-col gap-3 rounded-xl border border-slate-700/70 bg-[#101b2d] p-4 shadow-lg shadow-slate-950/30 transition ${className ?? ''}`.trim()}>
+    <div className={`flex min-h-[320px] min-w-[280px] flex-1 flex-col gap-3 rounded-2xl border border-border/50 bg-card/30 backdrop-blur-md p-4 shadow-xl shadow-black/20 transition ${className ?? ''}`.trim()}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-100">
+          <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <span>{column.title}</span>
-            <Badge variant="outline" className="border-slate-600/70 bg-slate-800/70 px-2 text-xs text-slate-100">
+            <Badge variant="outline" className="border-border/70 bg-muted/70 px-2 text-xs text-foreground">
               {column.tasks.length}
             </Badge>
           </div>
           {sprint && (
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-muted-foreground">
               {sprint.name}
             </span>
           )}
@@ -44,7 +44,7 @@ export function KanbanColumn({ column, sprint, className, onTaskClick, headerExt
           <div
             {...provided.droppableProps}
             ref={provided.innerRef}
-            className={`flex flex-1 flex-col gap-3 rounded-lg p-1 transition-colors ${snapshot.isDraggingOver ? 'bg-indigo-500/10 border-indigo-500/50' : ''}`}
+            className={`flex flex-1 flex-col gap-3 rounded-lg p-1 transition-colors ${snapshot.isDraggingOver ? 'bg-primary/10 border-primary/50' : ''}`}
           >
             {hasTasks ? (
               tasks.map((task, index) => (
@@ -64,7 +64,7 @@ export function KanbanColumn({ column, sprint, className, onTaskClick, headerExt
               ))
             ) : (
               emptyState ?? (
-                <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-slate-700/60 bg-[#0f1523] px-4 py-6 text-center text-sm leading-relaxed text-slate-300">
+                <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-white/10 bg-white/5 px-4 py-6 text-center text-sm leading-relaxed text-muted-foreground">
                   Bu sütunda görev yok.
                 </div>
               )

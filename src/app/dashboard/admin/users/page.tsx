@@ -85,7 +85,7 @@ export default function AdminUsersPage() {
     <div className="p-8">
       <div className="max-w-6xl">
         <div className="mb-6">
-          <Link href="/dashboard/admin" className="text-gray-400 hover:text-white flex items-center text-sm w-fit mb-4 transition-colors">
+          <Link href="/dashboard/admin" className="text-gray-400 hover:text-foreground flex items-center text-sm w-fit mb-4 transition-colors">
             <ArrowLeft className="w-4 h-4 mr-1" />
             Admin Paneline Dön
           </Link>
@@ -120,15 +120,15 @@ export default function AdminUsersPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border border-border">
+            <div className="rounded-xl border border-border/50 overflow-hidden bg-background/40 shadow-sm">
               <Table>
-                <TableHeader className="bg-muted/50">
-                  <TableRow>
-                    <TableHead>Ad Soyad</TableHead>
-                    <TableHead>E-posta</TableHead>
-                    <TableHead>Mevcut Rol</TableHead>
-                    <TableHead>Durum</TableHead>
-                    <TableHead className="text-right">Rol İşlemleri</TableHead>
+                <TableHeader className="bg-muted/30 border-b border-border/50">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider h-11">Ad Soyad</TableHead>
+                    <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider h-11">E-posta</TableHead>
+                    <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider h-11">Mevcut Rol</TableHead>
+                    <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider h-11">Durum</TableHead>
+                    <TableHead className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider h-11">Rol İşlemleri</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -146,16 +146,25 @@ export default function AdminUsersPage() {
                     </TableRow>
                   ) : (
                     filteredUsers.map(user => (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium text-foreground">{user.full_name ?? 'Bilinmiyor'}</TableCell>
-                        <TableCell className="text-muted-foreground">{user.email ?? '—'}</TableCell>
+                      <TableRow key={user.id} className="border-border/40 hover:bg-muted/30 transition-colors">
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-muted/50 border border-border/50 flex items-center justify-center flex-shrink-0">
+                              <span className="text-sm font-bold text-muted-foreground">
+                                {user.full_name?.charAt(0).toUpperCase() || 'U'}
+                              </span>
+                            </div>
+                            <div className="font-semibold text-foreground/90">{user.full_name ?? 'Bilinmiyor'}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground font-medium">{user.email ?? '—'}</TableCell>
                         <TableCell>
                           <Badge
                             className={
                               user.role === 'admin' || user.role === 'super_admin'
-                                ? 'bg-purple-500/10 text-purple-400 border-purple-500/20 font-normal'
+                                ? 'bg-primary/10 text-primary border-primary/20 font-normal'
                                 : user.role === 'instructor'
-                                ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 font-normal'
+                                ? 'bg-primary/10 text-primary border-primary/20 font-normal'
                                 : 'bg-muted text-muted-foreground font-normal border-border'
                             }
                           >
@@ -192,8 +201,10 @@ export default function AdminUsersPage() {
                               value={user.role}
                               onValueChange={(val) => handleRoleUpdate(user.id, val as 'student' | 'instructor')}
                             >
-                              <SelectTrigger className="w-[130px] bg-background h-8 text-xs ml-auto">
-                                <SelectValue />
+                              <SelectTrigger className="w-[130px] bg-background h-8 text-xs ml-auto border-border/60 hover:bg-muted/50 transition-colors">
+                                <SelectValue>
+                                  {user.role === 'instructor' ? 'Hoca' : user.role === 'student' ? 'Öğrenci' : 'Admin'}
+                                </SelectValue>
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="student">Öğrenci</SelectItem>

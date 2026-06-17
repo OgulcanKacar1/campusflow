@@ -53,10 +53,10 @@
   --background: hsl(0, 0%, 0%);
   --foreground: hsl(0, 0%, 100%);
 
-  /* Cards & Surfaces */
-  --card: hsl(0, 0%, 4%);
+  /* Cards & Surfaces: Make slightly lighter for depth */
+  --card: hsl(0, 0%, 8%);
   --card-foreground: hsl(0, 0%, 98%);
-  --popover: hsl(0, 0%, 4%);
+  --popover: hsl(0, 0%, 8%);
   --popover-foreground: hsl(0, 0%, 98%);
 
   /* Primary: Terracotta (Kiremit Turuncu) */
@@ -64,12 +64,12 @@
   --primary-foreground: hsl(0, 0%, 100%);
 
   /* Secondary: Deep muted dark */
-  --secondary: hsl(0, 0%, 10%);
+  --secondary: hsl(0, 0%, 15%);
   --secondary-foreground: hsl(0, 0%, 98%);
 
   /* Muted: Gray for secondary text/bgs */
-  --muted: hsl(0, 0%, 12%);
-  --muted-foreground: hsl(0, 0%, 60%);
+  --muted: hsl(0, 0%, 18%);
+  --muted-foreground: hsl(0, 0%, 65%);
 
   /* Accent: Hover states (Soft terracotta tint) */
   --accent: hsl(24, 30%, 12%);
@@ -81,8 +81,8 @@
   --warning: hsl(38, 92%, 50%);
 
   /* Borders & Inputs */
-  --border: hsl(0, 0%, 12%);
-  --input: hsl(0, 0%, 12%);
+  --border: hsl(0, 0%, 20%);
+  --input: hsl(0, 0%, 20%);
   --ring: hsl(24, 90%, 55%);
 
   /* Sidebar */

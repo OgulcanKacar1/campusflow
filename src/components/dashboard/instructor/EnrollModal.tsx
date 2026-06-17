@@ -48,11 +48,11 @@ export function EnrollModal({ course, onComplete }: Props) {
       if (!val) setResult(null);
     }}>
       <DialogTrigger render={
-        <Button variant="ghost" size="sm" className="h-8 text-xs hover:bg-purple-500/10 hover:text-purple-400">
+        <Button variant="ghost" size="sm" className="h-8 text-xs hover:bg-primary/10 hover:text-primary">
           <UserPlus className="w-3.5 h-3.5 mr-1" /> Öğrenci Ekle
         </Button>
       } />
-      <DialogContent className="sm:max-w-lg bg-[#0f1523] border border-gray-800 text-white">
+      <DialogContent className="sm:max-w-lg bg-card border border-gray-800 text-white">
         <DialogHeader>
           <DialogTitle>Öğrenci Kaydı: {course.code}</DialogTitle>
           <DialogDescription>
@@ -69,7 +69,7 @@ export function EnrollModal({ course, onComplete }: Props) {
                 name="csvContent"
                 required
                 placeholder="ogrenci1@isik.edu.tr&#10;ogrenci2@isik.edu.tr"
-                className="w-full h-48 px-3 py-2 rounded-md border border-gray-800 bg-background text-sm focus:ring-2 focus:ring-purple-500 outline-none transition-all"
+                className="w-full h-48 px-3 py-2 rounded-md border border-gray-800 bg-background text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
               />
             </div>
             <DialogFooter className="border-none bg-transparent p-0">
@@ -99,7 +99,7 @@ export function EnrollModal({ course, onComplete }: Props) {
             {result.unregistered && result.unregistered.length > 0 && (
               <div className="space-y-2">
                 <p className="text-sm font-medium text-yellow-400">Kayıt Edilemeyenler ({result.unregistered.length} öğrenci):</p>
-                <div className="max-h-32 overflow-y-auto p-3 rounded-md bg-white/5 border border-white/10 text-xs text-gray-400 font-mono">
+                <div className="max-h-32 overflow-y-auto p-3 rounded-md bg-white/5 border border-border text-xs text-gray-400 font-mono">
                   {result.unregistered.map(email => <div key={email}>{email}</div>)}
                 </div>
                 <p className="text-[11px] text-gray-500 italic">

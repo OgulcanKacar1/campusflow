@@ -36,9 +36,9 @@ const variantStyles = {
     button: 'bg-yellow-600 hover:bg-yellow-500 text-white',
   },
   default: {
-    icon: 'text-slate-400',
+    icon: 'text-muted-foreground',
     iconBg: 'bg-slate-500/10 border-slate-500/20',
-    button: 'bg-indigo-600 hover:bg-indigo-500 text-white',
+    button: 'bg-indigo-600 hover:bg-primary text-white',
   },
 } as const;
 
@@ -67,7 +67,7 @@ export function ConfirmDialog({
 
   return (
     <Dialog open={open} onOpenChange={isConfirming ? undefined : onOpenChange}>
-      <DialogContent className="max-w-md border-slate-800 bg-slate-900 text-white">
+      <DialogContent className="max-w-md border-border bg-card text-white">
         <DialogHeader>
           <div className="flex items-start gap-4">
             <div className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${styles.iconBg}`}>
@@ -78,7 +78,7 @@ export function ConfirmDialog({
                 {title}
               </DialogTitle>
               {description && (
-                <DialogDescription className="text-sm text-slate-400 leading-relaxed">
+                <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
                   {description}
                 </DialogDescription>
               )}
@@ -92,7 +92,7 @@ export function ConfirmDialog({
             size="sm"
             onClick={() => onOpenChange(false)}
             disabled={isConfirming}
-            className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+            className="border-border text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             {cancelLabel}
           </Button>

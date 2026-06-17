@@ -147,12 +147,12 @@ export function SprintTemplateModal({ courseId, open, onOpenChange, onSuccess }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[750px] bg-[#0a0f1e] border-slate-800 text-slate-200">
+      <DialogContent className="sm:max-w-[750px] bg-card/40 backdrop-blur-xl border-border/60 text-foreground shadow-2xl">
         <DialogHeader>
           <DialogTitle className="text-xl text-white">
             {step === 1 ? 'Toplu Şablon Uygula' : 'Sprintleri İncele ve Düzenle'}
           </DialogTitle>
-          <DialogDescription className="text-slate-400">
+          <DialogDescription className="text-muted-foreground">
             {step === 1 
               ? 'Seçtiğiniz proje şablonu, belirlediğiniz tarih aralığına orantısal olarak bölünecektir.'
               : 'Oluşturulan sprintleri aşağıdan kişiselleştirebilirsiniz. Bir sprintin bitiş tarihini uzattığınızda sonrakiler otomatik ötelenir (Akıllı Zincir).'}
@@ -168,8 +168,8 @@ export function SprintTemplateModal({ courseId, open, onOpenChange, onSuccess }:
         {step === 1 && (
           <div className="space-y-6 py-4">
             <div className="space-y-3">
-              <label className="text-sm font-medium text-slate-300">1. Şablon Seçin</label>
-              <div className="grid gap-3 max-h-[300px] overflow-y-auto pr-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-track]:bg-transparent">
+              <label className="text-sm font-medium text-muted-foreground">1. Şablon Seçin</label>
+              <div className="grid gap-3 max-h-[300px] overflow-y-auto pr-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-secondary [&::-webkit-scrollbar-track]:bg-transparent">
                 {ACADEMIC_SPRINT_TEMPLATES.map((tpl) => {
                   const isSelected = selectedTemplateId === tpl.id;
                   return (
@@ -178,26 +178,26 @@ export function SprintTemplateModal({ courseId, open, onOpenChange, onSuccess }:
                       onClick={() => setSelectedTemplateId(tpl.id)}
                       className={`relative cursor-pointer rounded-xl border p-4 transition-all ${
                         isSelected
-                          ? 'border-indigo-500 bg-indigo-500/10'
-                          : 'border-slate-800 bg-slate-900/50 hover:border-slate-700 hover:bg-slate-900'
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border bg-card/50 hover:border-border hover:bg-card'
                       }`}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex gap-3">
-                          <div className={`mt-1 flex h-8 w-8 items-center justify-center rounded-lg ${isSelected ? 'bg-indigo-500/20 text-indigo-400' : 'bg-slate-800 text-slate-400'}`}>
+                          <div className={`mt-1 flex h-8 w-8 items-center justify-center rounded-lg ${isSelected ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
                             <FileText className="h-4 w-4" />
                           </div>
                           <div>
-                            <h4 className={`font-medium ${isSelected ? 'text-indigo-300' : 'text-slate-200'}`}>
+                            <h4 className={`font-medium ${isSelected ? 'text-indigo-300' : 'text-foreground'}`}>
                               {tpl.title}
                             </h4>
-                            <p className="mt-1 text-xs text-slate-400">{tpl.description}</p>
-                            <p className="mt-2 text-xs font-medium text-slate-500">
+                            <p className="mt-1 text-xs text-muted-foreground">{tpl.description}</p>
+                            <p className="mt-2 text-xs font-medium text-muted-foreground">
                               {tpl.sprints.length} Aşamalı Sprint Döngüsü
                             </p>
                           </div>
                         </div>
-                        {isSelected && <CheckCircle2 className="h-5 w-5 text-indigo-500" />}
+                        {isSelected && <CheckCircle2 className="h-5 w-5 text-primary" />}
                       </div>
                     </div>
                   );
@@ -206,29 +206,29 @@ export function SprintTemplateModal({ courseId, open, onOpenChange, onSuccess }:
             </div>
 
             <div className="space-y-3">
-              <label className="text-sm font-medium text-slate-300">2. Proje Takvimi</label>
+              <label className="text-sm font-medium text-muted-foreground">2. Proje Takvimi</label>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <span className="mb-1 block text-xs text-slate-500">Başlangıç Tarihi</span>
+                  <span className="mb-1 block text-xs text-muted-foreground">Başlangıç Tarihi</span>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                    <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <input
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full rounded-lg border border-slate-700 bg-slate-900/60 py-2 pl-10 pr-4 text-sm text-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      className="w-full rounded-lg border border-border bg-card/60 py-2 pl-10 pr-4 text-sm text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                     />
                   </div>
                 </div>
                 <div>
-                  <span className="mb-1 block text-xs text-slate-500">Bitiş Tarihi</span>
+                  <span className="mb-1 block text-xs text-muted-foreground">Bitiş Tarihi</span>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                    <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <input
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full rounded-lg border border-slate-700 bg-slate-900/60 py-2 pl-10 pr-4 text-sm text-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      className="w-full rounded-lg border border-border bg-card/60 py-2 pl-10 pr-4 text-sm text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                     />
                   </div>
                 </div>
@@ -238,37 +238,37 @@ export function SprintTemplateModal({ courseId, open, onOpenChange, onSuccess }:
         )}
 
         {step === 2 && (
-          <div className="space-y-4 py-4 max-h-[400px] overflow-y-auto pr-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-track]:bg-transparent">
+          <div className="space-y-4 py-4 max-h-[400px] overflow-y-auto pr-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-secondary [&::-webkit-scrollbar-track]:bg-transparent">
             {draftSprints.map((sprint, index) => (
-              <div key={sprint.id} className="flex flex-col gap-3 rounded-xl border border-slate-800 bg-slate-900/30 p-4">
+              <div key={sprint.id} className="flex flex-col gap-3 rounded-xl border border-border bg-card/30 p-4">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-800 text-xs font-bold text-slate-400">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
                     {index + 1}
                   </div>
                   <input
                     type="text"
                     value={sprint.name}
                     onChange={(e) => handleSprintChange(index, 'name', e.target.value)}
-                    className="flex-1 rounded-md border border-transparent bg-transparent px-2 py-1 text-sm font-medium text-white hover:border-slate-700 focus:border-indigo-500 focus:bg-slate-900 focus:outline-none"
+                    className="flex-1 rounded-md border border-transparent bg-transparent px-2 py-1 text-sm font-medium text-white hover:border-border focus:border-primary focus:bg-card focus:outline-none"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4 pl-8">
                   <div>
-                    <span className="mb-1 block text-xs text-slate-500">Başlangıç</span>
+                    <span className="mb-1 block text-xs text-muted-foreground">Başlangıç</span>
                     <input
                       type="date"
                       value={sprint.start_at}
                       onChange={(e) => handleSprintChange(index, 'start_at', e.target.value)}
-                      className="w-full rounded-md border border-slate-700 bg-slate-800/50 px-3 py-1.5 text-xs text-white focus:border-indigo-500 focus:outline-none"
+                      className="w-full rounded-md border border-border bg-muted/50 px-3 py-1.5 text-xs text-white focus:border-primary focus:outline-none"
                     />
                   </div>
                   <div>
-                    <span className="mb-1 block text-xs text-slate-500">Bitiş</span>
+                    <span className="mb-1 block text-xs text-muted-foreground">Bitiş</span>
                     <input
                       type="date"
                       value={sprint.end_at}
                       onChange={(e) => handleSprintChange(index, 'end_at', e.target.value)}
-                      className="w-full rounded-md border border-slate-700 bg-slate-800/50 px-3 py-1.5 text-xs text-white focus:border-indigo-500 focus:outline-none"
+                      className="w-full rounded-md border border-border bg-muted/50 px-3 py-1.5 text-xs text-white focus:border-primary focus:outline-none"
                     />
                   </div>
                 </div>
@@ -284,7 +284,7 @@ export function SprintTemplateModal({ courseId, open, onOpenChange, onSuccess }:
                 type="button"
                 variant="ghost"
                 onClick={() => onOpenChange(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 İptal
               </Button>
@@ -292,7 +292,7 @@ export function SprintTemplateModal({ courseId, open, onOpenChange, onSuccess }:
                 type="button"
                 onClick={handleNext}
                 disabled={!selectedTemplateId || !startDate || !endDate}
-                className="gap-2 bg-indigo-600 text-white hover:bg-indigo-500"
+                className="gap-2 bg-indigo-600 text-white hover:bg-primary"
               >
                 Devam Et <ArrowRight className="h-4 w-4" />
               </Button>
@@ -304,7 +304,7 @@ export function SprintTemplateModal({ courseId, open, onOpenChange, onSuccess }:
                 variant="ghost"
                 onClick={() => setStep(1)}
                 disabled={isSubmitting}
-                className="gap-2 text-slate-400 hover:text-white"
+                className="gap-2 text-muted-foreground hover:text-foreground"
               >
                 <ArrowLeft className="h-4 w-4" /> Geri
               </Button>
@@ -312,7 +312,7 @@ export function SprintTemplateModal({ courseId, open, onOpenChange, onSuccess }:
                 type="button"
                 onClick={handleApply}
                 disabled={isSubmitting || draftSprints.length === 0}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white"
+                className="bg-indigo-600 hover:bg-primary text-white"
               >
                 {isSubmitting ? (
                   <>

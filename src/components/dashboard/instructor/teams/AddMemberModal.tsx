@@ -155,10 +155,10 @@ export function AddMemberModal({ team, courseId, open, onOpenChange, onSuccess }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl bg-[#0f1523] border-gray-800 text-white max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-xl bg-card border-gray-800 text-white max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-white flex items-center gap-2">
-            <UserPlus className="w-5 h-5 text-blue-400" />
+            <UserPlus className="w-5 h-5 text-primary" />
             Üye Ekle: {team?.name}
           </DialogTitle>
         </DialogHeader>
@@ -198,7 +198,7 @@ export function AddMemberModal({ team, courseId, open, onOpenChange, onSuccess }
                       onClick={() => toggleStudent(student.student_id)}
                       className={`relative p-3 rounded-lg border text-left transition-all ${
                         isSelected
-                          ? 'border-blue-500 bg-blue-500/10'
+                          ? 'border-primary bg-primary/10'
                           : 'border-gray-700 bg-[#1a1f2e] hover:border-gray-600 hover:bg-[#2a3142]'
                       }`}
                     >
@@ -213,7 +213,7 @@ export function AddMemberModal({ team, courseId, open, onOpenChange, onSuccess }
                         </div>
                         {isSelected && (
                           <div className="flex-shrink-0">
-                            <Check className="w-4 h-4 text-blue-400" />
+                            <Check className="w-4 h-4 text-primary" />
                           </div>
                         )}
                       </div>
@@ -227,7 +227,7 @@ export function AddMemberModal({ team, courseId, open, onOpenChange, onSuccess }
           {/* Seçili Sayısı */}
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-400">
-              <span className="text-blue-400 font-medium">{selectedStudentIds.size}</span> öğrenci seçildi
+              <span className="text-primary font-medium">{selectedStudentIds.size}</span> öğrenci seçildi
             </p>
             {selectedStudentIds.size > 0 && (
               <button

@@ -61,7 +61,7 @@ export function MarkdownEditor({ value, onChange, placeholder, className, mode =
   // If forced view mode (e.g., user doesn't have permissions)
   if (mode === 'view') {
     return (
-      <div className={cn('prose prose-invert max-w-none text-sm text-slate-300 rounded-md border border-slate-700 bg-slate-900/40 p-4', className)}>
+      <div className={cn('prose prose-invert max-w-none text-sm text-muted-foreground rounded-md border border-border bg-card/40 p-4', className)}>
         <ReactMarkdown remarkPlugins={[remarkGfm]}>
           {value || '*Açıklama bulunmuyor.*'}
         </ReactMarkdown>
@@ -70,14 +70,14 @@ export function MarkdownEditor({ value, onChange, placeholder, className, mode =
   }
 
   return (
-    <div className={cn('flex flex-col rounded-md border border-slate-700 bg-slate-900/60 overflow-hidden', className, disabled && 'opacity-50 pointer-events-none')}>
-      <div className="flex items-center justify-between border-b border-slate-700 bg-slate-800/50 p-1.5">
+    <div className={cn('flex flex-col rounded-md border border-border bg-card/60 overflow-hidden', className, disabled && 'opacity-50 pointer-events-none')}>
+      <div className="flex items-center justify-between border-b border-border bg-muted/50 p-1.5">
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => insertFormatting('**')}
             disabled={disabled || internalMode === 'view'}
-            className="rounded p-1.5 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors disabled:opacity-50"
+            className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors disabled:opacity-50"
             title="Kalın"
           >
             <Bold className="h-4 w-4" />
@@ -86,17 +86,17 @@ export function MarkdownEditor({ value, onChange, placeholder, className, mode =
             type="button"
             onClick={() => insertFormatting('*')}
             disabled={disabled || internalMode === 'view'}
-            className="rounded p-1.5 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors disabled:opacity-50"
+            className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors disabled:opacity-50"
             title="İtalik"
           >
             <Italic className="h-4 w-4" />
           </button>
-          <div className="h-4 w-px bg-slate-700 mx-1" />
+          <div className="h-4 w-px bg-secondary mx-1" />
           <button
             type="button"
             onClick={() => insertLineFormatting('- ')}
             disabled={disabled || internalMode === 'view'}
-            className="rounded p-1.5 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors disabled:opacity-50"
+            className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors disabled:opacity-50"
             title="Madde İşaretli Liste"
           >
             <List className="h-4 w-4" />
@@ -105,17 +105,17 @@ export function MarkdownEditor({ value, onChange, placeholder, className, mode =
             type="button"
             onClick={() => insertLineFormatting('1. ')}
             disabled={disabled || internalMode === 'view'}
-            className="rounded p-1.5 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors disabled:opacity-50"
+            className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors disabled:opacity-50"
             title="Numaralı Liste"
           >
             <ListOrdered className="h-4 w-4" />
           </button>
-          <div className="h-4 w-px bg-slate-700 mx-1" />
+          <div className="h-4 w-px bg-secondary mx-1" />
           <button
             type="button"
             onClick={() => insertFormatting('[', '](url)')}
             disabled={disabled || internalMode === 'view'}
-            className="rounded p-1.5 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors disabled:opacity-50"
+            className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors disabled:opacity-50"
             title="Bağlantı Ekle"
           >
             <Link className="h-4 w-4" />
@@ -124,7 +124,7 @@ export function MarkdownEditor({ value, onChange, placeholder, className, mode =
             type="button"
             onClick={() => insertFormatting('`')}
             disabled={disabled || internalMode === 'view'}
-            className="rounded p-1.5 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors disabled:opacity-50"
+            className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors disabled:opacity-50"
             title="Kod"
           >
             <Code className="h-4 w-4" />
@@ -138,7 +138,7 @@ export function MarkdownEditor({ value, onChange, placeholder, className, mode =
             onClick={() => setInternalMode(internalMode === 'edit' ? 'view' : 'edit')}
             className={cn(
               "flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors",
-              internalMode === 'view' ? "bg-indigo-500/20 text-indigo-300" : "text-slate-400 hover:bg-slate-700 hover:text-white"
+              internalMode === 'view' ? "bg-primary/20 text-indigo-300" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
             )}
           >
             {internalMode === 'edit' ? (
@@ -158,10 +158,10 @@ export function MarkdownEditor({ value, onChange, placeholder, className, mode =
           placeholder={placeholder}
           rows={5}
           disabled={disabled}
-          className="w-full bg-transparent p-3 text-sm text-white placeholder:text-slate-500 focus:outline-none resize-y min-h-[120px]"
+          className="w-full bg-transparent p-3 text-sm text-white placeholder:text-muted-foreground focus:outline-none resize-y min-h-[120px]"
         />
       ) : (
-        <div className="p-4 min-h-[120px] prose prose-invert prose-sm max-w-none text-slate-300">
+        <div className="p-4 min-h-[120px] prose prose-invert prose-sm max-w-none text-muted-foreground">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>
             {value || '*Açıklama bulunmuyor.*'}
           </ReactMarkdown>

@@ -38,11 +38,11 @@ export function EditCourseModal({ course, onComplete }: Props) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-400 hover:text-white">
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-400 hover:text-foreground">
           <Pencil className="w-3.5 h-3.5" />
         </Button>
       } />
-      <DialogContent className="sm:max-w-md bg-[#0f1523] border border-gray-800 text-white">
+      <DialogContent className="sm:max-w-md bg-card border border-gray-800 text-white">
         <DialogHeader>
           <DialogTitle>Dersi Düzenle</DialogTitle>
           <DialogDescription>Ders bilgilerini güncelleyin.</DialogDescription>

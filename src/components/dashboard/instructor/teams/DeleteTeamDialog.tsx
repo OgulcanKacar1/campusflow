@@ -44,7 +44,7 @@ export function DeleteTeamDialog({ team, open, onOpenChange, onSuccess }: Delete
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm bg-[#0f1523] border border-gray-800 text-white">
+      <DialogContent className="sm:max-w-sm bg-card border border-gray-800 text-white">
         <DialogHeader>
           <div className="flex flex-col items-center text-center gap-3 pb-2">
             <div className="flex items-center justify-center w-14 h-14 rounded-full bg-red-500/10 border border-red-500/20">

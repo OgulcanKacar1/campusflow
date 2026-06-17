@@ -36,11 +36,11 @@ export function CreateCourseModal({ onComplete }: Props) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={
-        <Button className="bg-purple-600 hover:bg-purple-700 text-white">
+        <Button style={{ backgroundColor: '#ea580c', color: 'white' }} className="hover:opacity-90 transition-opacity">
           <Plus className="w-4 h-4 mr-2" /> Yeni Ders Aç
         </Button>
       } />
-      <DialogContent className="sm:max-w-md bg-[#0f1523] border border-gray-800 text-white">
+      <DialogContent className="sm:max-w-md bg-card border border-border/60 text-foreground">
         <DialogHeader>
           <DialogTitle>Yeni Ders Oluştur</DialogTitle>
           <DialogDescription>
@@ -84,7 +84,7 @@ export function CreateCourseModal({ onComplete }: Props) {
 
           <DialogFooter className="mt-6 border-none bg-transparent p-0">
             <DialogClose render={<Button type="button" variant="ghost">İptal</Button>} />
-            <Button type="submit" disabled={isSubmitting} className="bg-purple-600 hover:bg-purple-700 text-white">
+            <Button type="submit" disabled={isSubmitting} style={{ backgroundColor: '#ea580c', color: 'white' }} className="hover:opacity-90 transition-opacity">
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Ders Oluştur
             </Button>

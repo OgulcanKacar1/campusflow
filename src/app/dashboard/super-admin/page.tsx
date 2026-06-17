@@ -1,5 +1,6 @@
 import { getSuperAdminStats, getOrganizationsWithDomains, getRegistrationTrend } from './actions';
 import OverviewCharts from './OverviewCharts';
+import { Building2, Users, CheckCircle2 } from 'lucide-react';
 
 interface SuperAdminStatRow {
   organization_name: string;
@@ -40,7 +41,7 @@ export default async function SuperAdminDashboard() {
     <div className="p-8">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold text-white mb-2">
-          👑 Süper Admin Paneli
+          Süper Admin Paneli
         </h1>
         <p className="text-gray-400 mb-8">
           Tüm üniversiteleri, lisansları ve sistemi bu panelden yönetiyorsun.
@@ -48,19 +49,35 @@ export default async function SuperAdminDashboard() {
 
         {/* İstatistik Kartları */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[
-            { label: 'Toplam Üniversite', value: totalOrgs, color: 'from-purple-500/20 to-purple-600/5', border: 'border-purple-500/20' },
-            { label: 'Toplam Kullanıcı', value: totalUsers, color: 'from-blue-500/20 to-blue-600/5', border: 'border-blue-500/20' },
-            { label: 'Aktif Lisans (Okul)', value: activeOrgs, color: 'from-green-500/20 to-green-600/5', border: 'border-green-500/20' },
-          ].map((card) => (
-            <div
-              key={card.label}
-              className={`rounded-xl border ${card.border} bg-gradient-to-br ${card.color} p-5`}
-            >
-              <p className="text-gray-400 text-sm">{card.label}</p>
-              <p className="text-white text-2xl font-bold mt-1">{card.value}</p>
+          <div className="flex flex-col gap-2 rounded-xl border border-border/60 bg-card p-6 shadow-sm hover:border-primary/50 transition-colors group">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                <Building2 className="w-5 h-5 text-primary" />
+              </div>
+              <p className="text-muted-foreground text-sm font-medium">Toplam Üniversite</p>
             </div>
-          ))}
+            <p className="text-foreground text-3xl font-bold mt-2 tracking-tight">{totalOrgs}</p>
+          </div>
+          
+          <div className="flex flex-col gap-2 rounded-xl border border-border/60 bg-card p-6 shadow-sm hover:border-primary/50 transition-colors group">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                <Users className="w-5 h-5 text-primary" />
+              </div>
+              <p className="text-muted-foreground text-sm font-medium">Toplam Kullanıcı</p>
+            </div>
+            <p className="text-foreground text-3xl font-bold mt-2 tracking-tight">{totalUsers}</p>
+          </div>
+
+          <div className="flex flex-col gap-2 rounded-xl border border-border/60 bg-card p-6 shadow-sm hover:border-primary/50 transition-colors group">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                <CheckCircle2 className="w-5 h-5 text-primary" />
+              </div>
+              <p className="text-muted-foreground text-sm font-medium">Aktif Lisans (Okul)</p>
+            </div>
+            <p className="text-foreground text-3xl font-bold mt-2 tracking-tight">{activeOrgs}</p>
+          </div>
         </div>
 
         {/* Grafikler ve Top Tablo */}
